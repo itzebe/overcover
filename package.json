@@ -10,7 +10,7 @@
     "test:contract": "cargo +stable test --manifest-path contract/Cargo.toml",
     "test:model": "node research/model/attacks.mjs",
     "test:console": "node --test tests/console.test.js",
-    "test:agent": "node --test tests/agent-limits.test.mjs tests/agent-api.test.mjs",
+    "test:agent": "node --test tests/agent-limits.test.mjs tests/agent-api.test.mjs tests/json-bigint.test.mjs",
     "test:onchain": "node --test tests/*.test.js",
     "build:wallet": "node scripts/build-wallet.mjs",
     "agent": "node agent/server.mjs",

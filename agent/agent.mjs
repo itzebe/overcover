@@ -17,6 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { connect, KeyPair, keyStores, utils, transactions, providers } from "near-api-js";
 import { normalizeLimits, evaluate } from "./limits.mjs";
+import { parseBigIntJson } from "./json.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_AUDIT = path.join(root, "agent", "audit.log.jsonl");
@@ -49,7 +50,7 @@ function connectAgent(accountId, secretKey) {
 }
 
 function decodeResult(r) {
-  return JSON.parse(Buffer.from(r.result).toString("utf8"));
+  return parseBigIntJson(Buffer.from(r.result).toString("utf8"));
 }
 
 function failureMessage(failure) {

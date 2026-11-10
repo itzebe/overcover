@@ -951,6 +951,88 @@
   var hhmm = function (ms) { return new Date(ms).toISOString().slice(11, 19) + " UTC"; };
   var shortAcct = function (a) { a = String(a || ""); return a.length > 26 ? a.slice(0, 12) + "…" + a.slice(-9) : a; };
 
+  // The contract returns u128 money fields (min_payout, max_payout, reserved,
+  // max_total_coverage, payout, premium) as bare JSON numbers. JSON.parse rounds
+  // any integer above 2^53, so 1 NEAR becomes 999999999999999983222784 and an
+  // exact bound check goes wrong. This parser keeps an oversized integer literal
+  // as a string and a safe one as a number, so BigInt() reproduces the on-chain
+  // value exactly while small integers stay numbers.
+  var MAX_SAFE_BIG = BigInt(Number.MAX_SAFE_INTEGER);
+  function parseBigIntJson(text) {
+    var i = 0, n = text.length;
+    function fail(m) { throw new Error(m + " at offset " + i); }
+    function skipWs() { while (i < n && " \t\n\r".indexOf(text[i]) >= 0) i++; }
+    function parseString() {
+      i++;
+      var out = "";
+      for (;;) {
+        if (i >= n) fail("unterminated string");
+        var c = text[i++];
+        if (c === '"') return out;
+        if (c === "\\") {
+          var e = text[i++];
+          if (e === "u") { out += String.fromCharCode(parseInt(text.slice(i, i + 4), 16)); i += 4; }
+          else if (e === "n") out += "\n";
+          else if (e === "t") out += "\t";
+          else if (e === "r") out += "\r";
+          else if (e === "b") out += "\b";
+          else if (e === "f") out += "\f";
+          else out += e;
+        } else out += c;
+      }
+    }
+    function parseNumber() {
+      var start = i;
+      if (text[i] === "-") i++;
+      while (i < n && text[i] >= "0" && text[i] <= "9") i++;
+      if (text[i] === "." || text[i] === "e" || text[i] === "E") {
+        while (i < n && "0123456789eE+-.".indexOf(text[i]) >= 0) i++;
+        return Number(text.slice(start, i));
+      }
+      var literal = text.slice(start, i);
+      var b = BigInt(literal);
+      return (b > MAX_SAFE_BIG || b < -MAX_SAFE_BIG) ? literal : Number(literal);
+    }
+    function parseValue() {
+      skipWs();
+      var c = text[i];
+      if (c === "{") {
+        i++; var obj = {}; skipWs();
+        if (text[i] === "}") { i++; return obj; }
+        for (;;) {
+          skipWs();
+          if (text[i] !== '"') fail("expected object key");
+          var key = parseString(); skipWs();
+          if (text[i] !== ":") fail("expected ':'");
+          i++; obj[key] = parseValue(); skipWs();
+          if (text[i] === ",") { i++; continue; }
+          if (text[i] === "}") { i++; return obj; }
+          fail("expected ',' or '}'");
+        }
+      }
+      if (c === "[") {
+        i++; var arr = []; skipWs();
+        if (text[i] === "]") { i++; return arr; }
+        for (;;) {
+          arr.push(parseValue()); skipWs();
+          if (text[i] === ",") { i++; continue; }
+          if (text[i] === "]") { i++; return arr; }
+          fail("expected ',' or ']'");
+        }
+      }
+      if (c === '"') return parseString();
+      if (c === "-" || (c >= "0" && c <= "9")) return parseNumber();
+      if (text.slice(i, i + 4) === "true") { i += 4; return true; }
+      if (text.slice(i, i + 5) === "false") { i += 5; return false; }
+      if (text.slice(i, i + 4) === "null") { i += 4; return null; }
+      fail("unexpected token");
+    }
+    var value = parseValue();
+    skipWs();
+    if (i !== n) fail("trailing content");
+    return value;
+  }
+
   // A NEAR RPC returns call_function output as a byte array on most nodes and as a
   // base64 string on others. Accepting only one shape blanked the whole page, so both
   // are handled and anything else is a hard error rather than a silent blank.
@@ -959,7 +1041,7 @@
     if (Array.isArray(result)) bytes = Uint8Array.from(result);
     else if (typeof result === "string") bytes = Uint8Array.from(atob(result), function (c) { return c.charCodeAt(0); });
     else throw new Error("unexpected RPC result shape");
-    return JSON.parse(new TextDecoder().decode(bytes));
+    return parseBigIntJson(new TextDecoder().decode(bytes));
   }
 
   function post(url, params) {

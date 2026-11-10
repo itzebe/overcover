@@ -17,15 +17,37 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HTML = fs.readFileSync(path.join(root, "ui", "index.html"), "utf8");
 const SCRIPT = HTML.slice(HTML.indexOf("<script>") + 8, HTML.lastIndexOf("</script>"));
 
-/** Lift a top-level function declaration out of the page script by brace matching. */
+/** Lift a top-level function declaration out of the page script by brace matching.
+ *  String and comment content is skipped so brace characters inside literals do
+ *  not confuse the depth count. */
 function extractFunction(src, name) {
   const start = src.indexOf(`function ${name}(`);
   assert.notEqual(start, -1, `function ${name} not found in ui/index.html`);
   const open = src.indexOf("{", start);
   let depth = 0;
   for (let i = open; i < src.length; i++) {
-    if (src[i] === "{") depth++;
-    else if (src[i] === "}") {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      i++;
+      while (i < src.length && src[i] !== quote) {
+        if (src[i] === "\\") i++;
+        i++;
+      }
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "/") {
+      while (i < src.length && src[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "*") {
+      i += 2;
+      while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++;
+      i++;
+      continue;
+    }
+    if (c === "{") depth++;
+    else if (c === "}") {
       depth--;
       if (depth === 0) return src.slice(start, i + 1);
     }
@@ -34,7 +56,8 @@ function extractFunction(src, name) {
 }
 
 const decodeSrc = extractFunction(SCRIPT, "decode");
-const decode = new Function(`${decodeSrc}; return decode;`)();
+const parseSrc = extractFunction(SCRIPT, "parseBigIntJson");
+const decode = new Function(`var MAX_SAFE_BIG = BigInt(Number.MAX_SAFE_INTEGER); ${parseSrc}; ${decodeSrc}; return decode;`)();
 
 test("decode accepts a byte-array result (the shape most NEAR nodes return)", () => {
   const obj = { capital: "1600000000000000000000000", solvent: true };
@@ -59,6 +82,27 @@ test("decode handles both shapes identically (no shape-dependent drift)", () => 
   const asArray = decode(Array.from(Buffer.from(json, "utf8")));
   const asBase64 = decode(Buffer.from(json, "utf8").toString("base64"));
   assert.deepEqual(asArray, asBase64);
+});
+
+test("decode keeps a u128 money field exact (the precision-loss bug)", () => {
+  // A bare JSON number above 2^53 is rounded by JSON.parse, so a product's true
+  // max_payout of 1 NEAR came back as 999999999999999983222784 and the agent's
+  // exact bounds check rejected a payout equal to the maximum. decode() must
+  // preserve the on-chain integer.
+  const raw = '{"id":"rain-lagos","min_payout":100000000000000000000000,"max_payout":1000000000000000000000000}';
+  const p = decode(Array.from(Buffer.from(raw, "utf8")));
+  assert.equal(BigInt(p.min_payout), 100000000000000000000000n);
+  assert.equal(BigInt(p.max_payout), 1000000000000000000000000n);
+  const payout = 1000000000000000000000000n;
+  assert.ok(payout >= BigInt(p.min_payout) && payout <= BigInt(p.max_payout));
+});
+
+test("decode still returns small integers as numbers, not strings", () => {
+  const raw = '{"threshold_tenths":2,"premium_bp":500,"active":true}';
+  const p = decode(Array.from(Buffer.from(raw, "utf8")));
+  assert.equal(p.threshold_tenths, 2);
+  assert.equal(typeof p.threshold_tenths, "number");
+  assert.equal(p.premium_bp, 500);
 });
 
 test("the failover list excludes the CORS-blocked, deprecated public endpoint", () => {

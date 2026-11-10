@@ -250,6 +250,62 @@
   .q-terms { font-size: 13.5px; color: var(--ink2); display: grid; gap: 6px; margin-top: 14px; }
   .q-terms div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
 
+  /* ---------------- wallet + purchase ---------------- */
+  .wallet { display: inline-flex; align-items: center; gap: 8px; }
+  .acct { font-family: var(--mono); font-size: 12px; color: var(--ink2); background: var(--card); border: 1px solid var(--line2); border-radius: 999px; padding: 5px 11px; white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+  .acct b { color: var(--ink); font-weight: 600; }
+  .buy { margin-top: 22px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); padding: 22px 24px; }
+  .buy-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .buy-head h3 { font-family: var(--serif); font-size: 20px; font-weight: 660; letter-spacing: -.01em; margin: 0; }
+  .buy-sub { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+  .buy-grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 18px; }
+  @media (min-width: 720px) { .buy-grid { grid-template-columns: 1fr 1fr; } }
+  .buy input[type=text], .buy input[type=datetime-local] { font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; min-height: 42px; }
+  .sub { font-size: 12.5px; color: var(--muted); }
+  .buy-actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; flex-wrap: wrap; }
+  .buy-status { font-size: 13.5px; color: var(--ink2); }
+  .buy-status.err { color: var(--bad); font-weight: 600; }
+  .buy-status.ok { color: var(--good); font-weight: 600; }
+  .buy-note { margin-top: 18px; border: 1px solid var(--line2); background: var(--card-2); border-radius: var(--r); padding: 14px 16px; font-size: 13px; color: var(--ink2); }
+  .buy-note b { color: var(--ink); }
+  .buy-note code { font-family: var(--mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .buy-result { margin-top: 18px; border: 1px solid var(--good); background: var(--good-w); border-radius: var(--r); padding: 16px 18px; }
+  .buy-result.err { border-color: var(--bad); background: var(--bad-w); }
+  .buy-result h4 { margin: 0 0 8px; font-size: 14.5px; color: var(--good); }
+  .buy-result.err h4 { color: var(--bad); }
+  .buy-result p { font-size: 13.5px; color: var(--ink2); margin: 0 0 8px; }
+  .buy-result .mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+
+  /* ---------------- agent console ---------------- */
+  .agent { margin-top: 6px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); padding: 22px 24px; }
+  .agent-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .agent-head h3 { font-family: var(--serif); font-size: 20px; font-weight: 660; letter-spacing: -.01em; margin: 0; }
+  .agent-head code { font-family: var(--mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .mode-switch { display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; }
+  .mode-switch .btn-s { border: 0; border-radius: 0; min-height: 40px; }
+  .mode-switch .btn-s[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .agent-grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 18px; }
+  @media (min-width: 720px) { .agent-grid { grid-template-columns: 1fr 1fr; } }
+  .agent input[type=text] { font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; min-height: 42px; }
+  .agent-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  .agent-state { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .agent-state .row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 15px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .agent-state .row:last-child { border-bottom: 0; }
+  .agent-state .row .k { color: var(--muted); }
+  .agent-state .row .v { font-family: var(--mono); font-size: 13px; text-align: right; }
+  .agent-log { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card-2); padding: 12px 14px; max-height: 240px; overflow: auto; }
+  .agent-log h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .agent-log ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .agent-log li { font-family: var(--mono); font-size: 12px; color: var(--ink2); display: flex; gap: 10px; }
+  .agent-log li .t { color: var(--muted); flex: none; }
+  .agent-log li.deny { color: var(--bad); }
+  .agent-log li.ok { color: var(--good); }
+  .verdict { display: flex; gap: 10px; align-items: baseline; padding: 12px 15px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .verdict .badge { font-weight: 700; font-size: 12px; padding: 2px 9px; border-radius: 999px; flex: none; }
+  .verdict .badge.allow { background: var(--good-w); color: var(--good); }
+  .verdict .badge.deny { background: var(--bad-w); color: var(--bad); }
+  .verdict ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink2); }
+
   /* ---------------- trust ---------------- */
   .vs { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
   @media (min-width: 780px) { .vs { grid-template-columns: 1fr 1fr; } }
@@ -322,6 +378,9 @@
     </div>
     <div class="mast-right">
       <span class="net"><span id="dot" class="dot load"></span><span id="netlabel">connecting…</span></span>
+      <span id="wallet-slot" class="wallet">
+        <button id="wallet-connect" class="btn" type="button">Connect wallet</button>
+      </span>
       <button id="refresh" class="btn" type="button">Refresh</button>
     </div>
   </div>
@@ -553,8 +612,100 @@
           <div><span class="k">Capacity remaining after this policy</span><span class="v" id="q-capacity">—</span></div>
         </div>
         <div class="ro" id="q-readonly" style="margin-top:16px">
-          <b>This is a read-only quote.</b> This page holds no wallet and signs nothing, so it cannot buy cover for you, and it will never show a policy as active before the chain confirms one. To buy, call <code>buy_cover</code> from a NEAR account with the exact premium attached as the deposit.
+          <b>This is a read-only quote.</b> It reads the contract and holds no key. Buying happens in the panel below, where you sign the transaction in your own wallet — this page never sees your private key and never signs for you.
         </div>
+      </div>
+    </div>
+
+    <!-- Purchase: the human journey. Every number below is re-checked against the
+         contract; the transaction is signed inside the user's own wallet. -->
+    <div class="buy" id="buy-panel" aria-labelledby="buy-h">
+      <div class="buy-head">
+        <div>
+          <h3 id="buy-h">Buy this cover with your own wallet</h3>
+          <p class="buy-sub">You sign the transaction in your wallet. Overcover never sees your key, and the premium is fixed by the contract — not by this page.</p>
+        </div>
+        <span class="wallet" id="buy-wallet-slot">
+          <button id="buy-wallet-connect" class="btn" type="button">Connect wallet</button>
+        </span>
+      </div>
+
+      <div class="buy-grid">
+        <div class="qrow">
+          <label for="b-obsdate">Cover starts (observation date, UTC)</label>
+          <input id="b-obsdate" type="datetime-local" />
+          <span class="sub" id="b-obsnote">The signed reading is taken on this date. It must be in the future.</span>
+        </div>
+        <div class="qrow">
+          <label for="b-beneficiary">Who gets paid (optional)</label>
+          <input id="b-beneficiary" type="text" placeholder="leave blank to pay your own account" autocomplete="off" spellcheck="false" />
+          <span class="sub" id="b-benefnote">Default: your connected account.</span>
+        </div>
+      </div>
+
+      <div class="buy-actions">
+        <button id="b-buy" class="btn-gold" type="button" disabled>Buy cover</button>
+        <span class="buy-status" id="b-status" role="status" aria-live="polite"></span>
+      </div>
+      <div class="buy-actions" id="b-wallet-choices"></div>
+
+      <div class="buy-note" id="b-note">
+        <b>What happens when you press Buy:</b> your wallet asks you to approve a single
+        <code>buy_cover</code> call with exactly the premium shown above attached. If you decline, nothing
+        happens. If the contract refuses (capacity, bounds, pause), you see the contract's own reason and
+        no policy is created.
+      </div>
+
+      <div class="buy-result" id="b-result" hidden></div>
+    </div>
+  </section>
+
+  <!-- ================= AUTONOMOUS AGENT ================= -->
+  <section class="wrap band" id="agent" aria-labelledby="agent-h">
+    <div class="sect-head">
+      <h2 id="agent-h">An autonomous agent can buy cover too</h2>
+      <p class="sect-note">The same contract, driven by software instead of a person. The agent has its own account and its own key; a human sets hard spending limits in advance. Connect a local agent service to watch it decide, or run it in dry-run so it never spends.</p>
+    </div>
+
+    <div class="agent" id="agent-panel">
+      <div class="agent-head">
+        <div>
+          <h3>Agent console</h3>
+          <p class="buy-sub">This console talks to an agent service you run yourself (see <code>agent/README.md</code>). It never holds a key. Two modes: <b>supervised</b> (decide, show the verdict, buy only on your press) and <b>autonomous</b> (it buys within limits on its own).</p>
+        </div>
+        <span class="mode-switch" role="group" aria-label="Agent mode">
+          <button class="btn-s" type="button" data-mode="supervised" aria-pressed="true">Supervised</button>
+          <button class="btn-s" type="button" data-mode="autonomous" aria-pressed="false">Autonomous</button>
+        </span>
+      </div>
+
+      <div class="agent-grid">
+        <div class="qrow">
+          <label for="a-url">Agent service URL</label>
+          <input id="a-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" value="http://127.0.0.1:8787" />
+          <span class="sub">Runs on your machine; bound to localhost by default.</span>
+        </div>
+        <div class="qrow">
+          <label for="a-product">Product for the agent</label>
+          <select id="a-product"></select>
+        </div>
+      </div>
+
+      <div class="agent-actions">
+        <button id="a-connect" class="btn" type="button">Connect to agent</button>
+        <button id="a-decide" class="btn" type="button" disabled>Ask the agent to decide</button>
+        <button id="a-buy" class="btn" type="button" disabled>Agent buys this cover</button>
+        <button id="a-kill" class="btn" type="button" disabled>Emergency stop</button>
+        <span class="buy-status" id="a-status" role="status" aria-live="polite"></span>
+      </div>
+
+      <div class="agent-state" id="a-state" hidden></div>
+      <div class="agent-log" id="a-log" hidden></div>
+
+      <div class="buy-note" id="a-note">
+        <b>What the agent can do.</b> It can read the contract and call <code>buy_cover</code>. It cannot call any
+        owner-only method, and every purchase is checked against the spending limits before anything is sent.
+        If a limit refuses the purchase, no transaction is created and no funds move.
       </div>
     </div>
   </section>
@@ -745,7 +896,8 @@
       <a href="#what-h">What it covers</a>
       <a href="#how-h">How a claim settles</a>
       <a href="#cover">Cover available</a>
-      <a href="#quote-h">Price a policy</a>
+      <a href="#quote-h">Buy cover</a>
+      <a href="#agent">For agents</a>
     </div>
     <div class="f-col">
       <h3>Verify</h3>
@@ -762,6 +914,7 @@
 </footer>
 
 
+<script src="vendor/wallet-bundle.js"></script>
 <script>
 (function () {
   "use strict";
@@ -1011,6 +1164,407 @@
   }
   function clearError() { el("error-slot").innerHTML = ""; }
 
+  // ---------------------------------------------------------------- wallet
+
+  // The wallet bundle (ui/vendor/wallet-bundle.js) owns every interaction with a
+  // NEAR wallet extension. This code only reads its status and calls connect /
+  // signAndSend. It never sees a key: signing happens inside the extension.
+  var WALLET = window.OvercoverWallet || null;
+  var walletState = { connected: false, accountId: null };
+
+  function accountChip(a) {
+    return '<span class="acct" title="' + esc(a) + '">signed in as <b>' + esc(shortAcct(a)) + "</b></span>";
+  }
+
+  function renderWallet() {
+    var slots = ["wallet-slot", "buy-wallet-slot"];
+    for (var i = 0; i < slots.length; i++) {
+      var s = el(slots[i]);
+      if (!s) continue;
+      if (!WALLET) { s.innerHTML = ""; continue; }
+      if (walletState.connected) {
+        s.innerHTML = accountChip(walletState.accountId) + '<button class="btn-s" type="button" data-wallet="disconnect">Disconnect</button>';
+      } else {
+        s.innerHTML = '<button class="btn" type="button" data-wallet="connect">Connect wallet</button>';
+      }
+    }
+    updateBuyEnabled();
+  }
+
+  function walletPick() {
+    var w = WALLET;
+    if (!w) return;
+    var avail = w.status().available.filter(function (m) { return m.available !== false; });
+    var any = w.status().available;
+    var msg = avail.length
+      ? "Choose a NEAR wallet: " + avail.map(function (m) { return m.name; }).join(", ") + "."
+      : "No NEAR wallet extension was detected in this browser. Install HERE or Meteor, then reload. Available modules: " + any.map(function (m) { return m.name; }).join(", ") + ".";
+    setBuyStatus(msg, avail.length ? false : true);
+    var host = el("b-wallet-choices");
+    host.innerHTML = avail.map(function (m) {
+      return '<button class="btn" type="button" data-wallet-id="' + esc(m.id) + '">' + esc(m.name) + "</button>";
+    }).join("");
+  }
+
+  function connectWallet(id) {
+    if (!WALLET) { setBuyStatus("The wallet library did not load. Reload the page.", true); return; }
+    setBuyStatus("Opening " + id + "…", false);
+    WALLET.connect(id).then(function (accountId) {
+      walletState.connected = true;
+      walletState.accountId = accountId;
+      renderWallet();
+      var host = el("b-wallet-choices"); if (host) host.innerHTML = "";
+      setBuyStatus("Connected as " + accountId + ". You can buy cover below.", false, true);
+    }).catch(function (e) {
+      setBuyStatus("Could not connect: " + (e && e.message ? e.message : String(e)), true);
+    });
+  }
+
+  function disconnectWallet() {
+    if (!WALLET) return;
+    WALLET.disconnect().then(function () {
+      walletState.connected = false; walletState.accountId = null;
+      renderWallet();
+      setBuyStatus("Wallet disconnected.", false);
+    });
+  }
+
+  // One delegated listener handles both wallet slots and the picker buttons.
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (!t || !t.getAttribute) return;
+    if (t.getAttribute("data-wallet") === "connect") { ev.preventDefault(); walletPick(); }
+    else if (t.getAttribute("data-wallet") === "disconnect") { ev.preventDefault(); disconnectWallet(); }
+    else if (t.getAttribute("data-wallet-id")) { ev.preventDefault(); connectWallet(t.getAttribute("data-wallet-id")); }
+  });
+
+  if (WALLET) {
+    WALLET.subscribe(function (st) {
+      walletState.connected = !!st.connected;
+      walletState.accountId = st.accountId || null;
+      renderWallet();
+    });
+    WALLET.status && WALLET.setup && WALLET.setup().then(function () {
+      var st = WALLET.status();
+      walletState.connected = !!st.connected;
+      walletState.accountId = st.accountId || null;
+      renderWallet();
+    }).catch(function () {});
+  }
+
+  // ---------------------------------------------------------------- purchase
+
+  var buyState = { busy: false, result: null };
+
+  function setBuyStatus(msg, isErr, isOk) {
+    var s = el("b-status");
+    s.textContent = msg || "";
+    s.className = "buy-status" + (isErr ? " err" : isOk ? " ok" : "");
+  }
+
+  function updateBuyEnabled() {
+    var b = el("b-buy");
+    if (!b) return;
+    b.disabled = buyState.busy || !walletState.connected || !quoteState.selected;
+    b.textContent = buyState.busy ? "Waiting for your wallet…" : "Buy cover";
+  }
+
+  // The observation date defaults to the product's minimum lead plus one day, in
+  // UTC, and is re-clamped whenever the selected product changes.
+  function defaultObsDate(p) {
+    var lead = Number(p.min_lead_sec || 0);
+    var t = Date.now() + (lead + 24 * 3600) * 1000;
+    var d = new Date(t);
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
+  }
+
+  var ACCOUNT_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
+
+  function obsDateSec() {
+    var v = el("b-obsdate").value;
+    if (!v) return null;
+    var ms = new Date(v + ":00Z").getTime();
+    return isFinite(ms) ? Math.floor(ms / 1000) : null;
+  }
+
+  function showBuyResult(ok, html) {
+    var box = el("b-result");
+    box.hidden = false;
+    box.className = "buy-result" + (ok ? "" : " err");
+    box.innerHTML = html;
+  }
+
+  function doBuy() {
+    if (buyState.busy) return;
+    var p = quoteState.selected;
+    if (!p) { setBuyStatus("Choose a product to price first.", true); return; }
+    if (!WALLET || !walletState.connected) { setBuyStatus("Connect a wallet first.", true); return; }
+
+    var obs = obsDateSec();
+    if (obs === null) { setBuyStatus("Choose an observation date.", true); return; }
+    if (obs < Math.floor(Date.now() / 1000) + Number(p.min_lead_sec || 0)) {
+      setBuyStatus("The observation date must be at least " + p.min_lead_sec + "s in the future.", true);
+      return;
+    }
+    var ben = (el("b-beneficiary").value || "").trim();
+    if (ben && (!ACCOUNT_RE.test(ben) || ben.length > 64)) {
+      setBuyStatus("The beneficiary is not a valid NEAR account id.", true);
+      return;
+    }
+
+    buyState.busy = true;
+    el("b-result").hidden = true;
+    updateBuyEnabled();
+    setBuyStatus("Confirming the premium with the contract…", false);
+
+    var payoutStr = quoteState.payoutYocto.toString();
+    // Read the authoritative premium straight from the contract, then attach
+    // exactly that as the deposit. The contract rejects any other amount.
+    view("quote", { product_id: p.id, payout: payoutStr }).then(function (q) {
+      var premium = String(Array.isArray(q) ? q[0] : q);
+      if (big(premium) === null) throw new Error("the contract returned no premium");
+      setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
+      var args = { product_id: p.id, payout: payoutStr, obs_date: obs, beneficiary: ben || null };
+      return WALLET.signAndSend({
+        receiverId: CONTRACT,
+        actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
+      });
+    }).then(function (res) {
+      var failed = res && res.status && res.status.Failure;
+      var hash = (res && res.transaction_outcome && res.transaction_outcome.id) || (res && res.transaction && res.transaction.hash) || null;
+      if (failed) throw new Error("the contract refused the transaction");
+      if (!hash) throw new Error("the wallet returned no transaction hash");
+      // Success is claimed only from the wallet's own confirmed outcome.
+      setBuyStatus("Transaction confirmed.", false, true);
+      showBuyResult(true,
+        "<h4>Cover in force</h4>" +
+        "<p>The contract confirmed your <code>buy_cover</code> call. The policy now appears under “Policies written”, read back from the contract.</p>" +
+        '<p class="mono">' + esc(hash) + "</p>" +
+        '<p><a href="' + EXPLORER + "/txns/" + encodeURIComponent(hash) + '" target="_blank" rel="noopener">View the transaction on NEAR Blocks ↗</a></p>');
+      buyState.busy = false;
+      updateBuyEnabled();
+      tick();
+    }).catch(function (e) {
+      var m = e && e.message ? e.message : String(e);
+      setBuyStatus("Purchase not completed: " + m, true);
+      showBuyResult(false,
+        "<h4>No cover was bought</h4>" +
+        "<p>" + esc(m) + "</p>" +
+        "<p>Nothing was charged. If your wallet was declined, no transaction was sent at all.</p>");
+      buyState.busy = false;
+      updateBuyEnabled();
+    });
+  }
+
+  el("b-buy").addEventListener("click", doBuy);
+  el("q-product").addEventListener("change", function () {
+    if (quoteState.selected) el("b-obsdate").value = defaultObsDate(quoteState.selected);
+  });
+
+  // ---------------------------------------------------------------- agent console
+
+  // The console talks to an agent service the user runs themselves. It holds no
+  // key and signs nothing here: the service does, under the limits the user set.
+  var agentUI = { url: "", mode: "supervised", connected: false, status: null };
+
+  function agentUrl() {
+    return (el("a-url").value || "").trim().replace(/\/$/, "");
+  }
+
+  function agentReq(path, body) {
+    var url = agentUrl() + path;
+    return fetch(url, {
+      method: body ? "POST" : "GET",
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(function (res) {
+      return res.text().then(function (t) {
+        var j = {};
+        try { j = t ? JSON.parse(t) : {}; } catch (e) { j = { message: t }; }
+        if (!res.ok) {
+          var err = new Error(j.message || ("HTTP " + res.status));
+          err.reasons = j.reasons || [];
+          err.status = res.status;
+          throw err;
+        }
+        return j;
+      });
+    });
+  }
+
+  function setAgentStatus(msg, isErr, isOk) {
+    var s = el("a-status");
+    s.textContent = msg || "";
+    s.className = "buy-status" + (isErr ? " err" : isOk ? " ok" : "");
+  }
+
+  function renderAgentState(st) {
+    var box = el("a-state");
+    box.hidden = false;
+    var lim = st.limits || {};
+    var body =
+      row("Agent account", esc(st.accountId)) +
+      row("Contract", esc(st.contractId)) +
+      row("Balance", typeof st.balanceYocto === "string" ? esc(fmt(st.balanceYocto, 4) + " NEAR") : "uninitialised account") +
+      row("Enabled", st.enabled ? "yes" : "no") +
+      row("Dry run", st.dryRun ? "yes (never sends)" : "no (sends real transactions)") +
+      row("Max premium / policy", esc(fmt(lim.maxPremiumPerPolicy, 4) + " NEAR")) +
+      row("Max payout / policy", esc(fmt(lim.maxPayoutPerPolicy, 4) + " NEAR")) +
+      row("Daily premium budget", esc(fmt(lim.dailyPremiumBudget, 4) + " NEAR")) +
+      row("Daily policy limit", esc(String(lim.dailyPolicyLimit))) +
+      row("Cooldown", esc(String(lim.cooldownSec) + "s"));
+    // Preserve any verdict or result block the caller appended.
+    var keep = box.querySelector(".verdict");
+    box.innerHTML = body;
+    if (keep) box.appendChild(keep);
+  }
+  function row(k, v) {
+    return '<div class="row"><span class="k">' + esc(k) + '</span><span class="v">' + v + "</span></div>";
+  }
+
+  function renderAgentLog(entries) {
+    var box = el("a-log");
+    if (!entries || !entries.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = "<h4>Agent activity (from its audit log)</h4><ol>" + entries.slice().reverse().map(function (e) {
+      var cls = e.kind === "buy" ? "ok" : e.kind === "denied" || e.kind === "refused" || e.kind === "error" ? "deny" : "";
+      var t = (e.at || "").slice(11, 19);
+      var detail = e.kind === "buy" ? "bought " + e.productId + " for " + fmt(e.premiumYocto, 4) + " NEAR"
+        : e.kind === "denied" ? "refused: " + (e.reasons || []).join("; ")
+        : e.kind === "refused" ? "contract refused: " + e.error
+        : e.kind === "dry_run" ? "dry run: would buy " + e.productId
+        : e.kind === "control" ? "set enabled=" + e.enabled
+        : e.kind;
+      return '<li class="' + cls + '"><span class="t">' + esc(t) + "</span><span>" + esc(detail) + "</span></li>";
+    }).join("") + "</ol>";
+  }
+
+  function refreshAgent() {
+    return agentReq("/api/v1/agent").then(function (st) {
+      agentUI.status = st;
+      renderAgentState(st);
+      return agentReq("/api/v1/agent/audit").then(function (a) { renderAgentLog(a.entries); }).catch(function () {});
+    });
+  }
+
+  function agentPayout(productId) {
+    var p = quoteState.products.filter(function (x) { return x.id === productId; })[0];
+    var v = p ? big(p.max_payout) : null;
+    return v === null ? null : v.toString();
+  }
+
+  function agentObsDate(productId) {
+    var p = quoteState.products.filter(function (x) { return x.id === productId; })[0];
+    return p ? Math.floor(new Date(defaultObsDate(p) + ":00Z").getTime() / 1000) : null;
+  }
+
+  function renderAgentProducts() {
+    var sel = el("a-product");
+    if (!sel) return;
+    // Only canonical products, never the throwaway machine-generated ones.
+    var list = quoteState.products.filter(function (p) { return p.active !== false && !MACHINE_ID.test(p.id); });
+    var prev = sel.value;
+    sel.innerHTML = list.map(function (p) {
+      return '<option value="' + esc(p.id) + '">' + esc(cap(p.city)) + " — " + esc(p.id) + "</option>";
+    }).join("");
+    if (prev && list.some(function (p) { return p.id === prev; })) sel.value = prev;
+  }
+
+  function agentConnect() {
+    setAgentStatus("Connecting to " + agentUrl() + "…", false);
+    agentReq("/api/v1/health").then(function (h) {
+      agentUI.connected = true;
+      agentUI.url = agentUrl();
+      el("a-decide").disabled = false;
+      el("a-buy").disabled = false;
+      el("a-kill").disabled = false;
+      setAgentStatus("Connected to agent " + h.accountId + " (" + (h.dryRun ? "dry run" : "live") + ").", false, true);
+      return refreshAgent();
+    }).catch(function (e) {
+      agentUI.connected = false;
+      setAgentStatus("Could not reach an agent service at " + agentUrl() + ". " + (e && e.message ? e.message : ""), true);
+    });
+  }
+
+  function agentDecide() {
+    var pid = el("a-product").value;
+    var payout = agentPayout(pid);
+    var obs = agentObsDate(pid);
+    if (!payout) { setAgentStatus("Choose an agent product.", true); return; }
+    setAgentStatus("Asking the agent to decide…", false);
+    agentReq("/api/v1/agent/decide", { productId: pid, payoutYocto: payout, obsDateSec: obs }).then(function (d) {
+      var box = el("a-state");
+      box.hidden = false;
+      var badge = d.allow ? '<span class="badge allow">ALLOW</span>' : '<span class="badge deny">DENY</span>';
+      var detail = d.allow
+        ? "The agent may buy this cover: premium " + fmt(d.premiumYocto, 6) + " NEAR, payout " + fmt(payout, 2) + " NEAR."
+        : "The agent refuses this cover:" + "<ul>" + d.reasons.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
+      var v = document.createElement("div");
+      v.className = "verdict";
+      v.innerHTML = badge + "<div>" + detail + "</div>";
+      box.innerHTML = "";
+      box.appendChild(v);
+      renderAgentState(agentUI.status || {});
+      setAgentStatus(d.allow ? "Policy verdict: allow." : "Policy verdict: deny.", !d.allow, d.allow);
+      if (agentUI.mode === "autonomous" && d.allow) agentBuy();
+    }).catch(function (e) {
+      setAgentStatus("Decision failed: " + (e && e.message ? e.message : e), true);
+    });
+  }
+
+  function agentBuy() {
+    var pid = el("a-product").value;
+    var payout = agentPayout(pid);
+    var obs = agentObsDate(pid);
+    if (!payout) { setAgentStatus("Choose an agent product.", true); return; }
+    var idem = "ui-" + pid + "-" + obs + "-" + Math.floor(Date.now() / 1000);
+    setAgentStatus("Asking the agent to buy…", false);
+    agentReq("/api/v1/agent/buy", { productId: pid, payoutYocto: payout, obsDateSec: obs, idempotencyKey: idem }).then(function (r) {
+      if (r.dryRun) { setAgentStatus("Dry run: the agent would have bought, but sent nothing.", false, true); }
+      else if (r.hash) {
+        setAgentStatus("Agent bought cover.", false, true);
+        var box = el("a-state");
+        box.hidden = false;
+        var v = document.createElement("div");
+        v.className = "verdict";
+        v.innerHTML = '<span class="badge allow">BOUGHT</span><div>Premium ' + fmt(r.premiumYocto, 6) + ' NEAR.<br><span class="mono">' + esc(r.hash) + '</span><br><a href="' + EXPLORER + "/txns/" + encodeURIComponent(r.hash) + '" target="_blank" rel="noopener">View on NEAR Blocks ↗</a></div>';
+        box.appendChild(v);
+      } else { setAgentStatus("Agent returned an unexpected result.", true); }
+      return refreshAgent();
+    }).catch(function (e) {
+      var reasons = (e.reasons && e.reasons.length) ? " " + e.reasons.join("; ") : "";
+      setAgentStatus("Agent did not buy: " + (e && e.message ? e.message : e) + reasons, true);
+    });
+  }
+
+  function agentKill() {
+    agentReq("/api/v1/agent/control", { enabled: false }).then(function (r) {
+      setAgentStatus("Emergency stop engaged. The agent is disabled (enabled=" + r.enabled + ").", false, true);
+      return refreshAgent();
+    }).catch(function (e) {
+      setAgentStatus("Emergency stop failed: " + (e && e.message ? e.message : e), true);
+    });
+  }
+
+  function setAgentMode(mode) {
+    agentUI.mode = mode;
+    var btns = document.querySelectorAll(".mode-switch .btn-s");
+    for (var i = 0; i < btns.length; i++) btns[i].setAttribute("aria-pressed", btns[i].getAttribute("data-mode") === mode ? "true" : "false");
+    setAgentStatus(mode === "autonomous" ? "Autonomous: the agent will buy within limits when the policy allows." : "Supervised: the agent decides, and you press Buy.", false);
+  }
+
+  el("a-connect").addEventListener("click", agentConnect);
+  el("a-decide").addEventListener("click", agentDecide);
+  el("a-buy").addEventListener("click", agentBuy);
+  el("a-kill").addEventListener("click", agentKill);
+  (function () {
+    var btns = document.querySelectorAll(".mode-switch .btn-s");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener("click", function () { setAgentMode(this.getAttribute("data-mode")); });
+    }
+  })();
+
   // ---------------------------------------------------------------- quote
 
   var quoteState = { products: [], selected: null, payoutYocto: 0n };
@@ -1035,6 +1589,8 @@
     var id = sel.value || canonical[0].id;
     var p = canonical.filter(function (x) { return x.id === id; })[0] || canonical[0];
     quoteState.selected = p;
+    if (el("b-obsdate") && !el("b-obsdate").value) el("b-obsdate").value = defaultObsDate(p);
+    updateBuyEnabled();
 
     var min = big(p.min_payout) || 0n, max = big(p.max_payout) || 0n;
     if (quoteState.payoutYocto < min || quoteState.payoutYocto > max) quoteState.payoutYocto = max;
@@ -1160,6 +1716,7 @@
       el("observations").innerHTML = renderObservations(obs);
       quoteState.products = products;
       renderQuote();
+      renderAgentProducts();
 
       renderProof(cfg, acct, pool);
       state.busy = false;
@@ -1209,6 +1766,7 @@
   el("copy").addEventListener("click", function () { copyText(el("cmd").textContent, el("copied")); });
   el("copy-cid").addEventListener("click", function () { copyText(CONTRACT, el("copied-cid")); });
 
+  renderWallet();
   tick();
   setInterval(tick, 15000);
 })();

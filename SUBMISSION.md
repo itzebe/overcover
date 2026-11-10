@@ -5,7 +5,7 @@ verifiable, instant-paying cover against objective public indices, and lets anyo
 with guaranteed solvency.
 
 **Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
-**Live console:** https://itzebe.github.io/overcover/
+**Live console:** https://overcover.vercel.app/ · https://itzebe.github.io/overcover/
 **Deployed code hash:** `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`
 **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
 **X demo post:** see [`docs/DEMO_POST.md`](docs/DEMO_POST.md)
@@ -55,6 +55,13 @@ replaces them with three primitives:
 
 The result: a business buys cover, an index is observed, and a claim settles in **seconds** —
 deterministically, with no discretion and no queue.
+
+Two actors can drive that flow. A **person** connects their own NEAR wallet and signs a single
+`buy_cover` call — the console re-reads the premium from the contract and attaches exactly that, and
+never claims a policy was bought until the wallet confirms it. An **autonomous agent** runs the same
+contract from software: a hard, pre-set spending-limits engine gates every buy (a denial never
+reaches the network), so the agent can act on its own without ever exceeding the authority a human
+granted it.
 
 ## 3. Why this fits the tracks
 
@@ -132,7 +139,9 @@ All 18 hashes resolve on-chain via the `tx` RPC method.
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
 | Console regression + live RPC | `npm run test:console` | **29 passed, 0 failed** |
+| Agent limits + API | `npm run test:agent` | **27 passed, 0 failed** |
 | Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
+| Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **5 viewports, 0 console errors, dry-run agent round-trip OK** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
 | Console accessibility (axe-core, WCAG 2.2 AA) | manual | **0 violations at 360 / 390 / 768 / 1024 / 1440 px** |
 
@@ -155,4 +164,7 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
 - Demo window is 60 s (production 3600 s).
 - The demo pins the reported reading to the value the threshold was derived from, so the outcome
   is deterministic; the reading itself is a genuine Open-Meteo observation.
+- The **autonomous agent** is operated by the user, not hosted by Overcover, and ships in dry-run:
+  a public endpoint that signed with a funded key would let any visitor spend that balance. Its
+  rate limits and single-flight locks are **per-instance**, not a global distributed lock.
 - Testnet only; unaudited; not for real funds.

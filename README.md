@@ -1,6 +1,6 @@
 # OVERCOVER — programmable insurance for autonomous businesses
 
-> **Live console:** https://itzebe.github.io/overcover/
+> **Live console:** https://overcover.vercel.app/ · https://itzebe.github.io/overcover/
 > **Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
 > **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
 > **License:** MIT
@@ -57,12 +57,17 @@ it says how the settlement works.
    eight-step journey, each step naming the actor and the contract method behind it.
 4. **Cover available now** shows each product as a coverage card: the covered event, the trigger, the
    premium, the payout bounds, capacity and capacity left, with the parametric limitation stated.
-5. **Price a policy** quotes a live premium from the contract's own `quote` view and is explicit that
-   it is read-only.
+5. **Price a policy** quotes a live premium from the contract's own `quote` view, and **Buy this
+   cover with your own wallet** turns that quote into a real policy: the page re-reads the premium
+   from the contract, attaches exactly that as the deposit, and your wallet signs a single
+   `buy_cover` call. Overcover never sees your key; if you decline, nothing happens.
 6. **Can the pool pay what it has promised?** is the live pool with an insurance framing, then
    **Policies written** and **Observations & disputes** — including a **nullified** reading that was
    successfully challenged on-chain.
-7. **How this differs from a traditional claim** states the honest comparison and the required
+7. **An autonomous agent can buy cover too** runs the same contract driven by software: connect a
+   local agent service (see [`agent/README.md`](agent/README.md)), watch it decide against hard
+   spending limits, and let it buy within those limits — supervised or autonomous.
+8. **How this differs from a traditional claim** states the honest comparison and the required
    disclosures; **Check it for yourself** lets you reproduce every figure.
 
 ```bash
@@ -124,6 +129,20 @@ It reads honestly: a failed read shows a **stale** warning with the time of the 
 **no data** state — never a stale number presented as live. Any contract can be inspected with
 `?contract=<id>`; the default is `contract.attestor-overcover.testnet`.
 
+## Buying cover with a wallet, and the autonomous agent
+
+`ui/wallet.js` (bundled to `ui/vendor/wallet-bundle.js` by `npm run build:wallet`) is the only code
+that touches a NEAR wallet. It holds **no private key**: it asks the user's wallet extension
+(HERE, Meteor, MyNearWallet) to sign one `buy_cover` call with the contract's own premium attached.
+The console reports a policy as bought only from the wallet's confirmed outcome (it inspects
+`status.Failure` and requires a real transaction hash), never optimistically.
+
+`agent/` is a dependency-free autonomous agent: a pure spending-limits policy engine
+(`limits.mjs`), the agent core (`agent.mjs`), and a small HTTP API (`server.mjs`). The agent's key
+lives in the operator's environment and is never in the browser or this repository. It ships in
+**dry-run by default** — it decides and reports, but sends nothing. A denied decision never reaches
+the network, so no funds move on a refusal. See [`agent/README.md`](agent/README.md).
+
 ## Run it
 
 ```bash
@@ -149,8 +168,14 @@ npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
 npm run test:console    # 29 regression + live-RPC tests          (browser console)
+npm run test:agent      # 27 limits + API tests                   (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 ```
+
+`npm run test:agent` covers the spending-limits policy engine (a denied buy never touches the
+network) and the agent HTTP API (strict field validation, `413` on oversized bodies, idempotent
+retries). `npm run ui:qa` is an optional Playwright check of the console at 320–1440 px, including a
+live dry-run agent round-trip; it needs a Chromium and is not part of `npm test`.
 
 `npm run test:onchain` sends real attacks to the deployed contract and asserts each is **refused
 with the expected reason** — capacity, premium, lead time, signature, replay, staleness, bond,
@@ -191,17 +216,25 @@ Full detail, including the trust boundary and residual risks, in [`docs/SECURITY
   outcome is deterministic. The reading is genuine; it is pinned, not fabricated.
 - The live contract carries **17 products**, of which 2 are the canonical named products and 15 are
   demo-generated test rows. The console groups the latter so the real cover stays legible.
+- The **autonomous agent** ships in dry-run and is run by the operator, not hosted by Overcover: a
+  public endpoint that signed with a funded key would let any visitor spend that balance. The
+  console's agent panel therefore expects a service you start yourself.
+- **Rate limits and single-flight locks in the agent service are per-instance**, not global across
+  processes. They reduce accidental double-spends; they are not a distributed lock.
 - Testnet only. No audit. Not for real funds.
 
 ## Deploy
 
-The console is a single static file with no build step, published to **GitHub Pages** from the
-`gh-pages` branch by [`.github/workflows/pages.yml`](.github/workflows/pages.yml). The workflow
-copies `ui/` to the branch root with a `.nojekyll` marker; the site is
-https://itzebe.github.io/overcover/. Any static host works equally well.
+The console is a single static file with no build step, published two ways:
+
+- **Vercel** (Hobby plan, free) from the repository root, `outputDirectory: ui` — the production
+  console is https://overcover.vercel.app/. See [`vercel.json`](vercel.json).
+- **GitHub Pages** from the `gh-pages` branch by
+  [`.github/workflows/pages.yml`](.github/workflows/pages.yml) — https://itzebe.github.io/overcover/.
 
 Reads go straight from the browser to public NEAR testnet RPC endpoints — there is no backend and
-no secret in the bundle.
+no secret in the bundle. The agent service is not deployed publicly; run it locally (see
+[`agent/README.md`](agent/README.md)).
 
 ## Documentation
 

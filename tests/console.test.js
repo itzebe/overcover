@@ -256,9 +256,12 @@ test("product cards read as coverage, with the trigger and honest limitations", 
 test("the quote is real, read-only, and never fakes a purchase", () => {
   assert.ok(SCRIPT.includes('view("quote"'), "the quote must be confirmed by the contract");
   assert.ok(/read-only quote/i.test(HTML), "the quote must say it is read-only");
-  assert.ok(/cannot buy cover for you/.test(HTML), "the page must say it cannot purchase");
-  assert.ok(!/policy is active|purchased|bought successfully|policy_issued/i.test(SCRIPT),
-    "the page must never imply a policy was bought");
+  assert.ok(/holds no key/.test(HTML), "the page must say it holds no key");
+  // A policy is reported as bought only from the wallet's own confirmed outcome,
+  // never optimistically. The success path must check status.Failure first.
+  assert.ok(/status\.Failure/.test(SCRIPT), "the buy path must inspect the transaction outcome for failure");
+  assert.ok(/the wallet returned no transaction hash/.test(SCRIPT), "success requires a real hash");
+  assert.ok(!/policy_issued/i.test(SCRIPT), "the page must never invent a contract event name");
 });
 
 test("the pool is framed as the ability to honour obligations", () => {

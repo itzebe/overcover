@@ -3,6 +3,27 @@
 > **Live on NEAR testnet:** `contract.attestor-overcover.testnet`
 > **Console:** `ui/index.html` — deployable as a static site (see [Deploy](#deploy))
 > **Tracks:** Business · Swarms · DeFi
+> **License:** MIT
+
+## Try it in 60 seconds
+
+Do this, see that — no install, no keys, no account:
+
+1. **Open the console.** It reads the live contract directly from your browser over public NEAR
+   testnet RPC. You should see `Capital backing cover` and `Payouts promised` with real numbers, and
+   two green invariants: `reserved ≤ capital` and `reconcile`.
+2. **Read the "Why the promise holds" strip.** Three rules — immutable products, reserved payout,
+   challengeable oracle — each enforced in the contract.
+3. **Scroll to Products / Policies / Observations.** Real rows read from the contract, including a
+   **nullified** observation that was successfully challenged on-chain.
+4. **Open the Proof panel.** Copy the `curl` command and run it in a terminal: you get the same pool
+   JSON the page rendered. Every figure on screen is reproducible without trusting the page.
+
+```bash
+# the whole product is one view call — this is the same read the console makes
+curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"contract.attestor-overcover.testnet","method_name":"get_pool","args_base64":"e30="}}'
+```
 
 ## The problem
 
@@ -103,14 +124,45 @@ python3 -m http.server 12000 --directory ui   # then open http://localhost:12000
 ## Verify it
 
 ```bash
+npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:onchain    # 17 adversarial tests against the LIVE contract
+npm run test:console    # 12 regression + live-RPC tests          (browser console)
+npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 ```
 
 `npm run test:onchain` sends real attacks to the deployed contract and asserts each one is
 **refused with the expected reason** — capacity, premium, lead time, signature, replay, staleness,
 bond, challenge window, ownership, provider share. It requires a fresh `npm run deploy` first.
+
+## Verification evidence
+
+Everything below is independently checkable. Nothing here is asserted on trust.
+
+| Claim | How to check |
+| --- | --- |
+| Deployed bytecode matches this source | `cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the code the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. |
+| The pool is solvent right now | `get_pool` returns `reserved ≤ capital` and `solvent: true`; `reconcile` returns `true`. |
+| Every demo transaction is real | `demo-log.json` holds 18 hashes; each resolves via `tx` RPC and on `testnet.nearblocks.io`. |
+| The oracle is challengeable, both ways | The log includes `challenge` + `resolve_dispute:true` (report upheld, bond forfeited) **and** `resolve_dispute:false` (report nullified, bond returned). |
+
+## Judging demo — 60 seconds
+
+The first ten seconds state the problem and show the product working; the rest explains why the
+approach is defensible. Open the console and follow top to bottom.
+
+1. **0–10s — the problem and the product.** "An autonomous business can buy, sell and move money,
+   but it cannot buy insurance — underwriting needs a legal person and a claims queue measured in
+   weeks." The console is already showing a live pool with real capital.
+2. **10–25s — the pool is provable.** Point at `Capital backing cover`, `Payouts promised` and the
+   two green invariants. "This is not a claim on a slide; it is contract state, and the page reads
+   it with no server in between."
+3. **25–40s — how the promise holds.** Walk the three rules: risk is published and immutable; the
+   payout is reserved at purchase; the oracle's word is challengeable with a bond.
+4. **40–55s — the real thing.** Scroll to Policies and Observations. Show a settled payout and a
+   **nullified** observation — a reading that was successfully challenged on-chain.
+5. **55–60s — close on proof.** Open the Proof panel, copy the `curl`, run it: the terminal returns
+   the same numbers the page shows. "Don't trust the page. Reproduce it."
 
 ## Deploy
 

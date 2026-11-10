@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Rust with wasm target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Node dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Contract unit tests
+        run: npm run test:contract
+
+      - name: Reference model attacks
+        run: npm run test:model
+
+      - name: Console regression tests
+        run: npm run test:console
+
+      - name: Build the contract to wasm
+        run: cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
+
+      - name: Fail if a secret is tracked
+        run: |
+          if git ls-files | grep -E '(^|/)(identities|state)\.json$|(^|/)keys/'; then
+            echo "secret or key material is tracked"; exit 1
+          fi
+          if git grep -nIE 'ed25519:[0-9A-Za-z]{40,}|BEGIN [A-Z ]*PRIVATE KEY' -- .; then
+            echo "a private key was committed"; exit 1
+          fi
+          echo "no secrets tracked"

@@ -9,8 +9,9 @@
     "demo": "node driver/demo.js",
     "test:contract": "cargo +stable test --manifest-path contract/Cargo.toml",
     "test:model": "node research/model/attacks.mjs",
+    "test:console": "node --test tests/console.test.js",
     "test:onchain": "node --test tests/*.test.js",
-    "test": "npm run test:model && npm run test:contract"
+    "test": "npm run test:model && npm run test:contract && npm run test:console"
   },
   "dependencies": {
     "near-api-js": "^5.1.1"

@@ -3,214 +3,549 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Overcover — mutual console</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230e1116'/%3E%3Cpath d='M16 5l9 4v7c0 6-4 9-9 11-5-2-9-5-9-11V9z' fill='none' stroke='%23e0954a' stroke-width='2'/%3E%3C/svg%3E" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="Overcover — an on-chain parametric risk mutual on NEAR. Pool solvency, immutable risk products and a bonded oracle, read directly from NEAR testnet with no server in between." />
+<title>Overcover — parametric risk mutual</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d1117'/%3E%3Cpath d='M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z' fill='none' stroke='%23e6a15a' stroke-width='2'/%3E%3C/svg%3E" />
 <style>
   :root {
-    --bg: #0e1116; --panel: #161b23; --line: #262d38; --ink: #e8edf4; --muted: #8b97a8;
-    --accent: #e0954a; --good: #57b47f; --bad: #d76b6b;
-    --mono: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
-    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --bg: #0d1117; --surface: #141a22; --surface-2: #19212b;
+    --line: #232c38; --line-strong: #33404f;
+    --ink: #e9eef6; --ink-2: #c3ccd9; --muted: #96a4b8;
+    --accent: #e6a15a; --accent-dim: #3a2c1c;
+    --good: #57b47f; --good-dim: #1d3327;
+    --bad: #e07a7a; --bad-dim: #3a2222;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    --maxw: 1120px; --r: 10px;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
-  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
-  header { border-bottom: 1px solid var(--line); padding: 18px 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; }
-  .brand { font-size: 20px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; }
-  .brand small { display: block; font-size: 11px; letter-spacing: .08em; color: var(--muted); text-transform: none; margin-top: 3px; }
-  .conn { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
-  .dot.ok { background: var(--good); } .dot.bad { background: var(--bad); }
-  main { max-width: 1180px; margin: 0 auto; padding: 24px; display: grid; gap: 22px; }
-  /* grid items default to min-width:auto; without this a wide table stretches the page */
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .skip { position: absolute; left: -9999px; top: 0; background: var(--accent); color: #12100c; padding: 10px 14px; z-index: 10; font-weight: 600; }
+  .skip:focus { left: 12px; top: 12px; }
+  .masthead {
+    border-bottom: 1px solid var(--line); padding: 20px 24px;
+    display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start; justify-content: space-between;
+    max-width: var(--maxw); margin: 0 auto;
+  }
+  .mast-left { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+  .mark { flex: none; width: 34px; height: 34px; margin-top: 2px; }
+  .wordmark { font-size: 19px; font-weight: 620; letter-spacing: -.01em; margin: 0; line-height: 1.2; }
+  .positioning { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; max-width: 46ch; }
+  .mast-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--good); box-shadow: 0 0 0 3px var(--good-dim); }
+  .dot.bad { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-dim); }
+  .dot.wait { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+  .btn { font: inherit; font-size: 13px; font-weight: 560; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 13px; cursor: pointer; min-height: 34px; }
+  .btn:hover { border-color: var(--muted); background: #1f2937; }
+  .btn:active { transform: translateY(1px); }
+  .btn[disabled] { opacity: .5; cursor: default; }
+  main { max-width: var(--maxw); margin: 0 auto; padding: 28px 24px 8px; display: grid; gap: 34px; }
   main > section { min-width: 0; }
-  section h2 { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
-  .stat .k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  .stat .v { font-family: var(--mono); font-size: 22px; margin-top: 6px; }
-  .stat .v.good { color: var(--good); } .stat .v.bad { color: var(--bad); } .stat .v.accent { color: var(--accent); }
-  .stat .u { font-size: 12px; color: var(--muted); margin-left: 4px; }
-  .bar { height: 34px; background: #1b222c; border: 1px solid var(--line); border-radius: 4px; position: relative; overflow: hidden; margin-top: 10px; }
-  .bar .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #2f6b4c, var(--good)); transition: width .5s ease; }
-  .bar .fill.over { background: var(--bad); }
-  .bar .lbl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; }
-  .invariant { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-family: var(--mono); font-size: 12px; }
-  .invariant .pill { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); }
-  .invariant .pill.good { color: var(--good); border-color: #2f6b4c; }
-  .invariant .pill.bad { color: var(--bad); border-color: #6b3030; }
-  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
-  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
-  th { color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-  td.num, th.num { text-align: right; }
-  .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
-  .tag.active { color: var(--good); border-color: #2f6b4c; }
-  .tag.settled_paid { color: var(--accent); border-color: #6b532f; }
+  .sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  h2 { font-size: 12px; font-weight: 620; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .sect-note { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .lead { display: grid; gap: 22px; }
+  .lede { font-size: clamp(21px, 3.6vw, 29px); line-height: 1.25; letter-spacing: -.015em; margin: 0; font-weight: 560; max-width: 32ch; }
+  .lede b { color: var(--accent); font-weight: 620; }
+  .solvency { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; display: grid; gap: 18px; }
+  .ratio-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 22px; }
+  .ratio { display: flex; align-items: baseline; gap: 8px; }
+  .ratio .n { font-family: var(--mono); font-size: clamp(30px, 6vw, 42px); font-weight: 560; letter-spacing: -.02em; line-height: 1; }
+  .ratio .n.accent { color: var(--accent); }
+  .ratio .u { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .ratio .k { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
+  .ratio-sep { font-family: var(--mono); font-size: 26px; color: var(--line-strong); padding-bottom: 2px; }
+  .coverage { display: grid; gap: 8px; }
+  .bar { height: 12px; background: #10161d; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; position: relative; }
+  .bar .fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #2c5f45, var(--good)); transition: width .55s cubic-bezier(.22,.61,.36,1); }
+  .bar .fill.over { background: linear-gradient(90deg, #7a3a3a, var(--bad)); }
+  .bar-cap { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .invariants { display: grid; gap: 10px; }
+  .inv { display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: start; border-top: 1px solid var(--line); padding-top: 10px; }
+  .inv:first-child { border-top: 0; padding-top: 0; }
+  .inv .glyph { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; flex: none; }
+  .inv.ok .glyph { background: var(--good-dim); color: var(--good); }
+  .inv.no .glyph { background: var(--bad-dim); color: var(--bad); }
+  .inv .name { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+  .inv .desc { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .inv .val { font-family: var(--mono); font-size: 12px; margin-left: 6px; }
+  .inv.ok .val { color: var(--good); }
+  .inv.no .val { color: var(--bad); }
+  .mech { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .mech > div { background: var(--surface); padding: 15px 18px; }
+  .mech .t { font-size: 13.5px; font-weight: 600; margin: 0 0 3px; }
+  .mech .d { margin: 0; font-size: 13px; color: var(--muted); max-width: 74ch; }
+  @media (min-width: 760px) { .mech { grid-template-columns: repeat(3, 1fr); } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; min-width: 640px; }
+  caption { text-align: left; padding: 0; position: absolute; left: -9999px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  th { color: var(--muted); font-weight: 560; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; background: var(--surface-2); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: #172029; }
+  .id { color: var(--ink); }
+  .sub { color: var(--muted); }
+  .acct { font-size: 12px; }
+  .tag { font-size: 11px; font-family: var(--sans); font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-2); white-space: nowrap; display: inline-block; }
+  .tag.active, .tag.signed { color: var(--good); border-color: #2f6b4c; background: var(--good-dim); }
+  .tag.settled_paid { color: var(--accent); border-color: #6b532f; background: var(--accent-dim); }
   .tag.settled_no_pay { color: var(--muted); }
-  .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 14px 0; }
-  /* tables scroll inside their panel, never the page */
-  #products, #policies, #observations { overflow-x: auto; }
-  table { min-width: 520px; }
-  footer { max-width: 1180px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-family: var(--mono); font-size: 11px; }
-  .err { color: var(--bad); font-family: var(--mono); font-size: 12px; }
+  .tag.challenged { color: var(--bad); border-color: #6b3030; background: var(--bad-dim); }
+  .tag.nullified { color: var(--muted); text-decoration: line-through; }
+  .tag.paused { color: var(--bad); border-color: #6b3030; background: var(--bad-dim); }
+  .meter { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .meter .track { width: 54px; height: 6px; background: #10161d; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .meter .m-fill { height: 100%; background: var(--accent); }
+  .meter .pct { font-size: 12px; color: var(--muted); }
+  .empty { padding: 26px 18px; color: var(--muted); font-size: 13.5px; }
+  .empty .e-t { color: var(--ink-2); font-weight: 560; display: block; margin-bottom: 3px; }
+  .skel { padding: 14px; display: grid; gap: 10px; }
+  .skel i { display: block; height: 12px; border-radius: 4px; background: linear-gradient(90deg, #1a222c, #222c38, #1a222c); background-size: 200% 100%; animation: sh 1.3s linear infinite; }
+  .skel i:nth-child(2) { width: 82%; } .skel i:nth-child(3) { width: 64%; }
+  @keyframes sh { to { background-position: -200% 0; } }
+  .proof { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .proof > div { background: var(--surface); padding: 16px 18px; }
+  .proof .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  .proof .val { font-family: var(--mono); font-size: 12.5px; word-break: break-all; margin: 0; color: var(--ink-2); }
+  #cid { display: inline-block; padding: 5px 0; }
+  .proof .eq { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); margin: 0; overflow-x: auto; white-space: nowrap; }
+  @media (min-width: 760px) { .proof { grid-template-columns: 1fr 1fr; } }
+  .copy-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  code.cmd { font-family: var(--mono); font-size: 12px; background: #10161d; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; color: var(--ink-2); overflow-x: auto; max-width: 100%; display: block; white-space: pre; }
+  .copied { color: var(--good); font-size: 12px; }
+  .banner { border: 1px solid #6b3030; background: var(--bad-dim); border-radius: var(--r); padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .banner .bt { font-weight: 600; margin: 0 0 2px; }
+  .banner .bd { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .banner code { font-family: var(--mono); font-size: 12.5px; color: var(--bad); word-break: break-all; }
+  footer { max-width: var(--maxw); margin: 0 auto; padding: 26px 24px 46px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; }
+  footer .f-l { max-width: 62ch; }
+  .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
 </head>
 <body>
-<header>
-  <div class="brand">Overcover<small>autonomous parametric risk mutual · NEAR testnet</small></div>
-  <div class="conn"><span id="dot" class="dot"></span><span id="conn">connecting…</span></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="mast-left">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect width="32" height="32" rx="7" fill="#141a22" stroke="#232c38"/>
+      <path d="M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z" fill="none" stroke="#e6a15a" stroke-width="2"/>
+    </svg>
+    <div>
+      <h1 class="wordmark">Overcover</h1>
+      <p class="positioning">Parametric risk cover for autonomous businesses — priced, written and settled on NEAR, with no underwriter and no claims queue.</p>
+    </div>
+  </div>
+  <div class="mast-right">
+    <span class="chip"><span id="dot" class="dot wait"></span><span id="netlabel">connecting…</span></span>
+    <button id="refresh" class="btn" type="button">Refresh</button>
+  </div>
 </header>
-<main>
-  <section>
-    <h2>Pool solvency</h2>
-    <div class="grid">
-      <div class="stat"><div class="k">Capital</div><div class="v accent"><span id="capital">—</span><span class="u">NEAR</span></div></div>
-      <div class="stat"><div class="k">Reserved (promised)</div><div class="v"><span id="reserved">—</span><span class="u">NEAR</span></div></div>
-      <div class="stat"><div class="k">Available</div><div class="v"><span id="available">—</span><span class="u">NEAR</span></div></div>
-      <div class="stat"><div class="k">Premiums collected</div><div class="v"><span id="premiums">—</span><span class="u">NEAR</span></div></div>
-      <div class="stat"><div class="k">Paid out</div><div class="v"><span id="paid">—</span><span class="u">NEAR</span></div></div>
-      <div class="stat"><div class="k">Policies</div><div class="v"><span id="npol">—</span></div></div>
+
+<main id="main">
+  <section class="lead" aria-labelledby="lead-h">
+    <h2 id="lead-h" class="sr">Pool solvency</h2>
+    <p class="lede" id="lede">Reading live pool state from NEAR testnet…</p>
+
+    <div class="solvency">
+      <div class="ratio-row">
+        <div class="ratio">
+          <span class="k">Capital backing cover</span>
+          <span class="n accent" id="capital">—</span><span class="u">NEAR</span>
+        </div>
+        <span class="ratio-sep" aria-hidden="true">·</span>
+        <div class="ratio">
+          <span class="k">Payouts promised</span>
+          <span class="n" id="reserved">—</span><span class="u">NEAR</span>
+        </div>
+      </div>
+
+      <div class="coverage">
+        <div class="bar" role="img" aria-labelledby="barlbl">
+          <div id="fill" class="fill" style="width:0%"></div>
+        </div>
+        <div class="bar-cap">
+          <span id="barlbl">reserved 0% of capital</span>
+          <span id="available-cap">available —</span>
+        </div>
+      </div>
+
+      <div class="invariants">
+        <div class="inv ok" id="inv-solvent">
+          <span class="glyph" id="inv-solvent-g" aria-hidden="true">?</span>
+          <div>
+            <div class="name">reserved ≤ capital <span class="val" id="inv-solvent-v">…</span></div>
+            <p class="desc">Every payout promised is fully backed by capital already in the pool.</p>
+          </div>
+        </div>
+        <div class="inv ok" id="inv-recon">
+          <span class="glyph" id="inv-recon-g" aria-hidden="true">?</span>
+          <div>
+            <div class="name">reconcile <span class="val" id="inv-recon-v">…</span></div>
+            <p class="desc">capital = deposits − withdrawals + premiums + forfeited bonds − payouts.</p>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="bar"><div id="fill" class="fill" style="width:0%"></div><div class="lbl" id="barlbl">reserved 0% of capital</div></div>
-    <div class="invariant">
-      <span id="pill-solvent" class="pill">reserved ≤ capital</span>
-      <span id="pill-recon" class="pill">reconcile</span>
+  </section>
+
+  <section aria-labelledby="mech-h">
+    <div class="sect-head">
+      <h2 id="mech-h">Why the promise holds</h2>
+      <p class="sect-note">Three rules enforced in the contract, not in a policy document.</p>
+    </div>
+    <div class="mech">
+      <div>
+        <p class="t">Risk is published, not negotiated</p>
+        <p class="d">A product fixes the index, the trigger, the premium, the payout bounds and a capacity cap. Once published it cannot change, so a buyer cannot re-price cover after the fact.</p>
+      </div>
+      <div>
+        <p class="t">Payout is reserved at purchase</p>
+        <p class="d">Buying cover locks the payout out of the pool immediately. The solvency invariant is re-checked after every mutation, so the pool can never promise more than it holds.</p>
+      </div>
+      <div>
+        <p class="t">The oracle's word is challengeable</p>
+        <p class="d">Readings are ed25519-signed and verified on-chain. Anyone can dispute one by posting a bond; the loser's bond is forfeited into the pool.</p>
+      </div>
     </div>
   </section>
 
-  <section>
-    <h2>Products — immutable risk definitions</h2>
-    <div id="products"><div class="empty">loading…</div></div>
+  <section aria-labelledby="prod-h">
+    <div class="sect-head">
+      <h2 id="prod-h">Products</h2>
+      <p class="sect-note">Immutable risk definitions. Capacity is a hard cap.</p>
+    </div>
+    <div class="panel" id="products">
+      <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="sr">Loading products…</p>
+    </div>
   </section>
 
-  <section>
-    <h2>Policies — cover written</h2>
-    <div id="policies"><div class="empty">loading…</div></div>
+  <section aria-labelledby="pol-h">
+    <div class="sect-head">
+      <h2 id="pol-h">Policies</h2>
+      <p class="sect-note">Cover written. Status and payout are read from the contract.</p>
+    </div>
+    <div class="panel" id="policies">
+      <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="sr">Loading policies…</p>
+    </div>
   </section>
 
-  <section>
-    <h2>Observations — signed index reports</h2>
-    <div id="observations"><div class="empty">no observations yet</div></div>
+  <section aria-labelledby="obs-h">
+    <div class="sect-head">
+      <h2 id="obs-h">Observations</h2>
+      <p class="sect-note">Signed index reports, including any that were successfully challenged.</p>
+    </div>
+    <div class="panel" id="observations">
+      <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="sr">Loading observations…</p>
+    </div>
   </section>
+
+  <section aria-labelledby="proof-h">
+    <div class="sect-head">
+      <h2 id="proof-h">Proof</h2>
+      <p class="sect-note">Everything above is a direct read. Reproduce it without trusting this page.</p>
+    </div>
+    <div class="proof">
+      <div>
+        <p class="lbl">Contract · NEAR testnet</p>
+        <p class="val"><a id="cid" href="#" rel="noopener">—</a></p>
+        <p class="lbl" style="margin-top:14px">Deployed code hash</p>
+        <p class="val" id="codehash">—</p>
+        <p class="lbl" style="margin-top:14px">Attestor &amp; dispute bond</p>
+        <p class="val" id="attestor">—</p>
+      </div>
+      <div>
+        <p class="lbl">Reconciliation, computed on-chain</p>
+        <p class="eq" id="eq" tabindex="0" role="region" aria-label="Reconciliation, computed on-chain">—</p>
+        <p class="lbl" style="margin-top:14px">Reproduce these figures yourself</p>
+        <code class="cmd" id="cmd">…</code>
+        <div class="copy-row">
+          <button class="btn" id="copy" type="button">Copy command</button>
+          <span id="copied" class="copied" role="status"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="error-slot"></div>
 </main>
+
 <footer>
-  Contract <span id="cid">—</span> · reads are direct RPC calls to NEAR testnet · no server, no keys in the browser.
+  <div class="f-l">
+    Reads are direct JSON-RPC calls from your browser to public NEAR testnet endpoints.
+    There is no server, no API key and no private key in this page. Testnet only — not for real funds.
+  </div>
+  <div>Overcover · NEAR Hackathon 2026</div>
 </footer>
 
 <script>
-const RPC = [
-  "https://test.rpc.fastnear.com",
-  "https://rpc.testnet.fastnear.com",
-  "https://near-testnet.drpc.org",
-];
-const CONTRACT = new URLSearchParams(location.search).get("contract") || "contract.attestor-overcover.testnet";
-document.getElementById("cid").textContent = CONTRACT;
+(function () {
+  "use strict";
 
-const YOCTO = 1e24;
-const near = (y) => Number(BigInt(y)) / YOCTO;
-const fmt = (y, d = 4) => near(y).toFixed(d);
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  // Public, CORS-enabled NEAR testnet endpoints. rpc.testnet.near.org is deliberately
+  // absent: it is deprecated and blocks browser requests via CORS.
+  var RPC = [
+    "https://test.rpc.fastnear.com",
+    "https://rpc.testnet.fastnear.com",
+    "https://near-testnet.drpc.org",
+  ];
+  var DEFAULT_CONTRACT = "contract.attestor-overcover.testnet";
+  var CONTRACT = new URLSearchParams(location.search).get("contract") || DEFAULT_CONTRACT;
+  var EXPLORER = "https://testnet.nearblocks.io";
 
-// NEAR RPC returns call_function output either as a byte array (most nodes) or as
-// a base64 string; handle both so a single endpoint change cannot blank the console.
-function decode(result) {
-  const bytes = Array.isArray(result)
-    ? Uint8Array.from(result)
-    : Uint8Array.from(atob(result), (c) => c.charCodeAt(0));
-  return JSON.parse(new TextDecoder().decode(bytes));
-}
+  var YOCTO = 1e24;
+  var el = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  var near = function (y) { try { return Number(BigInt(y)) / YOCTO; } catch (e) { return NaN; } };
+  var fmt = function (y, d) { var v = near(y); return isFinite(v) ? v.toFixed(d === undefined ? 4 : d) : "—"; };
+  var pct = function (a, b) { var n = near(a), d = near(b); return d > 0 ? (n / d) * 100 : 0; };
+  var mm = function (t) { return (Number(t) / 10).toFixed(1) + " mm"; };
+  var utc = function (s) { return new Date(Number(s) * 1000).toISOString().slice(0, 16).replace("T", " "); };
+  var shortAcct = function (a) { a = String(a || ""); return a.length > 26 ? a.slice(0, 12) + "…" + a.slice(-9) : a; };
 
-async function view(method, args = {}) {
-  const args_b64 = btoa(JSON.stringify(args));
-  let lastErr;
-  for (const url of RPC) {
-    try {
-      const res = await fetch(url, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: "1", method: "query",
-          params: { request_type: "call_function", finality: "final",
-            account_id: CONTRACT, method_name: method, args_base64: args_b64 } }),
+  // A NEAR RPC returns call_function output as a byte array on most nodes and as a
+  // base64 string on others. Accepting only one shape blanked the whole page, so both
+  // are handled and anything else is a hard error rather than a silent blank.
+  function decode(result) {
+    var bytes;
+    if (Array.isArray(result)) bytes = Uint8Array.from(result);
+    else if (typeof result === "string") bytes = Uint8Array.from(atob(result), function (c) { return c.charCodeAt(0); });
+    else throw new Error("unexpected RPC result shape");
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  function post(url, params) {
+    return fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: "overcover", method: "query", params: params }),
+    }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }).then(function (j) {
+      if (j.error) throw new Error((j.error.cause && j.error.cause.name) || j.error.message || "RPC error");
+      if (!j.result) throw new Error("no result");
+      return j.result;
+    });
+  }
+
+  function withFailover(fn) {
+    var i = 0;
+    function attempt() {
+      if (i >= RPC.length) return Promise.reject(new Error("all RPC endpoints failed"));
+      return fn(RPC[i++]).catch(attempt);
+    }
+    return attempt();
+  }
+
+  function view(method, args) {
+    return withFailover(function (url) {
+      return post(url, {
+        request_type: "call_function", finality: "final",
+        account_id: CONTRACT, method_name: method,
+        args_base64: btoa(JSON.stringify(args || {})),
+      }).then(function (r) {
+        if (r.result === undefined) throw new Error("no result");
+        return decode(r.result);
       });
-      const j = await res.json();
-      if (j.error) throw new Error(j.error.cause?.name || j.error.message);
-      if (j.result?.result === undefined) throw new Error("no result");
-      return decode(j.result.result);
-    } catch (e) { lastErr = e; }
+    });
   }
-  throw lastErr;
-}
 
-function productRows(products) {
-  if (!products.length) return '<div class="empty">no products published</div>';
-  return `<table><thead><tr><th>id</th><th>index</th><th class="num">trigger</th><th class="num">premium</th><th class="num">max payout</th><th class="num">reserved / cap</th></tr></thead><tbody>` +
-    products.map((p) => `<tr><td>${esc(p.id)}</td><td>${esc(p.city)}</td>
-      <td class="num">${(p.threshold_tenths / 10).toFixed(1)} mm</td>
-      <td class="num">${(p.premium_bp / 100).toFixed(2)}%</td>
-      <td class="num">${fmt(p.max_payout)}</td>
-      <td class="num">${fmt(p.reserved)} / ${fmt(p.max_total_coverage)}</td></tr>`).join("") + "</tbody></table>";
-}
+  function accountState() {
+    return withFailover(function (url) {
+      return post(url, { request_type: "view_account", finality: "final", account_id: CONTRACT })
+        .then(function (r) { return { code_hash: r.code_hash, amount: r.amount }; });
+    });
+  }
 
-function policyRows(policies) {
-  if (!policies.length) return '<div class="empty">no cover written</div>';
-  return `<table><thead><tr><th>#</th><th>product</th><th class="num">payout</th><th class="num">premium</th><th>beneficiary</th><th>status</th></tr></thead><tbody>` +
-    policies.map((p) => `<tr><td>#${p.id}</td><td>${esc(p.product_id)}</td>
-      <td class="num">${fmt(p.payout)}</td><td class="num">${fmt(p.premium)}</td>
-      <td>${esc(String(p.beneficiary || p.buyer || "").slice(0, 22))}</td>
-      <td><span class="tag ${esc(p.status)}">${esc(p.status)}</span></td></tr>`).join("") + "</tbody></table>";
-}
+  function renderProducts(list) {
+    if (!list.length) {
+      return '<div class="empty"><span class="e-t">No products published</span>Nothing can be bought until an owner publishes a risk definition. A product fixes the index, trigger, premium and a capacity cap.</div>';
+    }
+    var rows = list.map(function (p) {
+      var util = pct(p.reserved, p.max_total_coverage);
+      return "<tr>" +
+        '<td class="id">' + esc(p.id) + (p.active === false ? ' <span class="tag paused">paused</span>' : "") + "</td>" +
+        '<td class="sub">' + esc(p.city) + "</td>" +
+        '<td class="num">' + mm(p.threshold_tenths) + "</td>" +
+        '<td class="num">' + (p.premium_bp / 100).toFixed(2) + "%</td>" +
+        '<td class="num">' + fmt(p.max_payout) + "</td>" +
+        '<td class="num"><span class="meter"><span class="track"><span class="m-fill" style="width:' + Math.min(100, util).toFixed(1) + '%"></span></span><span class="pct">' + fmt(p.reserved, 2) + " / " + fmt(p.max_total_coverage, 0) + "</span></span></td>" +
+        "</tr>";
+    }).join("");
+    return '<div class="scroll" tabindex="0" role="region" aria-label="Published risk products"><table><caption>Published risk products</caption><thead><tr>' +
+      "<th>Product</th><th>Index</th><th class=\"num\">Trigger</th><th class=\"num\">Premium</th>" +
+      "<th class=\"num\">Max payout</th><th class=\"num\">Reserved / capacity</th>" +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+  }
 
-function observationRows(obs) {
-  if (!obs.length) return '<div class="empty">no observations yet</div>';
-  return `<table><thead><tr><th>index</th><th class="num">value</th><th class="num">obs date (UTC)</th><th class="num">reported</th><th>state</th></tr></thead><tbody>` +
-    obs.map((o) => `<tr><td>${esc(o.city)}</td><td class="num">${(o.value_tenths / 10).toFixed(1)} mm</td>
-      <td class="num">${new Date(o.obs_date * 1000).toISOString().slice(0, 16).replace("T", " ")}</td>
-      <td class="num">${o.reported_at}</td>
-      <td><span class="tag ${o.nullified ? "settled_no_pay" : o.disputed ? "settled_paid" : "active"}">${o.nullified ? "nullified" : o.disputed ? "challenged" : "signed"}</span></td></tr>`).join("") + "</tbody></table>";
-}
+  function renderPolicies(list) {
+    if (!list.length) {
+      return '<div class="empty"><span class="e-t">No cover written yet</span>A business buys cover by paying the product premium; the payout is reserved from the pool at that moment.</div>';
+    }
+    var rows = list.slice().sort(function (a, b) { return b.id - a.id; }).map(function (p) {
+      return "<tr>" +
+        '<td class="id">#' + esc(p.id) + "</td>" +
+        '<td class="sub">' + esc(p.product_id) + "</td>" +
+        '<td class="num">' + fmt(p.payout) + "</td>" +
+        '<td class="num">' + fmt(p.premium) + "</td>" +
+        '<td class="acct">' + esc(shortAcct(p.beneficiary || p.buyer)) + "</td>" +
+        '<td class="num sub">' + utc(p.obs_date) + "</td>" +
+        '<td><span class="tag ' + esc(p.status) + '">' + esc(String(p.status).replace(/_/g, " ")) + "</span></td>" +
+        "</tr>";
+    }).join("");
+    return '<div class="scroll" tabindex="0" role="region" aria-label="Cover written"><table><caption>Cover written, with settlement status</caption><thead><tr>' +
+      "<th>Policy</th><th>Product</th><th class=\"num\">Payout</th><th class=\"num\">Premium</th>" +
+      "<th>Beneficiary</th><th class=\"num\">Trigger date (UTC)</th><th>Status</th>" +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+  }
 
-async function tick() {
-  try {
-    const [pool, products, policies, recon, inv] = await Promise.all([
+  function renderObservations(list) {
+    if (!list.length) {
+      return '<div class="empty"><span class="e-t">No observations yet</span>An attestor reports a signed (index, date, value); the contract verifies the signature, freshness and replay nonce before accepting it.</div>';
+    }
+    var rows = list.slice().sort(function (a, b) { return b.reported_at - a.reported_at; }).map(function (o) {
+      var state = o.nullified ? "nullified" : o.disputed ? "challenged" : "signed";
+      return "<tr>" +
+        '<td class="sub">' + esc(o.city) + "</td>" +
+        '<td class="num">' + mm(o.value_tenths) + "</td>" +
+        '<td class="num sub">' + utc(o.obs_date) + "</td>" +
+        '<td class="num sub">' + esc(o.nonce) + "</td>" +
+        '<td><span class="tag ' + state + '">' + state + "</span></td>" +
+        "</tr>";
+    }).join("");
+    return '<div class="scroll" tabindex="0" role="region" aria-label="Signed index observations"><table><caption>Signed index observations</caption><thead><tr>' +
+      "<th>Index</th><th class=\"num\">Value</th><th class=\"num\">Observed (UTC)</th>" +
+      "<th class=\"num\">Nonce</th><th>State</th>" +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+  }
+
+  function setInvariant(prefix, ok) {
+    el(prefix).className = "inv " + (ok ? "ok" : "no");
+    el(prefix + "-g").textContent = ok ? "\u2713" : "\u2715";
+    el(prefix + "-v").textContent = ok ? "true" : "FALSE";
+  }
+
+  function showError(msg) {
+    el("dot").className = "dot bad";
+    el("netlabel").textContent = "connection failed";
+    el("error-slot").innerHTML =
+      '<div class="banner" role="alert"><div>' +
+      '<p class="bt">Could not read the contract</p>' +
+      '<p class="bd">The page keeps retrying. If this persists, the contract id may be wrong or the public RPC endpoints may be rate-limited.</p>' +
+      '<p class="bd"><code>' + esc(msg) + "</code></p>" +
+      "</div></div>";
+  }
+
+  var busy = false;
+  function tick() {
+    if (busy) return Promise.resolve();
+    busy = true;
+    return Promise.all([
       view("get_pool"), view("list_products"), view("list_policies"),
-      view("reconcile"), view("check_invariant"),
-    ]);
-    document.getElementById("dot").className = "dot ok";
-    document.getElementById("conn").textContent = CONTRACT;
-    document.getElementById("capital").textContent = fmt(pool.capital);
-    document.getElementById("reserved").textContent = fmt(pool.reserved);
-    document.getElementById("available").textContent = fmt(pool.available);
-    document.getElementById("premiums").textContent = fmt(pool.premiums_collected);
-    document.getElementById("paid").textContent = fmt(pool.total_paid);
-    document.getElementById("npol").textContent = pool.policy_count;
+      view("list_observations"), view("get_config"), view("reconcile"),
+      view("check_invariant"), accountState(),
+    ]).then(function (r) {
+      var pool = r[0], products = r[1], policies = r[2], obs = r[3], cfg = r[4];
+      var reconciled = r[5] === true, invariant = r[6] === true, acct = r[7];
 
-    const cap = Number(BigInt(pool.capital)), res = Number(BigInt(pool.reserved));
-    const pct = cap > 0 ? Math.min(100, (res / cap) * 100) : 0;
-    const fill = document.getElementById("fill");
-    fill.style.width = pct + "%";
-    fill.className = "fill" + (res > cap ? " over" : "");
-    document.getElementById("barlbl").textContent = `reserved ${pct.toFixed(1)}% of capital`;
+      el("error-slot").innerHTML = "";
+      el("dot").className = "dot ok";
+      el("netlabel").textContent = "NEAR testnet · live";
 
-    const ps = document.getElementById("pill-solvent");
-    ps.textContent = `reserved ≤ capital: ${inv ? "true" : "FALSE"}`;
-    ps.className = "pill " + (inv ? "good" : "bad");
-    const pr = document.getElementById("pill-recon");
-    pr.textContent = `reconcile: ${recon ? "true" : "false"}`;
-    pr.className = "pill " + (recon ? "good" : "bad");
+      el("capital").textContent = fmt(pool.capital);
+      el("reserved").textContent = fmt(pool.reserved);
+      el("available-cap").textContent = "available " + fmt(pool.available) + " NEAR";
 
-    document.getElementById("products").innerHTML = productRows(products);
-    document.getElementById("policies").innerHTML = policyRows(policies);
+      var util = pct(pool.reserved, pool.capital);
+      var fill = el("fill");
+      fill.style.width = Math.min(100, util).toFixed(1) + "%";
+      fill.className = "fill" + (near(pool.reserved) > near(pool.capital) ? " over" : "");
+      el("barlbl").textContent = "reserved " + util.toFixed(1) + "% of capital";
 
-    const obs = await view("list_observations");
-    obs.sort((a, b) => b.reported_at - a.reported_at);
-    document.getElementById("observations").innerHTML = observationRows(obs);
-  } catch (e) {
-    document.getElementById("dot").className = "dot bad";
-    document.getElementById("conn").innerHTML = `<span class="err">RPC error: ${esc(e.message)}</span>`;
+      // Both flags are read from the contract; neither is assumed.
+      setInvariant("inv-solvent", pool.solvent === undefined ? invariant : pool.solvent === true);
+      setInvariant("inv-recon", reconciled);
+
+      var lede = el("lede");
+      if (pool.paused) {
+        lede.innerHTML = "This mutual is <b>paused</b> by its owner. New cover cannot be written.";
+      } else if (policies.length === 0) {
+        lede.innerHTML = "A mutual that has taken <b>" + fmt(pool.capital) + " NEAR</b> of capital and written no cover yet.";
+      } else {
+        lede.innerHTML = "This pool holds <b>" + fmt(pool.capital) + " NEAR</b> and backs every promise it has made — " +
+          policies.length + " " + (policies.length === 1 ? "policy" : "policies") + ", " + fmt(pool.reserved) + " NEAR reserved.";
+      }
+
+      el("products").innerHTML = renderProducts(products);
+      el("policies").innerHTML = renderPolicies(policies);
+      el("observations").innerHTML = renderObservations(obs);
+
+      var cid = el("cid");
+      cid.textContent = CONTRACT;
+      cid.href = EXPLORER + "/account/" + encodeURIComponent(CONTRACT);
+      el("codehash").textContent = acct.code_hash || "—";
+      el("attestor").textContent = cfg ? (cfg.attestor + " · bond " + fmt(cfg.challenge_bond, 2) + " NEAR · window " + cfg.challenge_window_sec + "s") : "—";
+      el("eq").textContent = "capital " + fmt(pool.capital, 4) + "  =  deposits " + fmt(pool.total_deposited, 4) +
+        "  −  withdrawals " + fmt(pool.total_withdrawn, 4) + "  +  premiums " + fmt(pool.premiums_collected, 4) +
+        "  +  bonds " + fmt(pool.bonds_forfeited, 4) + "  −  paid " + fmt(pool.total_paid, 4);
+      el("cmd").textContent = "curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"query\",\"params\":{\"request_type\":\"call_function\",\"finality\":\"final\",\"account_id\":\"" + CONTRACT + "\",\"method_name\":\"get_pool\",\"args_base64\":\"e30=\"}}'";
+
+      busy = false;
+    }).catch(function (e) {
+      busy = false;
+      showError(e && e.message ? e.message : String(e));
+    });
   }
-}
 
-tick();
-setInterval(tick, 3000);
+  el("refresh").addEventListener("click", function () {
+    var b = el("refresh");
+    b.disabled = true; b.textContent = "Refreshing…";
+    tick().then(function () { b.disabled = false; b.textContent = "Refresh"; });
+  });
+
+  function copyFallback(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "absolute"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { el("copied").textContent = "Copy failed"; }
+    document.body.removeChild(ta);
+  }
+  el("copy").addEventListener("click", function () {
+    var text = el("cmd").textContent;
+    var done = function () {
+      el("copied").textContent = "Copied";
+      setTimeout(function () { el("copied").textContent = ""; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { copyFallback(text, done); });
+    } else { copyFallback(text, done); }
+  });
+
+  tick();
+  setInterval(tick, 5000);
+})();
 </script>
 </body>
 </html>

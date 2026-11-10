@@ -45,6 +45,9 @@
   .tag.settled_paid { color: var(--accent); border-color: #6b532f; }
   .tag.settled_no_pay { color: var(--muted); }
   .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 14px 0; }
+  /* tables scroll inside their panel, never the page */
+  #products, #policies, #observations { overflow-x: auto; }
+  table { min-width: 520px; }
   footer { max-width: 1180px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-family: var(--mono); font-size: 11px; }
   .err { color: var(--bad); font-family: var(--mono); font-size: 12px; }
 </style>

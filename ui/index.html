@@ -4,171 +4,304 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light" />
-<meta name="description" content="Overcover — programmable insurance for autonomous businesses. Capital-backed payouts, a challengeable oracle, and settlement on NEAR. Read live from the contract; nothing to take on trust." />
-<title>Overcover — programmable insurance, capital-backed on NEAR</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314161a'/%3E%3Cpath d='M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z' fill='none' stroke='%23e3a15a' stroke-width='2'/%3E%3C/svg%3E" />
+<meta name="description" content="Overcover — parametric insurance for businesses that cannot afford to wait for a claims process. Cover is defined up front, the payout is reserved from a capital pool, and settlement follows a signed public reading. Live on NEAR testnet; every figure is read from the contract." />
+<title>Overcover — parametric insurance, settled on contract rules</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2310251d'/%3E%3Cpath d='M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z' fill='none' stroke='%23f0c987' stroke-width='2'/%3E%3C/svg%3E" />
 <style>
+  /* ============================================================
+     OVERCOVER — visual system
+     Direction: "underwritten, not advertised". A calm institutional
+     risk ledger: deep evergreen field, warm paper, one amber accent
+     reserved for money and the protection stroke.
+     ============================================================ */
   :root {
-    --paper: #f7f6f2; --card: #ffffff; --ink: #14161a; --ink2: #3b414a; --muted: #565b63;
-    --line: #e4e2db; --line2: #cdcabe; --accent: #9a4a17; --accent-w: #f4eae0;
-    --good: #176b45; --good-w: #e7f2ea; --warn: #7d5300; --warn-w: #f8f0dd; --bad: #9c2b2b; --bad-w: #f7e8e8;
+    --paper: #f6f4ee; --card: #ffffff; --card-2: #fbfaf6;
+    --ink: #131a16; --ink2: #3a443d; --muted: #58635b;
+    --line: #e3e0d6; --line2: #cbc7ba;
+    --accent: #8f4a12; --accent-w: #f3e8d8;
+    --good: #176b45; --good-w: #e6f1ea;
+    --warn: #7d5300; --warn-w: #f8f0dd;
+    --bad: #9c2b2b; --bad-w: #f7e8e8;
+    /* the field: hero + dark bands */
+    --field: #10251d; --field-2: #17352a; --field-line: #2c4a3d;
+    --on-field: #eef3ef; --on-field-2: #b9c9c0;
+    --gold: #e0aa55; --gold-soft: #f0c987;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --maxw: 1080px; --r: 8px; --s4: 28px; --s5: 44px; --s6: 68px;
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", Georgia, serif;
+    --maxw: 1120px; --r: 10px; --r2: 14px;
+    --s3: 18px; --s4: 30px; --s5: 48px; --s6: 76px;
   }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15.5px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
-  h1, h2, h3 { letter-spacing: -.015em; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { letter-spacing: -.02em; line-height: 1.15; }
+  h2, h3 { margin: 0; }
+  p { margin: 0; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 2px; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
-  .skip { position: absolute; left: -9999px; top: 0; background: var(--ink); color: #fff; padding: 10px 14px; z-index: 20; font-weight: 600; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  .field a, .on-field a { color: var(--gold-soft); }
+  .skip { position: absolute; left: -9999px; top: 0; background: var(--ink); color: #fff; padding: 10px 14px; z-index: 40; font-weight: 600; }
   .skip:focus { left: 12px; top: 12px; }
   .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
-  .mast { border-bottom: 1px solid var(--line); background: var(--card); }
-  .mast-in { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; justify-content: space-between; padding-top: 15px; padding-bottom: 15px; }
+  main { padding-bottom: 0; }
+  main > section { min-width: 0; }
+  .band { padding-top: var(--s6); }
+  .eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  .field .eyebrow { color: var(--gold); }
+  .lead { font-size: 17px; color: var(--ink2); max-width: 62ch; }
+  .sect-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 26px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .sect-head h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 680; font-family: var(--serif); letter-spacing: -.01em; }
+  .sect-note { font-size: 14px; color: var(--muted); max-width: 58ch; margin: 0; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+
+  /* ---------------- header ---------------- */
+  .mast { position: sticky; top: 0; z-index: 30; background: rgba(246,244,238,.92); backdrop-filter: saturate(140%) blur(8px); border-bottom: 1px solid var(--line); }
+  .mast-in { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; padding-top: 13px; padding-bottom: 13px; }
   .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
-  .mark { flex: none; width: 30px; height: 30px; }
-  .brand h1 { font-size: 18px; font-weight: 680; margin: 0; line-height: 1.1; }
-  .brand p { margin: 1px 0 0; font-size: 12.5px; color: var(--muted); }
+  .mark { flex: none; width: 32px; height: 32px; }
+  .brand h1 { font-size: 18px; font-weight: 720; margin: 0; letter-spacing: -.01em; }
+  .brand .tagline { margin: 1px 0 0; font-size: 12px; color: var(--muted); }
   .mast-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .net { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink2); border: 1px solid var(--line2); background: var(--paper); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+  .net { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink2); border: 1px solid var(--line2); background: var(--card); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
-  .dot.live { background: var(--good); }
+  .dot.live { background: var(--good); box-shadow: 0 0 0 3px var(--good-w); }
   .dot.stale { background: var(--warn); }
   .dot.failed { background: var(--bad); }
   .dot.load { background: var(--line2); animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
-  .btn { font: inherit; font-size: 13px; font-weight: 560; color: var(--ink); background: var(--card); border: 1px solid var(--line2); border-radius: 7px; padding: 7px 13px; cursor: pointer; min-height: 36px; }
+  .btn { font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
   .btn:hover { border-color: var(--ink2); }
   .btn:active { transform: translateY(1px); }
   .btn[disabled] { opacity: .55; cursor: default; }
-  main { padding-bottom: var(--s6); }
-  main > section { min-width: 0; }
-  .band { padding-top: var(--s6); }
-  .eyebrow { font-size: 11.5px; font-weight: 680; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
-  .sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
-  .sect-head h2 { font-size: 19px; font-weight: 660; margin: 0; }
-  .sect-note { font-size: 13px; color: var(--muted); margin: 0; max-width: 62ch; }
-  .hero { display: grid; gap: var(--s4); }
-  .hero h2 { font-size: clamp(27px, 5vw, 44px); line-height: 1.1; font-weight: 680; margin: 0; max-width: 20ch; }
-  .hero h2 b { color: var(--accent); font-weight: 680; }
-  .hero .sub { font-size: 16px; color: var(--ink2); margin: 18px 0 0; max-width: 54ch; }
-  .hero .who { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
-  .hero .who li { position: relative; padding-left: 20px; font-size: 14px; color: var(--ink2); }
-  .hero .who li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 7px; height: 7px; background: var(--accent); border-radius: 2px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
-  .solv { padding: var(--s4); display: grid; gap: 18px; }
-  .solv .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-  .solv .lbl { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; }
-  .solv .big { font-family: var(--mono); font-size: clamp(34px, 8vw, 52px); font-weight: 560; letter-spacing: -.03em; line-height: 1; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
-  .solv .big .u { font-size: 15px; color: var(--muted); font-weight: 500; margin-left: 6px; }
-  .solv .promise { text-align: right; }
-  .solv .promise .n { font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums; }
-  .solv .promise .n.zero { color: var(--muted); }
-  .bar { height: 16px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; position: relative; }
-  .bar .fill { height: 100%; width: 0; background: var(--accent); transition: width .5s cubic-bezier(.22,.61,.36,1); }
+
+  /* ---------------- hero ---------------- */
+  .hero { background: linear-gradient(168deg, var(--field) 0%, #0d1f18 62%, #12291f 100%); color: var(--on-field); position: relative; overflow: hidden; }
+  .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 78% -10%, rgba(224,170,85,.14), transparent 60%); }
+  .hero-in { position: relative; z-index: 1; display: grid; gap: 40px; padding-top: 60px; padding-bottom: 56px; }
+  @media (min-width: 940px) { .hero-in { grid-template-columns: minmax(0,1.06fr) minmax(0,.94fr); align-items: center; gap: 48px; padding-top: 74px; padding-bottom: 70px; } }
+  .hero h2 { font-family: var(--serif); font-size: clamp(30px, 5.4vw, 52px); font-weight: 660; letter-spacing: -.02em; max-width: 19ch; color: #fff; }
+  .hero h2 em { font-style: normal; color: var(--gold-soft); }
+  .hero .sub { font-size: clamp(16px, 2vw, 18.5px); color: var(--on-field-2); margin: 20px 0 0; max-width: 46ch; }
+  .hero .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 0; }
+  .btn-gold { font: inherit; font-size: 15px; font-weight: 680; color: #241a06; background: var(--gold-soft); border: 1px solid var(--gold-soft); border-radius: 9px; padding: 12px 20px; cursor: pointer; min-height: 46px; }
+  .btn-gold:hover { background: #f6d79c; }
+  .btn-ghost { font: inherit; font-size: 15px; font-weight: 600; color: var(--on-field); background: transparent; border: 1px solid var(--field-line); border-radius: 9px; padding: 12px 18px; cursor: pointer; min-height: 46px; }
+  .btn-ghost:hover { border-color: var(--on-field-2); }
+  .hero .proof-line { margin: 22px 0 0; font-size: 13px; color: var(--on-field-2); display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .hero .proof-line .dot { width: 8px; height: 8px; }
+  .hero-art { position: relative; }
+  .hero-art svg { display: block; width: 100%; height: auto; }
+  .art-cap { font-size: 12.5px; color: var(--on-field-2); margin-top: 12px; line-height: 1.5; }
+  .art-cap b { color: var(--on-field); font-weight: 600; }
+
+  /* ---------------- coverage strip ---------------- */
+  .cov-strip { background: var(--field-2); border-top: 1px solid var(--field-line); color: var(--on-field); }
+  .cov-strip .in { display: grid; gap: 1px; background: var(--field-line); grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .cov-strip .in { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 940px) { .cov-strip .in { grid-template-columns: repeat(4, 1fr); } }
+  .cov-strip .c { background: var(--field-2); padding: 18px 20px; }
+  .cov-strip .c .n { font-family: var(--mono); font-size: 22px; color: #fff; font-variant-numeric: tabular-nums; margin: 0; }
+  .cov-strip .c .k { font-size: 12.5px; color: var(--on-field-2); margin: 5px 0 0; }
+  .cov-strip .c .k b { color: var(--on-field); font-weight: 600; }
+  .cov-strip .live-flag { font-family: var(--mono); font-size: 11px; color: var(--gold); }
+
+  /* ---------------- generic card ---------------- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); }
+  .pad { padding: var(--s4); }
+
+  /* ---------------- solvency ---------------- */
+  .solv-top { display: grid; gap: 18px; grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .solv-top { grid-template-columns: 1.2fr 1fr; } }
+  .lbl { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .big { font-family: var(--mono); font-size: clamp(32px, 6vw, 46px); font-weight: 560; letter-spacing: -.03em; line-height: 1; margin: 7px 0 0; font-variant-numeric: tabular-nums; }
+  .big .u { font-size: 15px; color: var(--muted); font-weight: 500; margin-left: 7px; }
+  .bar { height: 18px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
+  .bar .fill { height: 100%; width: 0; background: linear-gradient(90deg, #b9702f, var(--accent)); transition: width .6s cubic-bezier(.22,.61,.36,1); }
   .bar .fill.over { background: var(--bad); }
-  .bar-cap { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 7px; flex-wrap: wrap; }
-  .bar-key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 9px; }
+  .bar-cap { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+  .bar-key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
   .bar-key span { display: inline-flex; align-items: center; gap: 7px; }
-  .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .sw.a { background: var(--accent); } .sw.b { background: var(--paper); border: 1px solid var(--line2); }
-  .figs { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-  .figs > div { background: var(--card); padding: 13px 15px; }
-  .figs .k { font-size: 11.5px; color: var(--muted); margin: 0 0 3px; }
-  .figs .v { font-family: var(--mono); font-size: 17px; font-variant-numeric: tabular-nums; margin: 0; }
-  .figs .v .u { font-size: 12px; color: var(--muted); margin-left: 4px; }
-  @media (min-width: 560px) { .figs { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 900px) { .figs { grid-template-columns: repeat(3, 1fr); } }
-  .inv { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 12px 0 0; border-top: 1px solid var(--line); margin-top: 2px; }
-  .inv:first-of-type { border-top: 0; padding-top: 0; }
-  .inv .glyph { width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; flex: none; }
+  .inv { display: grid; grid-template-columns: auto 1fr; gap: 11px; align-items: start; padding: 13px 0 0; border-top: 1px solid var(--line); margin-top: 12px; }
+  .inv:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .inv .glyph { width: 21px; height: 21px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; flex: none; }
   .inv.ok .glyph { background: var(--good-w); color: var(--good); }
   .inv.no .glyph { background: var(--bad-w); color: var(--bad); }
   .inv .name { font-family: var(--mono); font-size: 13px; }
-  .inv .name .val { margin-left: 6px; font-weight: 600; }
+  .inv .name .val { margin-left: 6px; font-weight: 700; }
   .inv.ok .val { color: var(--good); } .inv.no .val { color: var(--bad); }
-  .inv .desc { font-size: 12.5px; color: var(--muted); margin: 2px 0 0; }
-  .fresh { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
-  .fresh b { color: var(--ink2); font-weight: 600; }
-  .stale-note { border: 1px solid var(--warn); background: var(--warn-w); color: var(--warn); border-radius: var(--r); padding: 10px 13px; font-size: 13px; display: flex; gap: 9px; align-items: flex-start; }
-  .fail-note { border: 1px solid var(--bad); background: var(--bad-w); border-radius: var(--r); padding: 13px 15px; }
-  .fail-note .ft { font-weight: 640; margin: 0 0 3px; }
-  .fail-note .fd { margin: 0; font-size: 13px; color: var(--ink2); }
+  .inv .desc { font-size: 13px; color: var(--muted); margin: 3px 0 0; }
+  .fresh { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted); flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .fresh b { color: var(--ink2); font-weight: 650; }
+  .stale-note { border: 1px solid var(--warn); background: var(--warn-w); color: var(--warn); border-radius: var(--r); padding: 11px 14px; font-size: 13.5px; display: flex; gap: 10px; align-items: flex-start; }
+  .fail-note { border: 1px solid var(--bad); background: var(--bad-w); border-radius: var(--r); padding: 14px 16px; }
+  .fail-note .ft { font-weight: 680; margin: 0 0 4px; }
+  .fail-note .fd { margin: 0; font-size: 13.5px; color: var(--ink2); }
   .fail-note code { font-family: var(--mono); font-size: 12.5px; color: var(--bad); word-break: break-all; }
-  .steps { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; counter-reset: s; margin: 0; padding: 0; }
-  .steps > li { background: var(--card); padding: 15px 18px; display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; list-style: none; }
-  .steps > li .n { counter-increment: s; font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 640; padding-top: 2px; }
-  .steps > li .n::before { content: counter(s, decimal-leading-zero); }
-  .steps .t { font-size: 14px; font-weight: 620; margin: 0 0 2px; }
-  .steps .d { font-size: 13px; color: var(--ink2); margin: 0; }
-  .steps .who { font-size: 12px; color: var(--muted); margin: 5px 0 0; font-family: var(--mono); }
-  @media (min-width: 760px) { .steps { grid-template-columns: 1fr 1fr; } }
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+
+  /* ---------------- journey timeline ---------------- */
+  .journey { list-style: none; margin: 0; padding: 0; position: relative; }
+  .journey > li { position: relative; display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 18px; padding-bottom: 30px; }
+  .journey > li:last-child { padding-bottom: 0; }
+  .journey .node { position: relative; }
+  .journey .node .num { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-family: var(--mono); font-size: 13px; font-weight: 700; background: var(--card); border: 1.5px solid var(--line2); color: var(--accent); }
+  .journey > li:not(:last-child) .node::after { content: ""; position: absolute; left: 21.5px; top: 48px; bottom: -30px; width: 2px; background: linear-gradient(var(--line2), var(--line)); }
+  .journey .body { padding-top: 6px; }
+  .journey .t { font-size: 16.5px; font-weight: 680; margin: 0 0 4px; }
+  .journey .d { font-size: 14.5px; color: var(--ink2); margin: 0; max-width: 68ch; }
+  .journey .meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+  .chip { font-family: var(--mono); font-size: 11.5px; color: var(--ink2); background: var(--card-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+  .chip.actor { color: var(--accent); background: var(--accent-w); border-color: #e6cdb0; }
+  @media (min-width: 860px) {
+    .journey { columns: 2; column-gap: 44px; }
+    .journey > li { break-inside: avoid; grid-template-columns: 40px minmax(0,1fr); gap: 14px; }
+    .journey .node .num { width: 40px; height: 40px; }
+    .journey > li:not(:last-child) .node::after { left: 19.5px; }
+  }
+
+  /* ---------------- products ---------------- */
+  .prod-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .prod-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .prod { display: flex; flex-direction: column; overflow: hidden; }
+  .prod .head { padding: 20px 22px 16px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--card-2), var(--card)); }
+  .prod .head .top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .prod .head h3 { font-size: 19px; font-weight: 700; font-family: var(--serif); }
+  .prod .head .city { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .prod .head .covered { font-size: 14.5px; color: var(--ink2); margin: 12px 0 0; }
+  .prod .terms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); }
+  .prod .terms > div { background: var(--card); padding: 13px 16px; }
+  .prod .terms .k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  .prod .terms .v { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; margin: 0; }
+  .prod .terms .v small { font-family: var(--sans); font-size: 11.5px; color: var(--muted); }
+  .prod .cap { padding: 16px 22px 20px; border-top: 1px solid var(--line); }
+  .prod .cap .row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12.5px; color: var(--ink2); margin-bottom: 8px; }
+  .capbar { height: 10px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
+  .capbar .cf { height: 100%; background: var(--accent); }
+  .prod .lim { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; padding-left: 16px; position: relative; }
+  .prod .lim::before { content: "!"; position: absolute; left: 0; top: 0; width: 11px; height: 11px; border-radius: 3px; background: var(--warn-w); color: var(--warn); font-size: 9px; font-weight: 800; display: grid; place-items: center; }
+  .prod .lim + .lim { margin-top: 7px; }
+
+  /* ---------------- tables ---------------- */
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
   .scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; min-width: 620px; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; min-width: 660px; }
   caption { position: absolute; left: -9999px; }
-  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   tbody tr:last-child td { border-bottom: 0; }
-  th { color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; background: var(--paper); }
+  th { color: var(--muted); font-weight: 650; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; background: var(--card-2); }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  tbody tr:hover { background: #fbfaf7; }
+  tbody tr:hover { background: #fbfaf6; }
   .sub { color: var(--muted); }
-  .tag { font-size: 11px; font-family: var(--sans); font-weight: 620; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); white-space: nowrap; display: inline-block; }
-  .tag.active, .tag.signed { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
+  .tag { font-size: 11px; font-family: var(--sans); font-weight: 650; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); white-space: nowrap; display: inline-block; }
+  .tag.active, .tag.signed, .tag.available { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
   .tag.settled_paid { color: var(--accent); border-color: #e0bfa2; background: var(--accent-w); }
   .tag.settled_no_pay { color: var(--muted); }
-  .tag.challenged { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
-  .tag.nullified { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); text-decoration: line-through; }
+  .tag.challenged, .tag.nullified { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
+  .tag.nullified { text-decoration: line-through; }
   .tag.paused { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
   .meter { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
-  .meter .track { width: 52px; height: 6px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
+  .meter .track { width: 54px; height: 6px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
   .meter .m-fill { height: 100%; background: var(--accent); }
   .meter .pct { font-size: 12px; color: var(--muted); }
-  .empty { padding: 24px 18px; color: var(--muted); font-size: 13.5px; }
-  .empty .e-t { color: var(--ink2); font-weight: 620; display: block; margin-bottom: 3px; }
+  .empty { padding: 26px 20px; color: var(--muted); font-size: 14px; }
+  .empty .e-t { color: var(--ink2); font-weight: 680; display: block; margin-bottom: 4px; font-size: 15px; }
   details.legacy { border-top: 1px solid var(--line); }
-  details.legacy > summary { padding: 13px 15px; cursor: pointer; font-size: 13px; color: var(--ink2); background: var(--paper); list-style: none; }
+  details.legacy > summary { padding: 14px 16px; cursor: pointer; font-size: 13.5px; color: var(--ink2); background: var(--card-2); list-style: none; }
   details.legacy > summary::-webkit-details-marker { display: none; }
   details.legacy > summary::before { content: "\25B8 "; color: var(--muted); }
   details.legacy[open] > summary::before { content: "\25BE "; }
-  .skel { padding: 14px; display: grid; gap: 10px; }
-  .skel i { display: block; height: 12px; border-radius: 4px; background: linear-gradient(90deg,#eeece6,#f6f4ef,#eeece6); background-size: 200% 100%; animation: sh 1.3s linear infinite; }
+  .skel { padding: 16px; display: grid; gap: 11px; }
+  .skel i { display: block; height: 13px; border-radius: 4px; background: linear-gradient(90deg,#eeece6,#f6f4ef,#eeece6); background-size: 200% 100%; animation: sh 1.3s linear infinite; }
   .skel i:nth-child(2) { width: 82%; } .skel i:nth-child(3) { width: 64%; }
   @keyframes sh { to { background-position: -200% 0; } }
-  .quote { display: grid; gap: 18px; padding: var(--s4); }
-  .qrow { display: grid; gap: 6px; }
-  label { font-size: 12.5px; font-weight: 600; color: var(--ink2); }
+
+  /* ---------------- dashboard figures ---------------- */
+  .figs { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+  .figs > div { background: var(--card); padding: 15px 17px; }
+  .figs .k { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+  .figs .v { font-family: var(--mono); font-size: 18px; font-variant-numeric: tabular-nums; margin: 0; }
+  .figs .v .u { font-size: 12px; color: var(--muted); margin-left: 5px; }
+  @media (min-width: 560px) { .figs { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .figs { grid-template-columns: repeat(3, 1fr); } }
+  .glossary { display: grid; gap: 10px; margin-top: 18px; }
+  .glossary div { font-size: 13.5px; color: var(--ink2); }
+  .glossary b { color: var(--ink); font-weight: 650; }
+
+  /* ---------------- quote ---------------- */
+  .quote { display: grid; gap: 22px; padding: var(--s4); }
+  @media (min-width: 860px) { .quote { grid-template-columns: minmax(0,1fr) minmax(0,1.05fr); gap: 34px; } }
+  .qrow { display: grid; gap: 7px; }
+  label { font-size: 13px; font-weight: 650; color: var(--ink2); }
   select, input[type=range] { font: inherit; }
-  select { padding: 9px 11px; border: 1px solid var(--line2); border-radius: 7px; background: var(--card); color: var(--ink); width: 100%; max-width: 440px; }
-  input[type=range] { width: 100%; max-width: 440px; accent-color: var(--accent); }
+  select { padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 32px; }
   .qout { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-  .qout > div { background: var(--card); padding: 12px 14px; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
-  .qout .k { font-size: 12.5px; color: var(--muted); }
-  .qout .v { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; }
-  .ro { border: 1px solid var(--line2); background: var(--paper); border-radius: var(--r); padding: 12px 14px; font-size: 13px; color: var(--ink2); }
+  .qout > div { background: var(--card); padding: 13px 15px; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .qout .k { font-size: 13px; color: var(--muted); }
+  .qout .v { font-family: var(--mono); font-size: 15.5px; font-variant-numeric: tabular-nums; }
+  .qout .v.hero-v { font-size: 19px; font-weight: 650; color: var(--accent); }
+  .ro { border: 1px solid var(--line2); background: var(--card-2); border-radius: var(--r); padding: 14px 16px; font-size: 13.5px; color: var(--ink2); }
   .ro b { color: var(--ink); }
-  .ro code { font-family: var(--mono); font-size: 12.5px; }
-  .proof { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-  .proof > div { background: var(--card); padding: 15px 17px; min-width: 0; }
-  .proof .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  .ro code { font-family: var(--mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .q-terms { font-size: 13.5px; color: var(--ink2); display: grid; gap: 6px; margin-top: 14px; }
+  .q-terms div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+
+  /* ---------------- trust ---------------- */
+  .vs { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+  @media (min-width: 780px) { .vs { grid-template-columns: 1fr 1fr; } }
+  .vs > div { background: var(--card); padding: 22px 24px; }
+  .vs .h { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 14px; }
+  .vs .trad .h { color: var(--muted); }
+  .vs .para .h { color: var(--good); }
+  .vs ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .vs li { font-size: 14px; color: var(--ink2); padding-left: 24px; position: relative; }
+  .vs .trad li::before { content: "–"; position: absolute; left: 6px; color: var(--muted); }
+  .vs .para li::before { content: "\2713"; position: absolute; left: 0; color: var(--good); font-weight: 700; }
+  .controls { display: grid; gap: 14px; margin-top: 26px; grid-template-columns: 1fr; }
+  @media (min-width: 700px) { .controls { grid-template-columns: repeat(3, 1fr); } }
+  .ctrl { border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; background: var(--card); }
+  .ctrl .ct { font-size: 14.5px; font-weight: 680; margin: 0 0 5px; display: flex; align-items: center; gap: 8px; }
+  .ctrl .ct .i { width: 20px; height: 20px; border-radius: 5px; background: var(--accent-w); color: var(--accent); display: grid; place-items: center; font-size: 11px; font-weight: 800; flex: none; }
+  .ctrl .cd { font-size: 13px; color: var(--muted); margin: 0; }
+  .disclose { margin-top: 26px; border: 1px solid var(--warn); background: var(--warn-w); border-radius: var(--r2); padding: 20px 24px; }
+  .disclose h3 { font-size: 15px; font-weight: 700; color: var(--warn); margin: 0 0 12px; }
+  .disclose ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .disclose li { font-size: 13.5px; color: #4a3a12; padding-left: 22px; position: relative; }
+  .disclose li::before { content: "!"; position: absolute; left: 0; top: 2px; width: 14px; height: 14px; border-radius: 4px; background: #e6c879; color: #4a3a12; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+  .disclose li b { color: #3a2c0a; }
+
+  /* ---------------- proof ---------------- */
+  .proof { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+  .proof > div { background: var(--card); padding: 17px 19px; min-width: 0; }
+  .proof .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px; }
   .proof .val { font-family: var(--mono); font-size: 12.5px; word-break: break-all; margin: 0; color: var(--ink2); }
   .eq { font-family: var(--mono); font-size: 12.5px; color: var(--ink2); margin: 0; overflow-x: auto; white-space: nowrap; }
-  @media (min-width: 760px) { .proof { grid-template-columns: 1fr 1fr; } }
-  .copy-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
-  code.cmd { font-family: var(--mono); font-size: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px; color: var(--ink2); overflow-x: auto; max-width: 100%; display: block; white-space: pre; }
-  .copied { color: var(--good); font-size: 12px; }
-  .btn-s { font: inherit; font-size: 12px; font-weight: 560; color: var(--ink2); background: var(--card); border: 1px solid var(--line2); border-radius: 6px; padding: 5px 10px; cursor: pointer; min-height: 32px; }
+  @media (min-width: 780px) { .proof { grid-template-columns: 1fr 1fr; } }
+  .copy-row { display: flex; gap: 9px; align-items: center; margin-top: 11px; flex-wrap: wrap; }
+  code.cmd { font-family: var(--mono); font-size: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; color: var(--ink2); overflow-x: auto; max-width: 100%; display: block; white-space: pre; }
+  .copied { color: var(--good); font-size: 12.5px; font-weight: 600; }
+  .btn-s { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink2); background: var(--card); border: 1px solid var(--line2); border-radius: 7px; padding: 6px 11px; cursor: pointer; min-height: 34px; }
   .btn-s:hover { border-color: var(--ink2); }
-  .links { display: grid; gap: 8px; }
-  .links a { font-size: 13px; }
-  footer { border-top: 1px solid var(--line); background: var(--card); }
-  footer .f-in { padding-top: 24px; padding-bottom: 40px; display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
-  footer .f-l { max-width: 64ch; }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
+  .links { display: grid; gap: 9px; }
+  .links a { font-size: 13.5px; }
+
+  /* ---------------- footer ---------------- */
+  footer { margin-top: var(--s6); background: var(--field); color: var(--on-field-2); }
+  footer .f-in { padding-top: 40px; padding-bottom: 44px; display: grid; gap: 26px; }
+  @media (min-width: 820px) { footer .f-in { grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; } }
+  footer h2 { font-family: var(--serif); font-size: 19px; color: #fff; margin: 0 0 10px; }
+  footer p { font-size: 13.5px; line-height: 1.65; margin: 0; }
+  footer .f-l { max-width: 52ch; }
+  footer .f-col h3 { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin: 0 0 12px; font-family: var(--sans); font-weight: 700; }
+  footer .f-col a { display: block; font-size: 13.5px; color: var(--on-field-2); margin-bottom: 9px; }
+  footer .f-col a:hover { color: #fff; }
+  footer .f-bot { border-top: 1px solid var(--field-line); padding-top: 18px; padding-bottom: 34px; display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; font-size: 12.5px; color: var(--on-field-2); }
+
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
 </head>
 <body>
@@ -178,12 +311,13 @@
   <div class="wrap mast-in">
     <div class="brand">
       <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-        <rect width="32" height="32" rx="7" fill="#14161a"/>
-        <path d="M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z" fill="none" stroke="#e3a15a" stroke-width="2"/>
+        <rect width="32" height="32" rx="7" fill="#10251d"/>
+        <path d="M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z" fill="none" stroke="#f0c987" stroke-width="2"/>
+        <path d="M16 10v8.4M16 18.4l3.4 2.6" fill="none" stroke="#f0c987" stroke-width="1.4" opacity=".55"/>
       </svg>
       <div>
         <h1>Overcover</h1>
-        <p>Programmable insurance for autonomous businesses</p>
+        <p class="tagline">Parametric insurance · settled on contract rules</p>
       </div>
     </div>
     <div class="mast-right">
@@ -196,103 +330,299 @@
 <main id="main">
   <div class="wrap"><div id="error-slot"></div></div>
 
-  <!-- ================= HERO + LIVE POOL ================= -->
-  <section class="wrap band" aria-labelledby="hero-h">
-    <div class="hero">
+  <!-- ================= HERO ================= -->
+  <section class="hero" aria-labelledby="hero-h">
+    <div class="wrap hero-in">
       <div>
-        <p class="eyebrow">Live on NEAR testnet</p>
-        <h2 id="hero-h">Insurance for businesses that run <b>without a person in the loop</b>.</h2>
-        <p class="sub">An autonomous business can buy, sell and move money. It cannot buy insurance: underwriting needs a legal person, and a claim needs an adjuster — so a loss is simply absorbed. Overcover writes cover against an objective public index and settles it from contract rules. No underwriter. No claims queue.</p>
-        <ul class="who">
-          <li>Cover is defined, not negotiated — the trigger, premium and payout are fixed when a product is published, and cannot change afterwards.</li>
-          <li>The payout is reserved from the pool the moment cover is bought, so a promise is always backed by capital already held.</li>
-          <li>The oracle's word is challengeable — a reading is signed, verified on-chain, and can be disputed with a bond.</li>
-        </ul>
+        <p class="eyebrow">Parametric insurance · live on NEAR testnet</p>
+        <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
+        <p class="sub">Overcover covers one clearly-defined event at a time: rainfall below a set level, in a named city, on a named date. If the signed reading meets the trigger, the payout follows from contract rules — no adjuster, no queue.</p>
+        <div class="actions">
+          <a class="btn-gold" href="#cover">See the cover available</a>
+          <a class="btn-ghost" href="#how">How a claim settles</a>
+        </div>
+        <p class="proof-line">
+          <span id="hero-dot" class="dot load" aria-hidden="true"></span>
+          <span id="hero-live">Reading the pool from the contract…</span>
+        </p>
       </div>
 
-      <div class="card solv" aria-labelledby="solv-h">
-        <div class="top">
-          <div>
-            <p class="lbl" id="solv-h">Capital backing cover</p>
-            <p class="big" id="capital">—<span class="u">NEAR</span></p>
-          </div>
-          <div class="promise">
-            <p class="lbl">Payouts promised</p>
-            <p class="n" id="reserved">—</p>
-          </div>
-        </div>
-        <div>
-          <div class="bar" role="img" aria-labelledby="barlbl">
-            <div id="fill" class="fill" style="width:0%"></div>
-          </div>
-          <div class="bar-cap">
-            <span id="barlbl">reserved —% of capital</span>
-            <span id="available-cap">available —</span>
-          </div>
-          <div class="bar-key">
-            <span><span class="sw a"></span>Reserved for outstanding policies</span>
-            <span><span class="sw b"></span>Free capital available to underwrite</span>
-          </div>
-        </div>
-        <div>
-          <div class="inv ok" id="inv-solvent">
-            <span class="glyph" id="inv-solvent-g" aria-hidden="true">?</span>
-            <div>
-              <div class="name">reserved ≤ capital <span class="val" id="inv-solvent-v">…</span></div>
-              <p class="desc">Re-checked on-chain after every state change. If it could ever be false the pool would be promising money it does not hold — so the contract refuses the transaction instead.</p>
-            </div>
-          </div>
-          <div class="inv ok" id="inv-recon">
-            <span class="glyph" id="inv-recon-g" aria-hidden="true">?</span>
-            <div>
-              <div class="name">reconcile <span class="val" id="inv-recon-v">…</span></div>
-              <p class="desc" id="recon-desc">Every NEAR in the pool is accounted for by an identity computed on-chain, not asserted here.</p>
-            </div>
-          </div>
-        </div>
-        <div class="fresh" id="fresh" role="status" aria-live="polite">
-          <span id="fresh-dot" class="dot load"></span><span id="fresh-text">Reading the contract…</span>
-        </div>
-      </div>
-
-      <div class="figs" id="figs" aria-label="Pool figures">
-        <div><p class="k">Available to underwrite</p><p class="v" id="fig-avail">—</p></div>
-        <div><p class="k">Active policies</p><p class="v" id="fig-active">—</p></div>
-        <div><p class="k">Premiums collected</p><p class="v" id="fig-premiums">—</p></div>
-        <div><p class="k">Paid to beneficiaries</p><p class="v" id="fig-paid">—</p></div>
-        <div><p class="k">Deposited by providers</p><p class="v" id="fig-deposited">—</p></div>
-        <div><p class="k">Withdrawn by providers</p><p class="v" id="fig-withdrawn">—</p></div>
+      <div class="hero-art">
+        <!-- Original layered illustration: rainfall outside, shelter within. -->
+        <svg viewBox="0 0 520 340" role="img" aria-labelledby="art-t art-d" focusable="false">
+          <title id="art-t">The risk is outside; the cover is inside</title>
+          <desc id="art-d">A field of falling rain lines above a ground line. Under an unbroken arc of protection, a sheltered row of units stands dry. The arc marks where the contract's rules take over.</desc>
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#17352a"/><stop offset="1" stop-color="#0d1f18"/>
+            </linearGradient>
+            <linearGradient id="shelter" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f0c987"/><stop offset="1" stop-color="#c98a3a"/>
+            </linearGradient>
+            <linearGradient id="rain" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7fa79a" stop-opacity=".05"/><stop offset="1" stop-color="#7fa79a" stop-opacity=".55"/>
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="520" height="340" rx="14" fill="url(#sky)"/>
+          <!-- rain field (the risk) -->
+          <g stroke="url(#rain)" stroke-width="2.4" stroke-linecap="round">
+            <line x1="30" y1="24" x2="22" y2="66"/><line x1="70" y1="14" x2="62" y2="56"/>
+            <line x1="110" y1="30" x2="102" y2="72"/><line x1="150" y1="16" x2="142" y2="58"/>
+            <line x1="190" y1="34" x2="182" y2="76"/><line x1="230" y1="18" x2="222" y2="60"/>
+            <line x1="270" y1="28" x2="262" y2="70"/><line x1="310" y1="12" x2="302" y2="54"/>
+            <line x1="350" y1="32" x2="342" y2="74"/><line x1="390" y1="18" x2="382" y2="60"/>
+            <line x1="430" y1="30" x2="422" y2="72"/><line x1="470" y1="16" x2="462" y2="58"/>
+            <line x1="50" y1="76" x2="42" y2="118"/><line x1="130" y1="82" x2="122" y2="124"/>
+            <line x1="210" y1="72" x2="202" y2="114"/><line x1="290" y1="86" x2="282" y2="128"/>
+            <line x1="370" y1="74" x2="362" y2="116"/><line x1="450" y1="80" x2="442" y2="122"/>
+          </g>
+          <!-- ground -->
+          <line x1="24" y1="252" x2="496" y2="252" stroke="#2c4a3d" stroke-width="2"/>
+          <!-- shelter arc (protection) -->
+          <path d="M96 236 C 150 150, 370 150, 424 236" fill="none" stroke="url(#shelter)" stroke-width="6" stroke-linecap="round"/>
+          <path d="M120 232 C 166 172, 354 172, 400 232" fill="none" stroke="#f0c987" stroke-width="1.4" opacity=".28"/>
+          <!-- the label on the arc -->
+          <text x="260" y="140" text-anchor="middle" font-family="ui-monospace, monospace" font-size="12.5" fill="#f0c987" opacity=".92">the contract's rules take over here</text>
+          <!-- sheltered units (the covered business) -->
+          <g fill="#0d1f18" stroke="#cfe0d6" stroke-width="1.6">
+            <rect x="176" y="204" width="42" height="48" rx="4"/>
+            <rect x="232" y="192" width="42" height="60" rx="4"/>
+            <rect x="288" y="204" width="42" height="48" rx="4"/>
+          </g>
+          <g fill="#f0c987" opacity=".9">
+            <rect x="184" y="214" width="9" height="9" rx="1.5"/><rect x="201" y="214" width="9" height="9" rx="1.5"/>
+            <rect x="240" y="202" width="9" height="9" rx="1.5"/><rect x="257" y="202" width="9" height="9" rx="1.5"/>
+            <rect x="240" y="220" width="9" height="9" rx="1.5"/><rect x="257" y="220" width="9" height="9" rx="1.5"/>
+            <rect x="296" y="214" width="9" height="9" rx="1.5"/><rect x="313" y="214" width="9" height="9" rx="1.5"/>
+          </g>
+          <!-- rain striking the arc, deflected -->
+          <g stroke="#e0aa55" stroke-width="1.6" stroke-linecap="round" opacity=".7">
+            <path d="M150 176 l-9 12"/><path d="M372 176 l9 12"/>
+          </g>
+          <!-- the reading marker -->
+          <g>
+            <circle cx="260" cy="176" r="5" fill="none" stroke="#f0c987" stroke-width="1.6" opacity=".5"/>
+          </g>
+        </svg>
+        <p class="art-cap"><b>Outside:</b> the risk, measured by a public index. <b>Inside:</b> the cover, defined in advance and backed by reserved capital. The arc is the set of rules the contract enforces — not a promise on a page.</p>
       </div>
     </div>
   </section>
 
-  <!-- ================= HOW IT WORKS ================= -->
-  <section class="wrap band" aria-labelledby="how-h">
-    <div class="sect-head">
-      <h2 id="how-h">How a policy works, end to end</h2>
-      <p class="sect-note">Eight steps. Each is a real contract rule; the actor who triggers it is named.</p>
+  <!-- ================= COVERAGE STRIP ================= -->
+  <section class="cov-strip" aria-label="Cover in force, read from the contract">
+    <div class="wrap">
+      <div class="in">
+        <div class="c"><p class="n" id="cov-capital">—</p><p class="k">Capital backing policies <span class="live-flag">live</span></p></div>
+        <div class="c"><p class="n" id="cov-reserved">—</p><p class="k">Reserved for potential payouts</p></div>
+        <div class="c"><p class="n" id="cov-active">—</p><p class="k">Policies currently in force</p></div>
+        <div class="c"><p class="n" id="cov-paid">—</p><p class="k">Settlements already paid out</p></div>
+      </div>
     </div>
-    <ol class="steps">
-      <li><span class="n"></span><div><p class="t">A product defines the risk</p><p class="d">The owner publishes a city, an index, a trigger threshold, a premium rate, payout bounds and a capacity cap. It is immutable afterwards.</p><p class="who">owner · add_product</p></div></li>
-      <li><span class="n"></span><div><p class="t">A provider funds the pool</p><p class="d">Anyone deposits NEAR and becomes an underwriter. Their capital earns the premiums and can only be withdrawn while it is not reserved.</p><p class="who">capital provider · deposit</p></div></li>
-      <li><span class="n"></span><div><p class="t">A business buys cover</p><p class="d">It pays the premium the product fixes, for a payout between the product's bounds, on an observation date. The payout is reserved from the pool immediately.</p><p class="who">policyholder · buy_cover</p></div></li>
-      <li><span class="n"></span><div><p class="t">The attestor publishes a signed reading</p><p class="d">A value for the index on the observation date, signed with ed25519. The contract verifies the signature, the freshness and a single-use nonce before accepting it.</p><p class="who">attestor · report_observation</p></div></li>
-      <li><span class="n"></span><div><p class="t">The reading can be challenged</p><p class="d">During the challenge window anyone can dispute a reading by posting a bond and a counter-value. A disputed reading cannot settle a policy.</p><p class="who">anyone · challenge_observation</p></div></li>
-      <li><span class="n"></span><div><p class="t">The owner resolves the dispute</p><p class="d">Upholding the reading forfeits the challenger's bond into the pool. Rejecting it nullifies the reading and returns the bond.</p><p class="who">owner · resolve_dispute</p></div></li>
-      <li><span class="n"></span><div><p class="t">The policy settles</p><p class="d">Once the window has elapsed, settlement pays the beneficiary iff the validated reading meets the threshold. Either way the reservation is released, and it can happen only once.</p><p class="who">anyone · resolve</p></div></li>
-      <li><span class="n"></span><div><p class="t">The result is verifiable</p><p class="d">The payout, the reservation release and the pool identity are all contract state. Any observer can reproduce every figure on this page from a public RPC endpoint.</p><p class="who">anyone · get_pool, reconcile</p></div></li>
+  </section>
+
+  <!-- ================= WHAT / WHO ================= -->
+  <section class="wrap band" aria-labelledby="what-h">
+    <div class="sect-head">
+      <h2 id="what-h">What Overcover covers, and who it is for</h2>
+      <p class="sect-note">One risk at a time, defined in advance. No underwriting interview, no claim form.</p>
+    </div>
+    <div class="prod-grid">
+      <div class="card pad">
+        <h3 style="font-size:17px">The risk it covers</h3>
+        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">A named city fails to receive an agreed amount of rainfall on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
+        <p style="margin-top:12px;color:var(--muted);font-size:13.5px">Because the trigger is a public reading rather than an assessed loss, there is nothing to argue about and no adjuster to wait for.</p>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:17px">Who it is for</h3>
+        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle: growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes, and the software agents that run them.</p>
+        <p style="margin-top:12px;color:var(--muted);font-size:13.5px">It is a poor fit for a loss that needs assessing after the fact — that is what a traditional policy is for.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HOW A POLICY WORKS ================= -->
+  <section class="wrap band" id="how" aria-labelledby="how-h">
+    <div class="sect-head">
+      <h2 id="how-h">From buying cover to getting paid</h2>
+      <p class="sect-note">Eight steps. Each is a real contract rule, and the actor who triggers it is named.</p>
+    </div>
+    <ol class="journey">
+      <li>
+        <div class="node"><span class="num">01</span></div>
+        <div class="body">
+          <p class="t">Choose protection</p>
+          <p class="d">Pick an available risk product: a city, an index and a trigger level, published in advance.</p>
+          <span class="meta"><span class="chip actor">you</span><span class="chip">list_products</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">02</span></div>
+        <div class="body">
+          <p class="t">Understand the coverage</p>
+          <p class="d">Read the trigger, the premium, the maximum payout, the capacity left and the observation date. These are fixed when the product is published and cannot change afterwards.</p>
+          <span class="meta"><span class="chip actor">you</span><span class="chip">get_product</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">03</span></div>
+        <div class="body">
+          <p class="t">Buy the policy</p>
+          <p class="d">Pay the premium the product fixes, with the exact amount attached as the deposit. The payout is reserved from the pool at that moment, so the promise is backed immediately.</p>
+          <span class="meta"><span class="chip actor">policyholder</span><span class="chip">buy_cover</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">04</span></div>
+        <div class="body">
+          <p class="t">The risk is observed</p>
+          <p class="d">An attestor submits the index reading for the agreed date, signed with ed25519. The contract checks the signature, the freshness and a single-use nonce before it accepts the value.</p>
+          <span class="meta"><span class="chip actor">attestor</span><span class="chip">report_observation</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">05</span></div>
+        <div class="body">
+          <p class="t">The reading can be challenged</p>
+          <p class="d">For a short window, anyone may dispute the reading by posting a bond and a counter-value. A reading under dispute cannot settle a policy.</p>
+          <span class="meta"><span class="chip actor">anyone</span><span class="chip">challenge_observation</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">06</span></div>
+        <div class="body">
+          <p class="t">A dispute is resolved</p>
+          <p class="d">The contract owner decides. Upholding the reading forfeits the challenger's bond into the pool; rejecting it nullifies the reading and returns the bond. This step is a human decision — see the disclosures below.</p>
+          <span class="meta"><span class="chip actor">owner</span><span class="chip">resolve_dispute</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">07</span></div>
+        <div class="body">
+          <p class="t">Eligibility and settlement</p>
+          <p class="d">Once the window has passed, the contract compares the validated reading to the trigger. If it meets the trigger the beneficiary is paid; if not, no payout is made. Either way the reservation is released, and this can happen only once.</p>
+          <span class="meta"><span class="chip actor">anyone</span><span class="chip">resolve</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">08</span></div>
+        <div class="body">
+          <p class="t">The result is verifiable</p>
+          <p class="d">The payout, the released reservation and the pool identity are contract state. Every figure on this page can be reproduced from a public RPC endpoint, without trusting the page.</p>
+          <span class="meta"><span class="chip actor">anyone</span><span class="chip">get_pool · reconcile</span></span>
+        </div>
+      </li>
     </ol>
   </section>
 
-  <!-- ================= PRODUCTS ================= -->
-  <section class="wrap band" aria-labelledby="prod-h">
+  <!-- ================= COVER AVAILABLE (products) ================= -->
+  <section class="wrap band" id="cover" aria-labelledby="cover-h">
     <div class="sect-head">
-      <h2 id="prod-h">Risk products</h2>
-      <p class="sect-note">Each row is an immutable definition read from the contract. Capacity is a hard cap on total outstanding payout for that product.</p>
+      <h2 id="cover-h">Cover available now</h2>
+      <p class="sect-note">Each card is an immutable risk definition read from the contract. Capacity is a hard cap on the total outstanding payout for that product.</p>
     </div>
-    <div class="panel" id="products">
-      <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
-      <p class="sr">Loading products…</p>
+    <div id="products">
+      <div class="card"><div class="skel" aria-hidden="true"><i></i><i></i><i></i></div><p class="sr">Loading products…</p></div>
+    </div>
+  </section>
+
+  <!-- ================= QUOTE ================= -->
+  <section class="wrap band" aria-labelledby="quote-h">
+    <div class="sect-head">
+      <h2 id="quote-h">Price a policy</h2>
+      <p class="sect-note">A live quote computed by the contract's own <code>quote</code> view — the same number <code>buy_cover</code> would charge for these terms.</p>
+    </div>
+    <div class="card quote">
+      <div>
+        <div class="qrow">
+          <label for="q-product">Which protection</label>
+          <select id="q-product"></select>
+        </div>
+        <div class="qrow" style="margin-top:16px">
+          <label for="q-payout">Payout if the trigger is met</label>
+          <input id="q-payout" type="range" min="0" max="100" value="100" step="1" />
+          <span class="sub" id="q-payout-label" style="font-family:var(--mono);font-size:13px">—</span>
+        </div>
+        <div class="q-terms" id="q-terms"></div>
+      </div>
+      <div>
+        <div class="qout" id="q-out" role="status" aria-live="polite">
+          <div><span class="k">Premium you pay now</span><span class="v hero-v" id="q-premium">—</span></div>
+          <div><span class="k">Payout reserved from the pool</span><span class="v" id="q-reserve">—</span></div>
+          <div><span class="k">Premium rate</span><span class="v" id="q-rate">—</span></div>
+          <div><span class="k">Capacity remaining after this policy</span><span class="v" id="q-capacity">—</span></div>
+        </div>
+        <div class="ro" id="q-readonly" style="margin-top:16px">
+          <b>This is a read-only quote.</b> This page holds no wallet and signs nothing, so it cannot buy cover for you, and it will never show a policy as active before the chain confirms one. To buy, call <code>buy_cover</code> from a NEAR account with the exact premium attached as the deposit.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="wrap band" aria-labelledby="dash-h">
+    <div class="sect-head">
+      <h2 id="dash-h">Can the pool pay what it has promised?</h2>
+      <p class="sect-note">The pool's job is to honour every policy it has written. These are its figures, read live from the contract.</p>
+    </div>
+    <div class="card pad">
+      <div class="solv-top">
+        <div>
+          <p class="lbl">Capital backing policies</p>
+          <p class="big" id="capital">—<span class="u">NEAR</span></p>
+          <p class="kicker" style="margin-top:8px">Total capital in the pool. Deposits and premiums, less what has already been paid out.</p>
+        </div>
+        <div>
+          <p class="lbl">Reserved for potential payouts</p>
+          <p class="big" id="reserved" style="color:var(--accent)">—<span class="u">NEAR</span></p>
+          <p class="kicker" style="margin-top:8px">Set aside the moment each policy was bought, so it cannot be withdrawn while the policy is live.</p>
+        </div>
+      </div>
+      <div style="margin-top:22px">
+        <div class="bar" role="img" aria-labelledby="barlbl">
+          <div id="fill" class="fill" style="width:0%"></div>
+        </div>
+        <div class="bar-cap">
+          <span id="barlbl">reserved —% of capital</span>
+          <span id="available-cap">free to underwrite —</span>
+        </div>
+        <div class="bar-key">
+          <span><span class="sw a"></span>Reserved for outstanding policies</span>
+          <span><span class="sw b"></span>Free capital, available to underwrite new cover</span>
+        </div>
+      </div>
+      <div style="margin-top:20px">
+        <div class="inv ok" id="inv-solvent">
+          <span class="glyph" id="inv-solvent-g" aria-hidden="true">?</span>
+          <div>
+            <div class="name">reserved ≤ capital <span class="val" id="inv-solvent-v">…</span></div>
+            <p class="desc">Re-checked on-chain after every state change. If it could ever be false the pool would be promising money it does not hold — so the contract refuses the transaction instead.</p>
+          </div>
+        </div>
+        <div class="inv ok" id="inv-recon">
+          <span class="glyph" id="inv-recon-g" aria-hidden="true">?</span>
+          <div>
+            <div class="name">reconcile <span class="val" id="inv-recon-v">…</span></div>
+            <p class="desc" id="recon-desc">Every NEAR in the pool is accounted for by an identity computed on-chain, not asserted here.</p>
+          </div>
+        </div>
+      </div>
+      <div class="fresh" id="fresh" role="status" aria-live="polite">
+        <span id="fresh-dot" class="dot load"></span><span id="fresh-text">Reading the contract…</span>
+      </div>
+    </div>
+
+    <div class="figs" id="figs" aria-label="Pool figures" style="margin-top:18px">
+      <div><p class="k">Free capital to underwrite</p><p class="v" id="fig-avail">—</p></div>
+      <div><p class="k">Policies in force</p><p class="v" id="fig-active">—</p></div>
+      <div><p class="k">Premiums collected</p><p class="v" id="fig-premiums">—</p></div>
+      <div><p class="k">Paid to beneficiaries</p><p class="v" id="fig-paid">—</p></div>
+      <div><p class="k">Deposited by providers</p><p class="v" id="fig-deposited">—</p></div>
+      <div><p class="k">Withdrawn by providers</p><p class="v" id="fig-withdrawn">—</p></div>
+    </div>
+
+    <div class="glossary">
+      <div><b>Capital</b> is what the pool holds. <b>Reserved</b> is the part already promised to live policies and unavailable to withdraw. <b>Free capital</b> is what remains to underwrite new cover. <b>Reconcile</b> checks that capital equals deposits − withdrawals + premiums + forfeited bonds − payouts.</div>
     </div>
   </section>
 
@@ -308,11 +638,11 @@
     </div>
   </section>
 
-  <!-- ================= ORACLE & SETTLEMENT ================= -->
+  <!-- ================= ORACLE ================= -->
   <section class="wrap band" aria-labelledby="obs-h">
     <div class="sect-head">
-      <h2 id="obs-h">Oracle readings &amp; settlement</h2>
-      <p class="sect-note">Signed index reports. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected and can never settle a policy.</p>
+      <h2 id="obs-h">Observations &amp; disputes</h2>
+      <p class="sect-note">Signed index readings. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected and can never settle a policy.</p>
     </div>
     <div class="panel" id="observations">
       <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -320,39 +650,55 @@
     </div>
   </section>
 
-  <!-- ================= GET COVERED (read-only quote) ================= -->
-  <section class="wrap band" aria-labelledby="buy-h">
+  <!-- ================= TRUST ================= -->
+  <section class="wrap band" aria-labelledby="trust-h">
     <div class="sect-head">
-      <h2 id="buy-h">What cover would cost</h2>
-      <p class="sect-note">A live quote computed by the contract's own <code>quote</code> view — the same number <code>buy_cover</code> would charge.</p>
+      <h2 id="trust-h">How this differs from a traditional claim</h2>
+      <p class="sect-note">Not that one is better in every case — they answer different questions. A traditional policy assesses a loss after the fact; Overcover settles a condition defined in advance.</p>
     </div>
-    <div class="card quote">
-      <div class="qrow">
-        <label for="q-product">Product</label>
-        <select id="q-product"></select>
+    <div class="vs">
+      <div class="trad">
+        <p class="h">A traditional claim</p>
+        <ul>
+          <li>The loss is reported, then assessed by an adjuster.</li>
+          <li>The payout is decided after the event, at someone's discretion.</li>
+          <li>Payment arrives on a queue measured in weeks.</li>
+          <li>The policy wording is long, and its interpretation is contestable.</li>
+        </ul>
       </div>
-      <div class="qrow">
-        <label for="q-payout">Payout if the trigger is met</label>
-        <input id="q-payout" type="range" min="0" max="100" value="50" step="1" />
-        <span class="sub" id="q-payout-label" style="font-family:var(--mono);font-size:13px">—</span>
+      <div class="para">
+        <p class="h">How Overcover settles</p>
+        <ul>
+          <li>The trigger is a public reading, fixed in the product before you buy.</li>
+          <li>Eligibility is a comparison — reading against trigger — not a judgement call.</li>
+          <li>The payout is reserved from capital the pool already holds.</li>
+          <li>Settlement can be replayed and checked by anyone, on-chain.</li>
+        </ul>
       </div>
-      <div class="qout" id="q-out" role="status" aria-live="polite">
-        <div><span class="k">Premium payable now</span><span class="v" id="q-premium">—</span></div>
-        <div><span class="k">Payout reserved from the pool</span><span class="v" id="q-reserve">—</span></div>
-        <div><span class="k">Premium rate</span><span class="v" id="q-rate">—</span></div>
-      </div>
-      <div class="ro" id="q-readonly">
-        <b>Read-only.</b> This page holds no wallet and signs nothing, so it cannot buy cover for you. To buy, call
-        <code>buy_cover</code> from a NEAR account with the exact premium attached as the deposit. The page never shows a
-        success it did not get from the chain.
-      </div>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">1</span>Defined conditions</p><p class="cd">The city, index, trigger, premium and payout bounds are published before purchase and cannot change afterwards. There is no re-pricing after the fact.</p></div>
+      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">2</span>Reserved payout</p><p class="cd">The moment a policy is bought, its payout is reserved. The contract refuses any transaction that would leave the pool promising more than it holds.</p></div>
+      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">3</span>Bonded, challengeable reading</p><p class="cd">The attestor's reading is signed and verified on-chain, and anyone may dispute it with a bond. A disputed reading cannot settle a policy.</p></div>
+    </div>
+
+    <div class="disclose">
+      <h3>What you should know before trusting this</h3>
+      <ul>
+        <li><b>Testnet only, unaudited.</b> This runs on NEAR testnet with test funds. The contract has not been professionally audited and is not for real money.</li>
+        <li><b>Single trusted attestor.</b> The index reading is currently signed by one key, not a decentralised oracle. It can be challenged, but the challenge is not yet trustless.</li>
+        <li><b>The owner resolves disputes.</b> Step 06 is a human decision by the contract owner. The owner has no power to move pool capital, but it does decide disputes.</li>
+        <li><b>60-second challenge window.</b> The live demonstration uses a 60-second window; a production deployment would use a longer one.</li>
+        <li><b>Parametric, not indemnity.</b> A payout follows the reading meeting the trigger. It does not compensate an assessed loss, and a loss that does not meet the trigger is not covered.</li>
+      </ul>
     </div>
   </section>
 
   <!-- ================= PROOF ================= -->
   <section class="wrap band" aria-labelledby="proof-h">
     <div class="sect-head">
-      <h2 id="proof-h">Proof &amp; reproducibility</h2>
+      <h2 id="proof-h">Check it for yourself</h2>
       <p class="sect-note">Everything above is a direct read. Reproduce it, or check it on a block explorer, without trusting this page.</p>
     </div>
     <div class="proof">
@@ -381,7 +727,7 @@
         <div class="links" id="explorer-links"><a href="#" rel="noopener">Contract account on NEAR Blocks</a></div>
       </div>
       <div>
-        <p class="lbl">Sample transactions from the recorded demo</p>
+        <p class="lbl">Sample settlements from the recorded demo</p>
         <div class="links" id="demo-links"><span class="sub" style="font-size:12.5px">Loading…</span></div>
       </div>
     </div>
@@ -391,12 +737,30 @@
 <footer>
   <div class="wrap f-in">
     <div class="f-l">
-      Overcover reads state straight from a public NEAR testnet RPC endpoint. There is no server, no API key and no private key in this page.
-      Testnet only — no real funds. Figures are contract state; if a read fails, the page says so instead of showing a stale number as live.
+      <h2>Overcover</h2>
+      <p>Parametric insurance for businesses that cannot afford to wait for a claims process. Cover is defined in advance, the payout is reserved from a capital pool, and settlement follows a signed public reading — read live from the contract, with nothing to take on trust.</p>
     </div>
-    <div>Overcover · NEAR Hackathon 2026 · MIT</div>
+    <div class="f-col">
+      <h3>Understand the cover</h3>
+      <a href="#what-h">What it covers</a>
+      <a href="#how-h">How a claim settles</a>
+      <a href="#cover">Cover available</a>
+      <a href="#quote-h">Price a policy</a>
+    </div>
+    <div class="f-col">
+      <h3>Verify</h3>
+      <a id="f-cid" href="#" rel="noopener">Contract on NEAR Blocks</a>
+      <a href="https://github.com/itzebe/overcover" target="_blank" rel="noopener">Source repository</a>
+      <a href="#proof-h">Reproduce the figures</a>
+      <a href="#trust-h">Disclosures</a>
+    </div>
+  </div>
+  <div class="wrap f-bot">
+    <span>Overcover · NEAR Hackathon 2026 · MIT</span>
+    <span>Testnet only — no real funds. Figures are contract state; if a read fails, the page says so instead of showing a stale number as live.</span>
   </div>
 </footer>
+
 
 <script>
 (function () {
@@ -424,6 +788,7 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   };
+  var cap = function (s) { s = String(s); return s.charAt(0).toUpperCase() + s.slice(1); };
   var big = function (y) { try { return BigInt(y); } catch (e) { return null; } };
   var near = function (y) { var b = big(y); return b === null ? NaN : Number(b) / 1e24; };
   var fmt = function (y, d) { var v = near(y); return isFinite(v) ? v.toFixed(d === undefined ? 4 : d) : "—"; };
@@ -493,14 +858,56 @@
     });
   }
 
+  // ---------------------------------------------------------------- insurance wording
+
+  // The contract pays iff the validated reading is >= the product threshold, so the
+  // coverage statement is derived from that rule rather than written by hand.
+  function coveredText(p) {
+    return "Pays if " + cap(p.city) + " rainfall reaches " + mm(p.threshold_tenths) +
+      " or more on the observation date.";
+  }
+
+  function capacityLeft(p) {
+    var max = big(p.max_total_coverage) || 0n, res = big(p.reserved) || 0n;
+    return max > res ? max - res : 0n;
+  }
+
   // ---------------------------------------------------------------- renderers
 
-  var PROD_HEAD = "<thead><tr><th>Product</th><th>Index</th><th class=\"num\">Trigger</th><th class=\"num\">Premium</th><th class=\"num\">Max payout</th><th class=\"num\">Reserved / capacity</th></tr></thead>";
+  function term(k, v) { return '<div><p class="k">' + esc(k) + '</p><p class="v">' + v + "</p></div>"; }
+
+  function productCard(p) {
+    var util = pct(p.reserved, p.max_total_coverage);
+    var left = capacityLeft(p);
+    var status = p.active === false
+      ? '<span class="tag paused">paused</span>'
+      : '<span class="tag available">available</span>';
+    return '<article class="card prod">' +
+      '<div class="head"><div class="top"><div>' +
+        "<h3>" + esc(cap(p.city)) + " rainfall</h3>" +
+        '<p class="city">' + esc(p.id) + " · " + esc(cap(p.city)) + "</p>" +
+      "</div>" + status + "</div>" +
+      '<p class="covered">' + esc(coveredText(p)) + "</p></div>" +
+      '<div class="terms">' +
+        term("Trigger", mm(p.threshold_tenths)) +
+        term("Premium", (p.premium_bp / 100).toFixed(2) + "%") +
+        term("Max payout", fmt(p.max_payout, 2) + " <small>NEAR</small>") +
+        term("Min payout", fmt(p.min_payout, 2) + " <small>NEAR</small>") +
+        term("Capacity", fmt(p.max_total_coverage, 2) + " <small>NEAR</small>") +
+        term("Capacity left", fmt(left, 2) + " <small>NEAR</small>") +
+      "</div>" +
+      '<div class="cap">' +
+        '<div class="row"><span>Reserved ' + fmt(p.reserved, 2) + " NEAR</span><span>" + util.toFixed(0) + "% of capacity</span></div>" +
+        '<div class="capbar"><div class="cf" style="width:' + Math.min(100, util).toFixed(1) + '%"></div></div>' +
+        '<p class="lim">Parametric: pays on the reading meeting the trigger, not on an assessed loss.</p>' +
+        '<p class="lim">Observation date must be at least ' + esc(String(p.min_lead_sec)) + "s after purchase.</p>" +
+      "</div></article>";
+  }
 
   function productRow(p) {
     var util = pct(p.reserved, p.max_total_coverage);
     return "<tr>" +
-      '<td>' + esc(p.id) + (p.active === false ? ' <span class="tag paused">paused</span>' : "") + "</td>" +
+      "<td>" + esc(p.id) + (p.active === false ? ' <span class="tag paused">paused</span>' : "") + "</td>" +
       '<td class="sub">' + esc(p.city) + "</td>" +
       '<td class="num">' + mm(p.threshold_tenths) + "</td>" +
       '<td class="num">' + (p.premium_bp / 100).toFixed(2) + "%</td>" +
@@ -509,23 +916,25 @@
       "</tr>";
   }
 
+  var PROD_HEAD = '<thead><tr><th>Product</th><th>Index</th><th class="num">Trigger</th><th class="num">Premium</th><th class="num">Max payout</th><th class="num">Reserved / capacity</th></tr></thead>';
+
   function renderProducts(list) {
     if (!list.length) {
-      return '<div class="empty"><span class="e-t">No products published</span>Nothing can be bought until the owner publishes a risk definition. A product fixes the index, trigger, premium and a capacity cap.</div>';
+      return '<div class="card"><div class="empty"><span class="e-t">No cover is available</span>Nothing can be bought until a risk product is published. A product fixes the city, index, trigger, premium and a capacity cap.</div></div>';
     }
     var canonical = list.filter(function (p) { return !MACHINE_ID.test(p.id); });
     var test = list.filter(function (p) { return MACHINE_ID.test(p.id); });
     var out = "";
     if (canonical.length) {
-      out += '<div class="scroll" tabindex="0" role="region" aria-label="Risk products"><table><caption>Risk products</caption>' +
-        PROD_HEAD + "<tbody>" + canonical.map(productRow).join("") + "</tbody></table></div>";
+      out += '<div class="prod-grid">' + canonical.map(productCard).join("") + "</div>";
     } else {
-      out += '<div class="empty"><span class="e-t">No named products</span>Only demo-generated product ids are present in the contract.</div>';
+      out += '<div class="card"><div class="empty"><span class="e-t">No named products</span>Only demo-generated product ids are present in the contract right now.</div></div>';
     }
     if (test.length) {
-      out += '<details class="legacy"><summary>Show ' + test.length + " demo-generated products (test state)</summary>" +
+      out += '<div class="card" style="margin-top:20px"><details class="legacy"><summary>Show ' + test.length +
+        " demo-generated products (test state, not a current customer offering)</summary>" +
         '<div class="scroll" tabindex="0" role="region" aria-label="Demo-generated products"><table><caption>Demo-generated products</caption>' +
-        PROD_HEAD + "<tbody>" + test.map(productRow).join("") + "</tbody></table></div></details>";
+        PROD_HEAD + "<tbody>" + test.map(productRow).join("") + "</tbody></table></div></details></div>";
     }
     return out;
   }
@@ -536,7 +945,7 @@
     }
     var rows = list.slice().sort(function (a, b) { return b.id - a.id; }).map(function (p) {
       return "<tr>" +
-        '<td>#' + esc(p.id) + "</td>" +
+        "<td>#" + esc(p.id) + "</td>" +
         '<td class="sub">' + esc(p.product_id) + "</td>" +
         '<td class="num">' + fmt(p.payout, 2) + "</td>" +
         '<td class="num">' + fmt(p.premium, 4) + "</td>" +
@@ -545,15 +954,15 @@
         '<td><span class="tag ' + esc(p.status) + '">' + esc(String(p.status).replace(/_/g, " ")) + "</span></td>" +
         "</tr>";
     }).join("");
-    return '<div class="scroll" tabindex="0" role="region" aria-label="Cover written"><table><caption>Cover written, with settlement status</caption><thead><tr>' +
-      "<th>Policy</th><th>Product</th><th class=\"num\">Payout</th><th class=\"num\">Premium</th>" +
-      "<th>Beneficiary</th><th class=\"num\">Trigger date</th><th>Status</th>" +
+    return '<div class="scroll" tabindex="0" role="region" aria-label="Policies written"><table><caption>Policies written, with settlement status</caption><thead><tr>' +
+      '<th>Policy</th><th>Product</th><th class="num">Payout</th><th class="num">Premium</th>' +
+      '<th>Beneficiary</th><th class="num">Observation date</th><th>Status</th>' +
       "</tr></thead><tbody>" + rows + "</tbody></table></div>";
   }
 
   function renderObservations(list) {
     if (!list.length) {
-      return '<div class="empty"><span class="e-t">No observations yet</span>An attestor reports a signed (index, date, value); the contract verifies the signature, freshness and replay nonce before accepting it.</div>';
+      return '<div class="empty"><span class="e-t">No observations yet</span>An attestor reports a signed (city, date, value); the contract verifies the signature, freshness and replay nonce before accepting it.</div>';
     }
     var rows = list.slice().sort(function (a, b) { return b.reported_at - a.reported_at; }).map(function (o) {
       var state = o.nullified ? "nullified" : o.disputed ? "challenged" : "signed";
@@ -566,8 +975,8 @@
         "</tr>";
     }).join("");
     return '<div class="scroll" tabindex="0" role="region" aria-label="Signed index observations"><table><caption>Signed index observations</caption><thead><tr>' +
-      "<th>Index</th><th class=\"num\">Value</th><th class=\"num\">Observed</th>" +
-      "<th class=\"num\">Reported</th><th>State</th>" +
+      '<th>Index</th><th class="num">Value</th><th class="num">Observed</th>' +
+      '<th class="num">Reported</th><th>State</th>' +
       "</tr></thead><tbody>" + rows + "</tbody></table></div>";
   }
 
@@ -595,7 +1004,7 @@
   function showError(msg, haveData, lastOk) {
     var slot = el("error-slot");
     if (haveData) {
-      slot.innerHTML = '<div class="stale-note" role="alert" style="margin-top:18px"><span aria-hidden="true">!</span><div><b>Live read failed.</b> Showing the last successful read' + (lastOk ? " from " + esc(lastOk) : "") + ". Reason: <code>" + esc(msg) + "</code></div></div>";
+      slot.innerHTML = '<div class="stale-note" role="alert" style="margin-top:18px"><span aria-hidden="true">!</span><div><b>Live read failed.</b> Showing the last successful read' + (lastOk ? " from " + esc(lastOk) : "") + '. Reason: <code>' + esc(msg) + "</code></div></div>";
     } else {
       slot.innerHTML = '<div class="fail-note" role="alert" style="margin-top:18px"><p class="ft">Could not read the contract</p><p class="fd">The page keeps retrying across three public RPC endpoints. If this persists, the contract id may be wrong or the endpoints may be rate-limiting. <code>' + esc(msg) + "</code></p></div>";
     }
@@ -612,13 +1021,15 @@
     var canonical = quoteState.products.filter(function (p) { return !MACHINE_ID.test(p.id) && p.active !== false; });
     if (!canonical.length) {
       sel.innerHTML = "";
-      el("q-premium").textContent = "—"; el("q-reserve").textContent = "—"; el("q-rate").textContent = "—";
-      el("q-readonly").innerHTML = "<b>No product available to quote.</b> The contract has no active named product.";
+      el("q-premium").textContent = "—"; el("q-reserve").textContent = "—";
+      el("q-rate").textContent = "—"; el("q-capacity").textContent = "—";
+      el("q-terms").innerHTML = "";
+      el("q-readonly").innerHTML = "<b>No cover available to price.</b> The contract has no active named product right now.";
       return;
     }
     if (sel.options.length !== canonical.length) {
       sel.innerHTML = canonical.map(function (p) {
-        return '<option value="' + esc(p.id) + '">' + esc(p.id) + " — " + esc(p.city) + ", trigger " + mm(p.threshold_tenths) + "</option>";
+        return '<option value="' + esc(p.id) + '">' + esc(cap(p.city)) + " rainfall — pays at " + mm(p.threshold_tenths) + " or more</option>";
       }).join("");
     }
     var id = sel.value || canonical[0].id;
@@ -629,12 +1040,22 @@
     if (quoteState.payoutYocto < min || quoteState.payoutYocto > max) quoteState.payoutYocto = max;
     var frac = max > min ? Number((quoteState.payoutYocto - min) * 1000n / (max - min)) / 1000 : 1;
     el("q-payout").value = String(Math.round(frac * 100));
-    el("q-payout-label").textContent = fmt(quoteState.payoutYocto, 2) + " NEAR  (product allows " + fmt(min, 2) + "–" + fmt(max, 2) + ")";
+    el("q-payout-label").textContent = fmt(quoteState.payoutYocto, 2) + " NEAR  (this product allows " + fmt(min, 2) + "–" + fmt(max, 2) + ")";
 
     var localPremium = ceilDiv(quoteState.payoutYocto * BigInt(p.premium_bp), 10000n);
     el("q-premium").textContent = fmt(localPremium, 4) + " NEAR";
     el("q-reserve").textContent = fmt(quoteState.payoutYocto, 2) + " NEAR";
     el("q-rate").textContent = (p.premium_bp / 100).toFixed(2) + "%";
+
+    var left = capacityLeft(p);
+    var after = left > quoteState.payoutYocto ? left - quoteState.payoutYocto : 0n;
+    el("q-capacity").textContent = fmt(after, 2) + " NEAR";
+
+    el("q-terms").innerHTML =
+      '<div><span>Covered event</span><span>' + esc(cap(p.city)) + " rainfall ≥ " + mm(p.threshold_tenths) + "</span></div>" +
+      "<div><span>Observation date</span><span>chosen at purchase, ≥ " + esc(String(p.min_lead_sec)) + "s ahead</span></div>" +
+      "<div><span>Product capacity</span><span>" + fmt(p.max_total_coverage, 2) + " NEAR · " + fmt(left, 2) + " left</span></div>" +
+      "<div><span>Limitations</span><span>parametric, not indemnity; single city and date</span></div>";
 
     // Confirm with the contract's own quote view; if it answers, its number wins.
     // A U128 serialises as a JSON string ("49999…"); some wrappers give a one-element
@@ -654,7 +1075,7 @@
     ["Publish a product", "BksQTpHzuZ5hDvGaUBBuNv1qgEzwSn7a3wTiMnm8rRR"],
     ["Provider deposit", "4VNLFJuzmjJyNCnmuvba6EaZCt3qLfR7r2he7oBN2Qxn"],
     ["Buy cover", "HpNNqRyLCQHHrqF5AQBT4ZRSF6Fu9AUbRPNX7HkU7gwL"],
-    ["Report an observation", "CLFdnAs14LkNEGsKmLJ8rMtt8J3XmxaH9KjCzRV9Dp7D"],
+    ["Report an observation", "CLFdnAs14lKNEGsKmLJ8rMtt8J3XmxaH9KjCzRV9Dp7D"],
     ["Settle, trigger met (paid)", "8nvB1dQfBNpJGqfiPcMBC6GScZnzZb3684aKvUzoSnJ3"],
     ["Settle, no trigger (no pay)", "8sHQujtdYHByd3pydEstxtjd444SRVXJzxhA5CqnXgSD"],
     ["Dispute upheld (bond forfeited)", "ztxGRCatv7xvUSZx7gJKo6eGHaSTNx52JxMQ5ejXNW4"],
@@ -665,6 +1086,8 @@
     var cid = el("cid");
     cid.textContent = CONTRACT;
     cid.href = EXPLORER + "/account/" + encodeURIComponent(CONTRACT);
+    var fcid = el("f-cid");
+    fcid.href = EXPLORER + "/account/" + encodeURIComponent(CONTRACT);
     el("codehash").textContent = acct && acct.code_hash ? acct.code_hash : "—";
     el("attestor").textContent = cfg
       ? cfg.attestor + "  ·  bond " + fmt(cfg.challenge_bond, 2) + " NEAR  ·  window " + cfg.challenge_window_sec + "s"
@@ -702,9 +1125,8 @@
       setFreshness("live", state.lastOk);
 
       el("capital").innerHTML = fmt(pool.capital) + '<span class="u">NEAR</span>';
-      el("reserved").textContent = fmt(pool.reserved) + " NEAR";
-      el("reserved").className = "n" + (near(pool.reserved) === 0 ? " zero" : "");
-      el("available-cap").textContent = "available " + fmt(pool.available) + " NEAR";
+      el("reserved").innerHTML = fmt(pool.reserved) + '<span class="u">NEAR</span>';
+      el("available-cap").textContent = "free to underwrite " + fmt(pool.available) + " NEAR";
 
       var util = pct(pool.reserved, pool.capital);
       var fill = el("fill");
@@ -724,6 +1146,15 @@
       el("fig-deposited").innerHTML = fmt(pool.total_deposited, 3) + '<span class="u">NEAR</span>';
       el("fig-withdrawn").innerHTML = fmt(pool.total_withdrawn, 3) + '<span class="u">NEAR</span>';
 
+      el("cov-capital").textContent = fmt(pool.capital, 2) + " NEAR";
+      el("cov-reserved").textContent = fmt(pool.reserved, 2) + " NEAR";
+      el("cov-active").textContent = active + " of " + policies.length;
+      el("cov-paid").textContent = fmt(pool.total_paid, 2) + " NEAR";
+
+      el("hero-live").textContent = "Pool read from the contract at " + state.lastOk +
+        " — " + fmt(pool.reserved, 2) + " of " + fmt(pool.capital, 2) + " NEAR reserved for live policies.";
+      el("hero-dot").className = "dot live";
+
       el("products").innerHTML = renderProducts(products);
       el("policies").innerHTML = renderPolicies(policies);
       el("observations").innerHTML = renderObservations(obs);
@@ -737,6 +1168,8 @@
       var msg = e && e.message ? e.message : String(e);
       showError(msg, state.haveData, state.lastOk);
       setFreshness(state.haveData ? "stale" : "failed", state.lastOk);
+      el("hero-dot").className = "dot " + (state.haveData ? "stale" : "failed");
+      if (!state.haveData) el("hero-live").textContent = "Could not read the pool from the contract.";
     });
   }
 
@@ -782,3 +1215,4 @@
 </script>
 </body>
 </html>
+

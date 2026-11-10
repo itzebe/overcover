@@ -131,7 +131,7 @@ All 18 hashes resolve on-chain via the `tx` RPC method.
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **18 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **29 passed, 0 failed** |
 | Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
 | Console accessibility (axe-core, WCAG 2.2 AA) | manual | **0 violations at 360 / 390 / 768 / 1024 / 1440 px** |

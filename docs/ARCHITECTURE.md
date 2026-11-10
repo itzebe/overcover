@@ -47,7 +47,8 @@ Operational scripts, not part of the product's runtime:
 
 A single static file with **no dependencies and no build step**. It makes direct
 `call_function` view calls to public NEAR testnet RPC endpoints (three, with failover) and renders
-the pool, the solvency meter, the products, the policies, the signed observations and a live quote.
+the pool, the products as coverage cards, the policies, the signed observations and a live quote.
+The hero artwork is inline SVG, so there is no remote image dependency.
 
 It holds **no wallet, no key, and no server**. It is read-only, and it says so on the page. It
 distinguishes four states honestly — loading, live, stale, failed — and never presents a failed

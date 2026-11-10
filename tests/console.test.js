@@ -142,7 +142,7 @@ test("the page defines distinct loading, live, stale and failed states", () => {
   for (const s of ["live", "stale", "failed"]) {
     assert.ok(new RegExp(`dot\\.${s}\\b`).test(HTML), `missing .dot.${s} style`);
   }
-  assert.ok(/state === "stale"/.test(SCRIPT), "a stale branch must exist in the poll loop");
+  assert.ok(/"stale" : "failed"/.test(SCRIPT), "the catch path must choose stale or failed");
   assert.ok(/No data — every RPC endpoint failed/.test(SCRIPT), "the failed state must say there is no data");
   assert.ok(/Stale — the latest read failed/.test(SCRIPT), "the stale state must warn the figures are not current");
 });
@@ -197,4 +197,112 @@ test("muted and accent text meet WCAG AA contrast on their backgrounds", () => {
   assert.ok(ratio(val("muted"), paper) >= 4.5, "muted text must reach 4.5:1 on paper");
   assert.ok(ratio(val("accent"), paper) >= 4.5, "accent text must reach 4.5:1 on paper");
   assert.ok(ratio(val("accent"), val("accent-w")) >= 4.5, "accent text must reach 4.5:1 on its tint");
+  // The hero sits on the dark field, so its own tokens must clear AA there too.
+  assert.ok(ratio(val("gold-soft"), val("field")) >= 4.5, "hero accent must reach 4.5:1 on the field");
+  assert.ok(ratio(val("on-field-2"), val("field")) >= 4.5, "hero body text must reach 4.5:1 on the field");
+});
+
+// ---------------------------------------------------------------------------
+// Insurance-first transformation: the page must read as an insurance product
+// before it reads as a blockchain application.
+// ---------------------------------------------------------------------------
+
+test("the first screen answers what/risk/who/how/trust, not chain metrics", () => {
+  const start = HTML.indexOf('<section class="hero"');
+  const end = HTML.indexOf('<section class="cov-strip"');
+  assert.ok(start !== -1 && end > start, "hero markup must be found");
+  const hero = HTML.slice(start, end);
+  assert.match(hero, /Insurance for businesses that[\s\S]*cannot afford to wait/, "hero must state the product");
+  assert.match(hero, /rainfall below a set level, in a named city, on a named date/, "hero must name the covered event");
+  assert.match(hero, /no adjuster, no queue/, "hero must say how protection is received");
+  // The chain belongs to the proof, not the promise.
+  assert.ok(!/blockchain|smart contract|on-chain/i.test(hero), "the hero must not lead with blockchain jargon");
+});
+
+test("the page describes a parametric mechanism honestly, without over-claiming", () => {
+  // Honest: settlement follows a rule; it does not claim every claim auto-approves.
+  assert.ok(/no adjuster, no queue/.test(HTML), "the parametric advantage must be stated");
+  assert.ok(/parametric, not indemnity|not on an assessed loss|does not compensate an assessed loss/i.test(HTML),
+    "the parametric limitation must be disclosed");
+  // The attestor and the owner are named actors, not hidden.
+  assert.ok(/attestor/i.test(HTML), "the attestor must be named");
+  assert.ok(/owner resolves disputes|owner decides|owner · resolve_dispute/i.test(HTML),
+    "the human dispute step must be disclosed, not hidden");
+  assert.ok(!/\bno human involvement\b|\bfully automated\b|\bautomatically approved\b/i.test(HTML),
+    "must not claim automation beyond the implementation");
+});
+
+test("the insurance journey names the real actor for each step", () => {
+  const j = HTML.slice(HTML.indexOf('class="journey"'), HTML.indexOf('id="cover"'));
+  const steps = [...j.matchAll(/class="t">([^<]+)</g)].map((m) => m[1]);
+  assert.equal(steps.length, 8, `expected 8 journey steps, found ${steps.length}`);
+  for (const actor of ["you", "policyholder", "attestor", "anyone", "owner"]) {
+    assert.ok(new RegExp(`chip actor">${actor}<`).test(j), `journey must name the actor "${actor}"`);
+  }
+});
+
+test("product cards read as coverage, with the trigger and honest limitations", () => {
+  assert.ok(SCRIPT.includes("function productCard("), "products must render as coverage cards");
+  assert.ok(SCRIPT.includes("coveredText(p)"), "each card must state the covered event");
+  assert.ok(/Pays if " \+ cap\(p\.city\) \+ " rainfall reaches/.test(SCRIPT),
+    "the covered event must be derived from the real threshold");
+  assert.ok(SCRIPT.includes("Capacity left"), "remaining capacity must be shown");
+  assert.ok(/not on an assessed loss/.test(SCRIPT), "cards must state the parametric limitation");
+  assert.ok(SCRIPT.includes('details class="legacy"'), "demo rows must stay foldable and honestly labelled");
+  assert.ok(/test state, not a current customer offering/.test(SCRIPT),
+    "demo products must be labelled as not a current offering");
+});
+
+test("the quote is real, read-only, and never fakes a purchase", () => {
+  assert.ok(SCRIPT.includes('view("quote"'), "the quote must be confirmed by the contract");
+  assert.ok(/read-only quote/i.test(HTML), "the quote must say it is read-only");
+  assert.ok(/cannot buy cover for you/.test(HTML), "the page must say it cannot purchase");
+  assert.ok(!/policy is active|purchased|bought successfully|policy_issued/i.test(SCRIPT),
+    "the page must never imply a policy was bought");
+});
+
+test("the pool is framed as the ability to honour obligations", () => {
+  assert.ok(/Can the pool pay what it has promised\?/.test(HTML), "the pool needs an insurance framing");
+  assert.ok(/Reserved for potential payouts/.test(HTML), "reserved capital must be explained as payouts");
+  assert.ok(/class="glossary"/.test(HTML), "the figures must be explained, not just displayed");
+});
+
+test("the disclosures required by the mission are present verbatim in spirit", () => {
+  const d = HTML.slice(HTML.indexOf('class="disclose"'));
+  for (const need of [
+    /Testnet only, unaudited/i,
+    /Single trusted attestor/i,
+    /owner resolves disputes/i,
+    /60-second challenge window/i,
+    /Parametric, not indemnity/i,
+  ]) {
+    assert.ok(need.test(d), `disclosure missing: ${need}`);
+  }
+});
+
+test("the hero illustration is an inline SVG (no remote image dependency)", () => {
+  assert.ok(/<svg[^>]*viewBox="0 0 520 340"/.test(HTML), "the layered hero artwork must be inline SVG");
+  assert.ok(!/<img[^>]+src="https?:/.test(HTML), "no remote image may be loaded");
+  assert.ok(!/url\(["']?https?:/.test(HTML), "no remote CSS asset may be loaded");
+});
+
+test("every in-page anchor resolves to a real id, and every id is unique", () => {
+  const ids = [...HTML.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
+  const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
+  assert.deepEqual([...new Set(dupes)], [], `duplicate ids: ${[...new Set(dupes)].join(", ")}`);
+  const idSet = new Set(ids);
+  const anchors = [...HTML.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]);
+  for (const a of anchors) assert.ok(idSet.has(a), `anchor #${a} has no matching element`);
+});
+
+test("every getElementById target in the script exists in the markup", () => {
+  const ids = new Set([...HTML.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+  const targets = new Set([...SCRIPT.matchAll(/el\("([^"]+)"\)/g)].map((m) => m[1]));
+  for (const t of targets) assert.ok(ids.has(t), `script targets #${t}, which is not in the page`);
+});
+
+test("the page has one h1 and does not skip heading levels", () => {
+  const levels = [...HTML.matchAll(/<h([1-3])[\s>]/g)].map((m) => Number(m[1]));
+  assert.equal(levels.filter((l) => l === 1).length, 1, "exactly one h1 is required");
+  assert.equal(levels[0], 1, "the h1 must come first");
 });

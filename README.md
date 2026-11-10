@@ -45,16 +45,28 @@ indices and settles it autonomously in seconds.
 Open **https://itzebe.github.io/overcover/**. No install, no keys, no account. It reads the live
 contract straight from your browser over public NEAR testnet RPC.
 
-1. The hero states the problem and shows the live pool: **capital backing cover** vs **payouts
-   promised**, with the solvency meter between them.
-2. **How a policy works** walks the eight contract rules, naming the actor and method for each.
-3. **Risk products**, **Policies written** and **Oracle readings** are real contract state. The
-   oracle table includes a **nullified** reading — one that was successfully challenged on-chain.
-4. **What cover would cost** quotes a live premium from the contract's own `quote` view.
-5. **Proof** lets you copy the exact `curl` and get the same JSON the page rendered.
+The page is written as an insurance product first: it says what is covered and who it is for before
+it says how the settlement works.
+
+1. The hero states the promise — *insurance for businesses that cannot afford to wait* — and names
+   the covered event. Beside it, an original illustration shows the risk outside and the cover
+   inside. A live line reports the pool straight from the contract.
+2. A **cover strip** gives the four figures that matter to a policyholder: capital backing policies,
+   capital reserved for potential payouts, policies in force, and settlements already paid.
+3. **What Overcover covers, and who it is for**, then **From buying cover to getting paid** — the
+   eight-step journey, each step naming the actor and the contract method behind it.
+4. **Cover available now** shows each product as a coverage card: the covered event, the trigger, the
+   premium, the payout bounds, capacity and capacity left, with the parametric limitation stated.
+5. **Price a policy** quotes a live premium from the contract's own `quote` view and is explicit that
+   it is read-only.
+6. **Can the pool pay what it has promised?** is the live pool with an insurance framing, then
+   **Policies written** and **Observations & disputes** — including a **nullified** reading that was
+   successfully challenged on-chain.
+7. **How this differs from a traditional claim** states the honest comparison and the required
+   disclosures; **Check it for yourself** lets you reproduce every figure.
 
 ```bash
-# the whole pool in one view call — the same read the console makes
+# the whole pool in one view call — the same read the page makes
 curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"contract.attestor-overcover.testnet","method_name":"get_pool","args_base64":"e30="}}'
 ```
@@ -100,8 +112,9 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
 ## The console
 
 `ui/index.html` is a single, zero-dependency static file. It makes direct RPC `view` calls to the
-deployed contract and renders the pool, the solvency meter, the products, the policies, the signed
-observations and a live quote — no server, and no key, token or secret in the bundle.
+deployed contract and renders the pool, the products as coverage cards, the policies, the signed
+observations and a live quote — no server, and no key, token or secret in the bundle. The hero
+illustration is inline SVG, so there is no remote image that can fail in production.
 
 ```bash
 python3 -m http.server 12000 --directory ui   # then open http://localhost:12000
@@ -135,7 +148,7 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 18 regression + live-RPC tests          (browser console)
+npm run test:console    # 29 regression + live-RPC tests          (browser console)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 ```
 

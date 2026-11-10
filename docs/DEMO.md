@@ -7,21 +7,23 @@
 Open the console and follow it top to bottom. Do not narrate the technology; narrate the problem and
 the proof.
 
-1. **0–10 s — the problem and the product.** "An autonomous business can buy, sell and move money,
-   but it cannot buy insurance — underwriting needs a legal person and a claim needs an adjuster. So
-   a loss is simply absorbed. Overcover writes cover against an objective public index and settles
-   it from contract rules." The page is already showing a live pool.
-2. **10–25 s — the pool is provable.** Point at **Capital backing cover** vs **Payouts promised** and
-   the solvency meter between them, then at the two green invariants. "This is not a slide; it is
-   contract state, and this page reads it with no server in between."
-3. **25–40 s — how the promise holds.** Walk **How a policy works**: risk is defined and immutable;
-   the payout is reserved at purchase; the oracle's word is challengeable with a bond.
-4. **40–55 s — the real thing.** Scroll to **Policies written** and **Oracle readings**. Show a
-   settled payout, then the **nullified** reading — a report that was successfully challenged
-   on-chain. Open **What cover would cost** and move the slider: the premium comes from the
-   contract's own `quote`.
-5. **55–60 s — close on proof.** Open **Proof**, copy the `curl`, run it. The terminal returns the
-   same numbers the page shows. "Don't trust the page. Reproduce it."
+1. **0–12 s — the product, not the chain.** "Insurance for businesses that cannot afford to wait for
+   a claims process." Name the covered event on the hero: rainfall in a named city on a named date.
+   Point at the illustration — "the risk is outside; the cover is inside" — and at the live line
+   under the buttons, which is already reading the pool from the contract.
+2. **12–25 s — the cover, in the buyer's terms.** Scroll the cover strip: capital backing policies,
+   reserved for potential payouts, policies in force, settlements paid. Then **Cover available now**:
+   read one card aloud — the covered event, the trigger, the premium, the payout bounds, capacity
+   left, and the parametric limitation. "This is what you would actually be buying."
+3. **25–38 s — how a claim settles.** Walk **From buying cover to getting paid**: cover is defined
+   before purchase; the payout is reserved at purchase; the attestor's reading is challengeable with
+   a bond; the owner resolves a dispute; settlement is one comparison, run once.
+4. **38–50 s — the real thing.** **Price a policy** and move the slider: the premium comes from the
+   contract's own `quote`. Then **Policies written** for a settled payout, and **Observations &
+   disputes** for the **nullified** reading — a report that was successfully challenged on-chain.
+5. **50–60 s — the honest part, then close on proof.** Open the disclosures: testnet only, unaudited,
+   a single trusted attestor, the owner resolves disputes, a 60-second window. Then **Check it for
+   yourself**, copy the `curl`, run it. "Don't trust the page. Reproduce it."
 
 ## What makes the demo credible
 
@@ -61,6 +63,6 @@ npm run demo
 
 ## The 30-second version
 
-If you only have half a minute: open the console, point at the solvency meter, say "this pool backs
-every promise it has made, and the page reads it from the chain", then open Proof and run the
-`curl`. The number matches.
+If you only have half a minute: open the console, read one **Cover available now** card aloud — "it
+pays if the rainfall reading meets this trigger, and the payout is reserved from the pool" — then
+open **Check it for yourself** and run the `curl`. The number matches.

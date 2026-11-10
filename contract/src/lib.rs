@@ -19,7 +19,7 @@
 use near_sdk::borsh::BorshSerialize;
 use near_sdk::collections::{LookupMap, UnorderedSet};
 use near_sdk::json_types::U128;
-use near_sdk::{env, near, require, AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise};
+use near_sdk::{env, near, AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise};
 
 /// Money is yoctoNEAR (u128). Rainfall is tenths of a millimetre (u64).
 /// Time is unix seconds (u64).
@@ -31,10 +31,32 @@ const MAX_RAINFALL_TENTHS: u64 = 5_000; // 500.0 mm
 const MAX_PREMIUM_BP: u32 = 5_000;
 /// An observation must be reported within this window after its date.
 const REPORT_MAX_DELAY_SEC: u64 = 24 * 3600;
-/// An observation cannot be settled until this window has passed since report.
-const CHALLENGE_WINDOW_SEC: u64 = 3600;
 /// Seconds in a nanosecond-epoch conversion.
 const NS_PER_SEC: u64 = 1_000_000_000;
+
+/// Abort with a message the NEAR runtime keeps in the receipt. std's wasm panic
+/// handler turns panics into a bare `unreachable` trap and discards the message,
+/// so every user-facing refusal calls the `panic_utf8` host function directly.
+#[cfg(target_arch = "wasm32")]
+fn fail(msg: &str) -> ! {
+    #[link(wasm_import_module = "env")]
+    extern "C" {
+        fn panic_utf8(len: u64, ptr: u64) -> !;
+    }
+    unsafe { panic_utf8(msg.len() as u64, msg.as_ptr() as u64) }
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn fail(msg: &str) -> ! {
+    panic!("{}", msg)
+}
+
+macro_rules! ensure {
+    ($cond:expr, $($arg:tt)*) => {
+        if !$cond {
+            fail(&format!($($arg)*));
+        }
+    };
+}
 
 #[derive(BorshStorageKey, BorshSerialize)]
 #[borsh(crate = "near_sdk::borsh")]
@@ -113,6 +135,7 @@ pub struct Overcover {
     pub paused: bool,
     pub challenge_bond: Yocto,
     pub settle_delay_sec: u64,
+    pub challenge_window_sec: u64,
 
     pub products: LookupMap<String, Product>,
     pub product_ids: UnorderedSet<String>,
@@ -146,14 +169,16 @@ impl Overcover {
         attestor: Vec<u8>,
         challenge_bond: U128,
         settle_delay_sec: u64,
+        challenge_window_sec: u64,
     ) -> Self {
-        require!(attestor.len() == 32, "attestor key must be 32 bytes");
+        ensure!(attestor.len() == 32, "attestor key must be 32 bytes");
         Self {
             owner,
             attestor,
             paused: false,
             challenge_bond: challenge_bond.0,
             settle_delay_sec,
+            challenge_window_sec,
             products: LookupMap::new(StorageKey::Products),
             product_ids: UnorderedSet::new(StorageKey::ProductIds),
             policies: LookupMap::new(StorageKey::Policies),
@@ -172,12 +197,25 @@ impl Overcover {
         }
     }
 
+    /// Re-initialize in place (deploy new wasm, then call this). Overwrites any
+    /// previous state, so a redeploy never requires deleting the account.
+    #[init(ignore_state)]
+    pub fn migrate(
+        owner: AccountId,
+        attestor: Vec<u8>,
+        challenge_bond: U128,
+        settle_delay_sec: u64,
+        challenge_window_sec: u64,
+    ) -> Self {
+        Self::new(owner, attestor, challenge_bond, settle_delay_sec, challenge_window_sec)
+    }
+
     // ---------------------------------------------------------------------
     // admin
     // ---------------------------------------------------------------------
 
     fn assert_owner(&self) {
-        require!(
+        ensure!(
             env::predecessor_account_id() == self.owner,
             "only the owner may do this"
         );
@@ -185,7 +223,7 @@ impl Overcover {
 
     pub fn set_attestor(&mut self, attestor: Vec<u8>) {
         self.assert_owner();
-        require!(attestor.len() == 32, "attestor key must be 32 bytes");
+        ensure!(attestor.len() == 32, "attestor key must be 32 bytes");
         self.attestor = attestor;
     }
 
@@ -207,12 +245,12 @@ impl Overcover {
         max_total_coverage: U128,
     ) {
         self.assert_owner();
-        require!(self.products.get(&id).is_none(), "product already exists");
-        require!(premium_bp <= MAX_PREMIUM_BP, "premium_bp too high");
-        require!(threshold_tenths <= MAX_RAINFALL_TENTHS, "threshold out of range");
-        require!(min_payout.0 > 0, "min payout must be > 0");
-        require!(max_payout.0 >= min_payout.0, "max payout below min");
-        require!(
+        ensure!(self.products.get(&id).is_none(), "product already exists");
+        ensure!(premium_bp <= MAX_PREMIUM_BP, "premium_bp too high");
+        ensure!(threshold_tenths <= MAX_RAINFALL_TENTHS, "threshold out of range");
+        ensure!(min_payout.0 > 0, "min payout must be > 0");
+        ensure!(max_payout.0 >= min_payout.0, "max payout below min");
+        ensure!(
             max_total_coverage.0 >= max_payout.0,
             "capacity below a single max payout"
         );
@@ -235,7 +273,7 @@ impl Overcover {
 
     pub fn set_product_active(&mut self, id: String, active: bool) {
         self.assert_owner();
-        let mut p = self.products.get(&id).expect("no such product");
+        let mut p = self.products.get(&id).unwrap_or_else(|| fail("no such product"));
         p.active = active;
         self.products.insert(&id, &p);
     }
@@ -248,16 +286,16 @@ impl Overcover {
     #[payable]
     pub fn deposit(&mut self) -> U128 {
         let amount = env::attached_deposit().as_yoctonear();
-        require!(amount > 0, "deposit must be > 0");
+        ensure!(amount > 0, "deposit must be > 0");
         let who = env::predecessor_account_id();
         let mut pr = self.providers.get(&who).unwrap_or(Provider {
             deposited: 0,
             withdrawn: 0,
         });
-        pr.deposited = pr.deposited.checked_add(amount).expect("overflow");
+        pr.deposited = pr.deposited.checked_add(amount).unwrap_or_else(|| fail("overflow"));
         self.providers.insert(&who, &pr);
-        self.capital = self.capital.checked_add(amount).expect("overflow");
-        self.total_deposited = self.total_deposited.checked_add(amount).expect("overflow");
+        self.capital = self.capital.checked_add(amount).unwrap_or_else(|| fail("overflow"));
+        self.total_deposited = self.total_deposited.checked_add(amount).unwrap_or_else(|| fail("overflow"));
         self.check_invariant_or_panic();
         log_event("deposit", &[("account", &who.to_string()), ("amount", &amount.to_string())]);
         U128(pr.deposited - pr.withdrawn)
@@ -267,20 +305,20 @@ impl Overcover {
     /// would no longer cover every outstanding liability.
     pub fn withdraw(&mut self, amount: U128) -> U128 {
         let amount = amount.0;
-        require!(amount > 0, "withdraw must be > 0");
+        ensure!(amount > 0, "withdraw must be > 0");
         let who = env::predecessor_account_id();
-        let mut pr = self.providers.get(&who).expect("not a provider");
+        let mut pr = self.providers.get(&who).unwrap_or_else(|| fail("not a provider"));
         let own = pr.deposited - pr.withdrawn;
-        require!(amount <= own, "withdraw exceeds your own capital");
+        ensure!(amount <= own, "withdraw exceeds your own capital");
         // Solvency gate: after paying out, capital must still cover reserved.
-        require!(
+        ensure!(
             self.capital.checked_sub(amount).map_or(false, |c| c >= self.reserved),
             "withdraw would break solvency (funds are reserved)"
         );
-        pr.withdrawn = pr.withdrawn.checked_add(amount).expect("overflow");
+        pr.withdrawn = pr.withdrawn.checked_add(amount).unwrap_or_else(|| fail("overflow"));
         self.providers.insert(&who, &pr);
         self.capital -= amount;
-        self.total_withdrawn = self.total_withdrawn.checked_add(amount).expect("overflow");
+        self.total_withdrawn = self.total_withdrawn.checked_add(amount).unwrap_or_else(|| fail("overflow"));
         self.check_invariant_or_panic();
         let _ = Promise::new(who.clone()).transfer(NearToken::from_yoctonear(amount));
         log_event("withdraw", &[("account", &who.to_string()), ("amount", &amount.to_string())]);
@@ -295,12 +333,12 @@ impl Overcover {
         // ceil(payout * bp / 10000) — never zero for a positive payout.
         let num = (payout as u128)
             .checked_mul(p.premium_bp as u128)
-            .expect("overflow");
+            .unwrap_or_else(|| fail("overflow"));
         num.div_ceil(10_000)
     }
 
     pub fn quote(&self, product_id: String, payout: U128) -> U128 {
-        let p = self.products.get(&product_id).expect("no such product");
+        let p = self.products.get(&product_id).unwrap_or_else(|| fail("no such product"));
         U128(Self::premium_for(&p, payout.0))
     }
 
@@ -315,36 +353,36 @@ impl Overcover {
         obs_date: u64,
         beneficiary: Option<AccountId>,
     ) -> u64 {
-        require!(!self.paused, "contract is paused");
-        let p = self.products.get(&product_id).expect("no such product");
-        require!(p.active, "product is inactive");
+        ensure!(!self.paused, "contract is paused");
+        let p = self.products.get(&product_id).unwrap_or_else(|| fail("no such product"));
+        ensure!(p.active, "product is inactive");
         let payout = payout.0;
-        require!(
+        ensure!(
             payout >= p.min_payout && payout <= p.max_payout,
             "payout outside product bounds"
         );
         let now = now_sec();
-        require!(
+        ensure!(
             obs_date >= now.saturating_add(p.min_lead_sec),
             "observation date too soon (min lead not met)"
         );
-        require!(
+        ensure!(
             p.reserved.checked_add(payout).map_or(false, |r| r <= p.max_total_coverage),
             "product capacity exceeded"
         );
         let premium = Self::premium_for(&p, payout);
-        require!(
+        ensure!(
             env::attached_deposit().as_yoctonear() == premium,
             "attached deposit must equal the quoted premium"
         );
-        require!(
+        ensure!(
             self.available().checked_sub(payout).is_some(),
             "insufficient available capital to underwrite"
         );
 
         // Premium enters the pool first, then the payout is reserved.
-        self.premiums_collected = self.premiums_collected.checked_add(premium).expect("overflow");
-        self.capital = self.capital.checked_add(premium).expect("overflow");
+        self.premiums_collected = self.premiums_collected.checked_add(premium).unwrap_or_else(|| fail("overflow"));
+        self.capital = self.capital.checked_add(premium).unwrap_or_else(|| fail("overflow"));
 
         let id = self.next_policy_id;
         self.next_policy_id += 1;
@@ -367,9 +405,9 @@ impl Overcover {
         };
         self.policies.insert(&id, &pol);
         self.policy_ids.insert(&id);
-        self.reserved = self.reserved.checked_add(payout).expect("overflow");
+        self.reserved = self.reserved.checked_add(payout).unwrap_or_else(|| fail("overflow"));
         let mut p2 = p;
-        p2.reserved = p2.reserved.checked_add(payout).expect("overflow");
+        p2.reserved = p2.reserved.checked_add(payout).unwrap_or_else(|| fail("overflow"));
         self.products.insert(&product_id, &p2);
         self.check_invariant_or_panic();
         log_event(
@@ -420,27 +458,27 @@ impl Overcover {
         nonce: u64,
         signature: Vec<u8>,
     ) -> Vec<u8> {
-        require!(signature.len() == 64, "signature must be 64 bytes");
+        ensure!(signature.len() == 64, "signature must be 64 bytes");
         let msg = Self::obs_message(&city, obs_date, value_tenths, reported_at, nonce);
-        let sig: [u8; 64] = signature.as_slice().try_into().expect("sig len");
-        let pk: [u8; 32] = self.attestor.as_slice().try_into().expect("attestor key len");
-        require!(
+        let sig: [u8; 64] = signature.as_slice().try_into().unwrap_or_else(|_| fail("signature must be 64 bytes"));
+        let pk: [u8; 32] = self.attestor.as_slice().try_into().unwrap_or_else(|_| fail("attestor key must be 32 bytes"));
+        ensure!(
             env::ed25519_verify(&sig, &msg, &pk),
             "invalid attestor signature"
         );
 
         let now = now_sec();
-        require!(obs_date <= now, "cannot observe a future date");
-        require!(reported_at >= obs_date, "observation predates its date");
-        require!(
+        ensure!(obs_date <= now, "cannot observe a future date");
+        ensure!(reported_at >= obs_date, "observation predates its date");
+        ensure!(
             reported_at.saturating_sub(obs_date) <= REPORT_MAX_DELAY_SEC,
             "observation reported too late (stale)"
         );
-        require!(reported_at <= now, "observation reported in the future");
-        require!(value_tenths <= MAX_RAINFALL_TENTHS, "implausible rainfall value");
+        ensure!(reported_at <= now, "observation reported in the future");
+        ensure!(value_tenths <= MAX_RAINFALL_TENTHS, "implausible rainfall value");
 
         let key = Self::obs_key(&city, obs_date);
-        require!(self.observations.get(&key).is_none(), "observation already reported");
+        ensure!(self.observations.get(&key).is_none(), "observation already reported");
         let o = Observation {
             city: city.clone(),
             obs_date,
@@ -475,17 +513,17 @@ impl Overcover {
         counter_value_tenths: u64,
     ) -> Vec<u8> {
         let bond = env::attached_deposit().as_yoctonear();
-        require!(bond >= self.challenge_bond, "challenge bond too small");
+        ensure!(bond >= self.challenge_bond, "challenge bond too small");
         let key = Self::obs_key(&city, obs_date);
-        let mut o = self.observations.get(&key).expect("no such observation");
-        require!(!o.disputed, "observation already disputed");
-        require!(!o.nullified, "observation already nullified");
+        let mut o = self.observations.get(&key).unwrap_or_else(|| fail("no such observation"));
+        ensure!(!o.disputed, "observation already disputed");
+        ensure!(!o.nullified, "observation already nullified");
         o.disputed = true;
         o.challenger = Some(env::predecessor_account_id());
         o.counter_value_tenths = counter_value_tenths;
         o.bond = bond;
         self.observations.insert(&key, &o);
-        self.held_bonds = self.held_bonds.checked_add(bond).expect("overflow");
+        self.held_bonds = self.held_bonds.checked_add(bond).unwrap_or_else(|| fail("overflow"));
         log_event("observation_challenged", &[("city", &city), ("obs_date", &obs_date.to_string())]);
         key
     }
@@ -496,22 +534,22 @@ impl Overcover {
     pub fn resolve_dispute(&mut self, city: String, obs_date: u64, uphold: bool) {
         self.assert_owner();
         let key = Self::obs_key(&city, obs_date);
-        let mut o = self.observations.get(&key).expect("no such observation");
-        require!(o.disputed, "no open dispute");
+        let mut o = self.observations.get(&key).unwrap_or_else(|| fail("no such observation"));
+        ensure!(o.disputed, "no open dispute");
         let bond = o.bond;
         if uphold {
             o.disputed = false;
             o.bond = 0;
-            self.capital = self.capital.checked_add(bond).expect("overflow");
-            self.bonds_forfeited = self.bonds_forfeited.checked_add(bond).expect("overflow");
+            self.capital = self.capital.checked_add(bond).unwrap_or_else(|| fail("overflow"));
+            self.bonds_forfeited = self.bonds_forfeited.checked_add(bond).unwrap_or_else(|| fail("overflow"));
         } else {
             o.nullified = true;
             o.disputed = false;
             o.bond = 0;
-            let to = o.challenger.clone().expect("challenger");
+            let to = o.challenger.clone().unwrap_or_else(|| fail("challenger"));
             let _ = Promise::new(to).transfer(NearToken::from_yoctonear(bond));
         }
-        self.held_bonds = self.held_bonds.checked_sub(bond).expect("bond underflow");
+        self.held_bonds = self.held_bonds.checked_sub(bond).unwrap_or_else(|| fail("bond underflow"));
         self.observations.insert(&key, &o);
         self.check_invariant_or_panic();
         log_event("dispute_resolved", &[("city", &city), ("uphold", if uphold { "true" } else { "false" })]);
@@ -528,7 +566,7 @@ impl Overcover {
         if o.disputed {
             return Err("observation disputed (unresolved)");
         }
-        if at < o.reported_at.saturating_add(CHALLENGE_WINDOW_SEC) {
+        if at < o.reported_at.saturating_add(self.challenge_window_sec) {
             return Err("challenge window not elapsed");
         }
         Ok(o.value_tenths)
@@ -541,29 +579,29 @@ impl Overcover {
     /// Settle a policy exactly once. Pays iff the validated observation meets
     /// the product's threshold. Releases the reservation in both outcomes.
     pub fn resolve(&mut self, policy_id: u64) -> bool {
-        let mut pol = self.policies.get(&policy_id).expect("no such policy");
-        require!(pol.status == "active", "policy not active");
+        let mut pol = self.policies.get(&policy_id).unwrap_or_else(|| fail("no such policy"));
+        ensure!(pol.status == "active", "policy not active");
         let now = now_sec();
-        require!(
+        ensure!(
             now >= pol.obs_date.saturating_add(self.settle_delay_sec),
             "too early to settle"
         );
         let value = match self.observation_valid(&pol.city, pol.obs_date, now) {
             Ok(v) => v,
-            Err(e) => env::panic_str(&format!("cannot settle: {}", e)),
+            Err(e) => fail(&format!("cannot settle: {}", e)),
         };
 
         // Release the reservation exactly once.
-        self.reserved = self.reserved.checked_sub(pol.payout).expect("reserved underflow");
-        let mut p = self.products.get(&pol.product_id).expect("product");
-        p.reserved = p.reserved.checked_sub(pol.payout).expect("product reserved underflow");
+        self.reserved = self.reserved.checked_sub(pol.payout).unwrap_or_else(|| fail("reserved underflow"));
+        let mut p = self.products.get(&pol.product_id).unwrap_or_else(|| fail("product"));
+        p.reserved = p.reserved.checked_sub(pol.payout).unwrap_or_else(|| fail("product reserved underflow"));
         self.products.insert(&pol.product_id, &p);
 
         let triggered = value >= pol.threshold_tenths;
         if triggered {
-            require!(pol.payout <= self.capital, "payout exceeds capital");
+            ensure!(pol.payout <= self.capital, "payout exceeds capital");
             self.capital -= pol.payout;
-            self.total_paid = self.total_paid.checked_add(pol.payout).expect("overflow");
+            self.total_paid = self.total_paid.checked_add(pol.payout).unwrap_or_else(|| fail("overflow"));
             pol.status = "settled_paid".to_string();
             pol.paid_amount = pol.payout;
             let _ = Promise::new(pol.beneficiary.clone())
@@ -618,7 +656,7 @@ impl Overcover {
             owner: self.owner.clone(),
             attestor: bs58_encode(&self.attestor),
             challenge_bond: U128(self.challenge_bond),
-            challenge_window_sec: CHALLENGE_WINDOW_SEC,
+            challenge_window_sec: self.challenge_window_sec,
             settle_delay_sec: self.settle_delay_sec,
         }
     }
@@ -671,7 +709,7 @@ impl Overcover {
     // ---------------------------------------------------------------------
 
     fn check_invariant_or_panic(&self) {
-        require!(self.reserved <= self.capital, "INVARIANT: reserved > capital");
+        ensure!(self.reserved <= self.capital, "INVARIANT: reserved > capital");
     }
 }
 

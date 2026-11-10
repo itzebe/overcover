@@ -33,7 +33,7 @@ fn owner() -> AccountId {
 
 fn setup() -> Overcover {
     ctx(owner(), 0, 0);
-    let mut c = Overcover::new(owner(), pubkey(), U128(ONE / 10), 0);
+    let mut c = Overcover::new(owner(), pubkey(), U128(ONE / 10), 0, 3600);
     c.add_product(
         "rain-berlin-20mm".to_string(),
         "berlin".to_string(),

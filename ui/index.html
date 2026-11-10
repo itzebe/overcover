@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Overcover — mutual console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230e1116'/%3E%3Cpath d='M16 5l9 4v7c0 6-4 9-9 11-5-2-9-5-9-11V9z' fill='none' stroke='%23e0954a' stroke-width='2'/%3E%3C/svg%3E" />
 <style>
   :root {
     --bg: #0e1116; --panel: #161b23; --line: #262d38; --ink: #e8edf4; --muted: #8b97a8;
@@ -21,6 +22,8 @@
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
   .dot.ok { background: var(--good); } .dot.bad { background: var(--bad); }
   main { max-width: 1180px; margin: 0 auto; padding: 24px; display: grid; gap: 22px; }
+  /* grid items default to min-width:auto; without this a wide table stretches the page */
+  main > section { min-width: 0; }
   section h2 { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
   .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
@@ -99,7 +102,6 @@ const RPC = [
   "https://test.rpc.fastnear.com",
   "https://rpc.testnet.fastnear.com",
   "https://near-testnet.drpc.org",
-  "https://rpc.testnet.near.org",
 ];
 const CONTRACT = new URLSearchParams(location.search).get("contract") || "contract.attestor-overcover.testnet";
 document.getElementById("cid").textContent = CONTRACT;
@@ -109,8 +111,12 @@ const near = (y) => Number(BigInt(y)) / YOCTO;
 const fmt = (y, d = 4) => near(y).toFixed(d);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
-function decode(b64) {
-  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+// NEAR RPC returns call_function output either as a byte array (most nodes) or as
+// a base64 string; handle both so a single endpoint change cannot blank the console.
+function decode(result) {
+  const bytes = Array.isArray(result)
+    ? Uint8Array.from(result)
+    : Uint8Array.from(atob(result), (c) => c.charCodeAt(0));
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 

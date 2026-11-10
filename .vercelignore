@@ -1,0 +1,10 @@
+node_modules/
+keys/
+contract/target/
+target/
+research/
+driver/
+tests/
+*.log
+.env
+demo-log.json

@@ -1,6 +1,7 @@
 # OVERCOVER — an autonomous parametric risk mutual for AI-operated businesses
 
 > **Live on NEAR testnet:** `contract.attestor-overcover.testnet`
+> **Console:** `ui/index.html` — deployable as a static site (see [Deploy](#deploy))
 > **Tracks:** Business · Swarms · DeFi
 
 ## The problem
@@ -110,6 +111,34 @@ npm run test:onchain    # 17 adversarial tests against the LIVE contract
 `npm run test:onchain` sends real attacks to the deployed contract and asserts each one is
 **refused with the expected reason** — capacity, premium, lead time, signature, replay, staleness,
 bond, challenge window, ownership, provider share. It requires a fresh `npm run deploy` first.
+
+## Deploy
+
+The console is a single static file with no build step. `vercel.json` sets `ui/` as the output
+directory and disables the build, so any static host works:
+
+```bash
+vercel deploy --prod          # uses vercel.json; serves ui/index.html at /
+```
+
+Reads go straight from the browser to public NEAR testnet RPC endpoints — there is no backend, and
+no key, token or secret is present in the bundle. The contract is selected with `?contract=<id>`,
+defaulting to `contract.attestor-overcover.testnet`.
+
+## 60-second demo script
+
+1. **Open the console** — the header shows the live contract id and a green connection dot; the
+   pool panel reads real capital and reserved capital from testnet.
+2. **"This is fully-collateralised cover."** Reserved 1.5 of 1.6 NEAR capital — the solvency bar
+   fills and `reserved ≤ capital: true` is computed from on-chain state, not asserted.
+3. **Scroll to Products** — immutable risk definitions: index, trigger threshold, premium, max
+   payout, reserved vs capacity cap.
+4. **Scroll to Policies** — cover written, each with payout, premium, beneficiary and status
+   (`active` / `settled_paid` / `settled_no_pay`).
+5. **Scroll to Observations** — signed index reports, including a **nullified** one that was
+   successfully challenged.
+6. **Close on the footer** — reads are direct RPC calls to NEAR testnet, no server, no keys in the
+   browser. Every number on screen is contract state.
 
 ## NEAR integrations and their purpose
 

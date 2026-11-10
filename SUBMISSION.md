@@ -5,7 +5,26 @@ verifiable, instant-paying cover against objective public indices, and lets anyo
 with guaranteed solvency.
 
 **Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
+**Deployed code hash:** `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`
 **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
+**X demo post:** see [`docs/DEMO_POST.md`](docs/DEMO_POST.md)
+
+Verify the deployed bytecode is exactly this source:
+
+```bash
+cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
+sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm
+# expected: 1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e
+```
+
+The RPC returns the same 344857-byte module for `contract.attestor-overcover.testnet`.
+
+**Try it without installing anything.** Open `ui/index.html` (or the hosted console). It reads the
+contract directly from your browser over public testnet RPC and shows, right now: capital backing
+cover, payouts promised, both invariants (`reserved ≤ capital`, `reconcile`), 17 products, 8
+policies and 13 observations — including one **nullified** reading that was successfully challenged
+on-chain. Open the Proof panel, copy the `curl`, run it, and you get the same JSON. Nothing on the
+page has to be taken on trust.
 
 ---
 
@@ -106,8 +125,11 @@ Every row is a real transaction; run `npm run demo` to reproduce and regenerate 
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **12 passed, 0 failed** |
 | Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
+
+Track ids for the submission form: `business` (primary), `swarms`, `defi`.
 
 ## 8. What is genuinely novel here
 

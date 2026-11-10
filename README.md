@@ -4,7 +4,7 @@
 > **Console:** `ui/index.html` — deployable as a static site (see [Deploy](#deploy))
 > **Tracks:** Business · Swarms · DeFi
 > **License:** MIT
-> **Submission pack:** [`docs/SUBMISSION.md`](docs/SUBMISSION.md) — one-liner, evidence, demo script, and the X post.
+> **Submission pack:** [`SUBMISSION.md`](SUBMISSION.md) — one-liner, evidence, demo script; X post in [`docs/DEMO_POST.md`](docs/DEMO_POST.md).
 
 ## Try it in 60 seconds
 

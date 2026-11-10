@@ -32,6 +32,26 @@ function emit() {
   }
 }
 
+// The near-wallet-selector modules hardcode `available: true`, so a plain
+// `available` check lists wallets that are not actually installed and can never
+// connect. Detect the ones that only work through an injected provider, so the
+// picker can label them honestly instead of promising a flow that dead-ends.
+// HERE and MyNearWallet can still open their own web/app flow, so only a
+// genuinely extension-only wallet is reported as not installed.
+const EXTENSION_ONLY = { "meteor-wallet": true };
+function injectedPresent(id) {
+  try {
+    if (id === "here-wallet") return !!globalThis.herewallet;
+    if (id === "meteor-wallet") return !!globalThis.meteorWallet;
+    if (id === "my-near-wallet") return !!globalThis.mynearwallet;
+  } catch (e) { /* reading a cross-origin global must never break the picker */ }
+  return false;
+}
+function installUrl(id) {
+  const m = selector && selector.store.getState().modules.find((x) => x.id === id);
+  return (m && m.metadata && m.metadata.downloadUrl) || null;
+}
+
 function status() {
   return {
     ready: !!selector,
@@ -39,7 +59,16 @@ function status() {
     contractId: CONTRACT_ID,
     connected: !!currentAccountId,
     accountId: currentAccountId,
-    available: selector ? selector.store.getState().modules.map((m) => ({ id: m.id, name: m.metadata.name, type: m.type, available: m.metadata.available !== false })) : [],
+    available: selector ? selector.store.getState().modules.map((m) => ({
+      id: m.id,
+      name: m.metadata.name,
+      type: m.type,
+      downloadUrl: m.metadata.downloadUrl || null,
+      // `present` is the honest signal: is there something in this browser that
+      // can actually approve a signature for this wallet right now?
+      present: EXTENSION_ONLY[m.id] ? injectedPresent(m.id) : true,
+      extensionOnly: !!EXTENSION_ONLY[m.id],
+    })) : [],
   };
 }
 
@@ -65,19 +94,40 @@ async function setup() {
   return selector;
 }
 
+/** Reject after `ms` so a wallet that opens nothing (a missing extension, a
+ *  blocked popup, a wallet that never calls back) cannot leave the UI hanging
+ *  forever. The user gets a clear, actionable error instead of a dead button.
+ *  The delay is overridable for tests; production uses the default. */
+const CONNECT_TIMEOUT_MS = Number(globalThis.OVERCOVER_CONNECT_TIMEOUT_MS) || 90000;
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms); }),
+  ]).finally(() => clearTimeout(timer));
+}
+
 /** Connect a named wallet module. `walletId` is one of here-wallet,
  *  meteor-wallet, my-near-wallet. Throws with a human-readable reason. */
 async function connect(walletId) {
   await setup();
   const module = selector.store.getState().modules.find((m) => m.id === walletId);
   if (!module) throw new Error(`wallet "${walletId}" is not available`);
-  if (module.metadata.available === false) {
+  if (EXTENSION_ONLY[walletId] && !injectedPresent(walletId)) {
     throw new Error(`${module.metadata.name} is not installed in this browser`);
   }
   const w = await selector.wallet(walletId);
   // signIn returns the accounts; HERE/Meteor are injected wallets that open their
-  // own UI. No private key ever reaches this page.
-  const accounts = await w.signIn({ contractId: CONTRACT_ID, methodNames: [] });
+  // own UI. No private key ever reaches this page. The function-call access key is
+  // scoped to buy_cover alone (least privilege) — the console has no other write
+  // path, and owner-only methods are guarded on-chain regardless. The timeout
+  // guards against a wallet that never opens or never resolves, which would
+  // otherwise hang the button with no feedback at all.
+  const accounts = await withTimeout(
+    w.signIn({ contractId: CONTRACT_ID, methodNames: ["buy_cover"] }),
+    CONNECT_TIMEOUT_MS,
+    `${module.metadata.name} did not respond. If a wallet window opened, finish there; otherwise install the wallet and try again.`,
+  );
   const accountId = accounts?.[0]?.accountId ?? null;
   if (!accountId) throw new Error("the wallet returned no account");
   wallet = w;
@@ -129,6 +179,7 @@ window.OvercoverWallet = {
   disconnect,
   signAndSend,
   functionCall,
+  installUrl,
   subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   _selector: () => selector,
 };

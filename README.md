@@ -134,6 +134,10 @@ It reads honestly: a failed read shows a **stale** warning with the time of the 
 `ui/wallet.js` (bundled to `ui/vendor/wallet-bundle.js` by `npm run build:wallet`) is the only code
 that touches a NEAR wallet. It holds **no private key**: it asks the user's wallet extension
 (HERE, Meteor, MyNearWallet) to sign one `buy_cover` call with the contract's own premium attached.
+The wallet picker is a modal, so it opens where the user clicked — from the header, the hero, or the
+buy panel — and it states honestly which wallets this browser can actually complete (a wallet that
+is not installed is disabled with an install link, not offered as a flow that dead-ends). A connect
+attempt is bounded by a timeout, so a wallet that never answers reports an error instead of hanging.
 The console reports a policy as bought only from the wallet's confirmed outcome (it inspects
 `status.Failure` and requires a real transaction hash), never optimistically.
 
@@ -167,7 +171,7 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 39 regression + live-RPC tests          (browser console)
+npm run test:console    # 54 regression + live-RPC tests          (browser console)
 npm run test:agent      # 34 limits + API + u128-precision tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 ```
@@ -192,6 +196,7 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 | Every demo transaction is real | `demo-log.json` holds 18 hashes; each resolves via `tx` RPC and on `testnet.nearblocks.io`. |
 | The oracle is challengeable, both ways | The log includes `challenge` + `resolve_dispute:true` (report upheld, bond forfeited) **and** `resolve_dispute:false` (report nullified, bond returned). |
 | The console is accessible | `axe-core` (WCAG 2.2 AA) reports 0 violations at 360/390/768/1024/1440 px, with no horizontal overflow. |
+| The wallet picker opens where you click, at every width | `npm run ui:qa` clicks Connect at 320–1440 px and asserts the modal is in-viewport with no overflow; `npm run test:console` covers the installed/not-installed labelling and the connect timeout. |
 
 ## Security model
 

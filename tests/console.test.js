@@ -418,3 +418,101 @@ test("the page has one h1 and does not skip heading levels", () => {
   assert.equal(levels.filter((l) => l === 1).length, 1, "exactly one h1 is required");
   assert.equal(levels[0], 1, "the h1 must come first");
 });
+
+// ---- wallet connect: the picker must appear where the user clicked, and it
+// must be honest about which wallets this browser can actually complete. ----
+
+const choicesHTML = new Function(
+  `function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+   ${extractFunction(SCRIPT, "walletChoicesHTML")}
+   return walletChoicesHTML;`,
+)();
+
+test("the picker disables a wallet this browser cannot complete and offers an install link", () => {
+  const html = choicesHTML([{ id: "meteor-wallet", name: "Meteor Wallet", present: false, extensionOnly: true, downloadUrl: "https://meteorwallet.app" }]);
+  assert.match(html, /data-wallet-id="meteor-wallet"[^>]*disabled/, "an absent wallet must not be presented as connectable");
+  assert.match(html, /not detected in this browser/, "the reason must be stated plainly");
+  assert.match(html, /https:\/\/meteorwallet\.app/, "an install path must be offered");
+});
+
+test("the picker enables a wallet that can complete and says how it works", () => {
+  const html = choicesHTML([{ id: "here-wallet", name: "Here Wallet", present: true, extensionOnly: false, downloadUrl: "https://herewallet.app" }]);
+  assert.doesNotMatch(html, /disabled/, "a usable wallet must be clickable");
+  assert.match(html, /opens its own app or window/, "the user must know a window will open");
+});
+
+test("an installed extension-only wallet is labelled as detected", () => {
+  const html = choicesHTML([{ id: "meteor-wallet", name: "Meteor Wallet", present: true, extensionOnly: true, downloadUrl: "x" }]);
+  assert.match(html, /browser extension detected/);
+});
+
+test("Connect wallet opens a modal picker instead of a list far down the page", () => {
+  assert.match(HTML, /<dialog id="wallet-dialog"/, "the picker must be a dialog element");
+  assert.match(SCRIPT, /d\.showModal\(\)/, "the picker must be opened modally, where the user is looking");
+  assert.ok(!/id="b-wallet-choices"/.test(HTML), "the old off-screen choice container must be gone");
+  assert.ok(!/b-wallet-choices/.test(SCRIPT), "no code may still target the removed container");
+});
+
+test("the first screen offers a wired Connect control (not only the header)", () => {
+  assert.match(HTML, /data-wallet="connect"[^>]*>Connect a wallet</, "the hero must offer a connect control that opens the picker");
+});
+
+test("the connect wait is bounded so a dead wallet cannot hang the button", () => {
+  const bundle = fs.readFileSync(path.join(root, "ui", "vendor", "wallet-bundle.js"), "utf8");
+  assert.match(bundle, /OVERCOVER_CONNECT_TIMEOUT_MS/, "the wallet bundle must cap how long connect can block");
+  assert.match(bundle, /did not respond/, "a timed-out connect must surface an actionable message");
+});
+
+test("the picker warns plainly when no supported wallet is available", () => {
+  assert.match(SCRIPT, /None of the supported NEAR wallets were detected/, "the no-wallet case must be stated, not left silent");
+});
+
+// ---- the wallet connect timeout, tested against the real function in ui/wallet.js ----
+
+const WALLET_JS = fs.readFileSync(path.join(root, "ui", "wallet.js"), "utf8");
+const withTimeout = new Function(`${extractFunction(WALLET_JS, "withTimeout")}; return withTimeout;`)();
+
+test("a wallet that never answers is rejected after the timeout, not hung forever", async () => {
+  const t0 = Date.now();
+  await assert.rejects(() => withTimeout(new Promise(() => {}), 200, "the wallet did not respond"), /did not respond/);
+  assert.ok(Date.now() - t0 < 2000, "the rejection must be prompt, not open-ended");
+});
+
+test("a wallet that answers quickly passes its result straight through", async () => {
+  assert.equal(await withTimeout(Promise.resolve("alice.testnet"), 5000, "x"), "alice.testnet");
+});
+
+test("connect is wired to the bounded timeout, so no path can hang silently", () => {
+  assert.match(WALLET_JS, /CONNECT_TIMEOUT_MS/, "connect must use the named timeout");
+  assert.match(WALLET_JS, /withTimeout\(\s*w\.signIn/, "signIn must be wrapped in the timeout");
+});
+
+test("wallet availability is honest: extension-only wallets are probed, not assumed present", () => {
+  assert.match(WALLET_JS, /EXTENSION_ONLY/, "the selector's hardcoded available:true must be corrected");
+  assert.match(WALLET_JS, /injectedPresent/, "a missing extension must be detected");
+});
+
+// ---- first-time-user honesty: no panel may sit on "Loading…" forever, and a
+// disabled control must say why. ----
+
+test("a failed first read replaces the loading placeholders instead of leaving them spinning", () => {
+  assert.match(SCRIPT, /function renderLoadFailed\(/, "a load-failure renderer is required");
+  assert.match(SCRIPT, /if \(!state\.haveData\) \{[\s\S]*renderLoadFailed\(\)/, "the failure path must call it");
+  assert.match(SCRIPT, /Could not load from the contract/, "the failure must be stated plainly");
+});
+
+test("the buy button explains why it is disabled", () => {
+  assert.match(HTML, /id="b-hint"/, "a hint element must exist next to the buy button");
+  assert.match(SCRIPT, /Connect a wallet to buy this cover/, "the hint must tell a first-time visitor to connect");
+  assert.match(SCRIPT, /Pick the cover and payout/, "the hint must explain the no-selection case");
+});
+
+test("no dead choice container or orphaned picker reference remains", () => {
+  assert.ok(!/id="b-wallet-choices"/.test(HTML) && !/b-wallet-choices/.test(SCRIPT));
+});
+
+test("every static Connect control is wired from first paint (no dead-click window)", () => {
+  const connects = [...HTML.matchAll(/<button[^>]*id="(wallet-connect|buy-wallet-connect)"[^>]*>/g)].map((m) => m[0]);
+  assert.equal(connects.length, 2, "expected the header and buy-panel Connect buttons");
+  for (const b of connects) assert.match(b, /data-wallet="connect"/, `a static Connect button is not wired: ${b}`);
+});

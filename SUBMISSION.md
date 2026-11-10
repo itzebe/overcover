@@ -172,12 +172,12 @@ hashless wallet result is never presented as a purchase.
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **39 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **54 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **34 passed, 0 failed** |
 | Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
-| Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **5 viewports, 0 console errors, dry-run agent round-trip OK** |
+| Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, wallet picker opens in-viewport, dry-run agent round-trip OK** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
-| Console accessibility (axe-core, WCAG 2.2 AA) | manual | **0 violations at 360 / 390 / 768 / 1024 / 1440 px** |
+| Console accessibility (axe-core, WCAG 2.2 AA) | manual | **0 violations at 360 / 390 / 768 / 1024 / 1440 px (page and wallet dialog)** |
 
 Track ids for the submission form: `business` (primary), `swarms`, `defi`.
 

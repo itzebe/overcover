@@ -1377,6 +1377,27 @@
     box.innerHTML = html;
   }
 
+  // Decide, from the wallet's OWN result, whether a purchase is confirmed. A
+  // rejected, failed or hashless outcome must never be classified as success:
+  // that is the difference between "cover in force" and a lie. Pure, so it can
+  // be lifted and asserted (see tests/console.test.js).
+  //   -> { ok: boolean, hash: string|null, reason: string|null }
+  function evaluateWalletOutcome(res) {
+    var failed = res && res.status && res.status.Failure;
+    var hash = (res && res.transaction_outcome && res.transaction_outcome.id)
+            || (res && res.transaction && res.transaction.hash) || null;
+    if (failed) return { ok: false, hash: hash, reason: "the contract refused the transaction" };
+    if (!hash) return { ok: false, hash: null, reason: "the wallet returned no transaction hash" };
+    return { ok: true, hash: hash, reason: null };
+  }
+
+  // The exact arguments sent to the contract's buy_cover. Built in one place so
+  // the console and its tests agree on the shape, and so the payout is always
+  // the same string the contract quoted against. Pure.
+  function buildBuyArgs(product, payoutStr, obsDateSec, beneficiary) {
+    return { product_id: product.id, payout: payoutStr, obs_date: obsDateSec, beneficiary: beneficiary || null };
+  }
+
   function doBuy() {
     if (buyState.busy) return;
     var p = quoteState.selected;
@@ -1407,23 +1428,21 @@
       var premium = String(Array.isArray(q) ? q[0] : q);
       if (big(premium) === null) throw new Error("the contract returned no premium");
       setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
-      var args = { product_id: p.id, payout: payoutStr, obs_date: obs, beneficiary: ben || null };
+      var args = buildBuyArgs(p, payoutStr, obs, ben);
       return WALLET.signAndSend({
         receiverId: CONTRACT,
         actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
       });
     }).then(function (res) {
-      var failed = res && res.status && res.status.Failure;
-      var hash = (res && res.transaction_outcome && res.transaction_outcome.id) || (res && res.transaction && res.transaction.hash) || null;
-      if (failed) throw new Error("the contract refused the transaction");
-      if (!hash) throw new Error("the wallet returned no transaction hash");
+      var out = evaluateWalletOutcome(res);
+      if (!out.ok) throw new Error(out.reason);
       // Success is claimed only from the wallet's own confirmed outcome.
       setBuyStatus("Transaction confirmed.", false, true);
       showBuyResult(true,
         "<h4>Cover in force</h4>" +
         "<p>The contract confirmed your <code>buy_cover</code> call. The policy now appears under “Policies written”, read back from the contract.</p>" +
-        '<p class="mono">' + esc(hash) + "</p>" +
-        '<p><a href="' + EXPLORER + "/txns/" + encodeURIComponent(hash) + '" target="_blank" rel="noopener">View the transaction on NEAR Blocks ↗</a></p>');
+        '<p class="mono">' + esc(out.hash) + "</p>" +
+        '<p><a href="' + EXPLORER + "/txns/" + encodeURIComponent(out.hash) + '" target="_blank" rel="noopener">View the transaction on NEAR Blocks ↗</a></p>');
       buyState.busy = false;
       updateBuyEnabled();
       tick();

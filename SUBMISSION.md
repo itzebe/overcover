@@ -22,8 +22,8 @@ The RPC returns the same 344857-byte module for `contract.attestor-overcover.tes
 
 **Try it without installing anything.** Open `ui/index.html` (or the hosted console). It reads the
 contract directly from your browser over public testnet RPC and shows, right now: capital backing
-cover, payouts promised, both invariants (`reserved ≤ capital`, `reconcile`), 17 products, 8
-policies and 13 observations — including one **nullified** reading that was successfully challenged
+cover, payouts promised, both invariants (`reserved ≤ capital`, `reconcile`), 22 products, 15
+policies and 16 observations — including one **nullified** reading that was successfully challenged
 on-chain. Open the Proof panel, copy the `curl`, run it, and you get the same JSON. Nothing on the
 page has to be taken on trust.
 
@@ -132,14 +132,48 @@ All 18 hashes resolve on-chain via the `tx` RPC method.
 | challenge lagos (→ rejected) | https://testnet.nearblocks.io/txns/CeaUg3X9R3urZQzSQhF2ewrs6k49ASVSzjnHdDSumB5e |
 | resolve_dispute rejected (report nullified) | https://testnet.nearblocks.io/txns/3i1ZwxY1MfkzDnCfhDK2YGaDeCH2wX8j5cpobfamEaG6 |
 
+### Autonomous-agent purchases (independent agent account)
+
+An agent with its own NEAR testnet account (`oc-agent-mwb87z4k.testnet`) and its own key bought
+cover on the live contract, gated by the spending-limits engine. Each hash resolves via the `tx` RPC
+method; each emitted a `policy_issued` event.
+
+| Step | Transaction |
+| --- | --- |
+| agent buy_cover (rain-lagos, 1 NEAR payout = product max) → policy 11 | https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ |
+| agent buy_cover via the HTTP API (rain-bergen-dry, 0.5 NEAR payout) → policy 12 | https://testnet.nearblocks.io/txns/26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And |
+
+The first purchase is the regression that proved the u128 precision fix: before the fix the agent's
+exact bounds check rejected a payout equal to the product's true maximum (`max_payout` came back
+from `JSON.parse` as `999999999999999983222784`). The over-limit case (a 5 NEAR payout against a
+1 NEAR cap) is refused by the policy engine before any RPC call, so no funds move.
+
+### Human wallet purchase (independent account)
+
+The same `buy_cover` transaction the console builds — signed by a wallet, not by a service key —
+settles on the live contract. To demonstrate the human path end to end without depending on a
+browser extension in this environment, an independent testnet account bought cover through the
+**exact** arguments the page constructs (`buildBuyArgs`: `product_id`, `payout`, `obs_date`,
+`beneficiary`), attaching the contract's own quoted premium.
+
+| Step | Transaction |
+| --- | --- |
+| human buy_cover (rain-lagos, 1 NEAR payout) → policy 15 | https://testnet.nearblocks.io/txns/87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i |
+
+Policy 15 reads back from the contract as `buyer = human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet`,
+`product = rain-lagos`, `payout = 1 NEAR`, `premium = 0.05 NEAR`, `status = active`. The console's
+success/failure classifier is unit-tested (`tests/console.test.js`): a rejected, failed or
+hashless wallet result is never presented as a purchase.
+
+
 ## 7. Verification results
 
 | Suite | Command | Result |
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **29 passed, 0 failed** |
-| Agent limits + API | `npm run test:agent` | **27 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **39 passed, 0 failed** |
+| Agent limits + API + u128 precision | `npm run test:agent` | **34 passed, 0 failed** |
 | Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **5 viewports, 0 console errors, dry-run agent round-trip OK** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |

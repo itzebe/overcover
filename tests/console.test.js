@@ -105,6 +105,71 @@ test("decode still returns small integers as numbers, not strings", () => {
   assert.equal(p.premium_bp, 500);
 });
 
+// ---------------------------------------------------------------------------
+// Human wallet purchase: the console must classify the wallet's OWN outcome.
+// A rejected, failed or hashless result must never be shown as a purchase.
+// These run the ACTUAL evaluateWalletOutcome() lifted from ui/index.html.
+// ---------------------------------------------------------------------------
+
+const outcomeSrc = extractFunction(SCRIPT, "evaluateWalletOutcome");
+const evaluateWalletOutcome = new Function(`${outcomeSrc}; return evaluateWalletOutcome;`)();
+
+test("a confirmed wallet transaction with a hash is the only success path", () => {
+  const r = evaluateWalletOutcome({ status: { SuccessValue: "MTM=" }, transaction_outcome: { id: "5xAbcDef" } });
+  assert.equal(r.ok, true);
+  assert.equal(r.hash, "5xAbcDef");
+  assert.equal(r.reason, null);
+});
+
+test("a rejected wallet transaction is never presented as a purchase", () => {
+  const r = evaluateWalletOutcome({ status: { Failure: { ActionError: { kind: "x" } } }, transaction_outcome: { id: "5xRejected" } });
+  assert.equal(r.ok, false, "a Failure status must not be success");
+  assert.equal(r.reason, "the contract refused the transaction");
+});
+
+test("a wallet result with no transaction hash is not success (the fake-success guard)", () => {
+  for (const res of [null, undefined, {}, { status: {} }, { transaction: {} }]) {
+    const r = evaluateWalletOutcome(res);
+    assert.equal(r.ok, false, `empty/hashless result ${JSON.stringify(res)} must not be success`);
+    assert.equal(r.hash, null);
+    assert.match(r.reason, /no transaction hash/);
+  }
+});
+
+test("a hash on the transaction object (alt wallet shape) is still accepted", () => {
+  const r = evaluateWalletOutcome({ status: { SuccessValue: "" }, transaction: { hash: "AltShapeHash" } });
+  assert.equal(r.ok, true);
+  assert.equal(r.hash, "AltShapeHash");
+});
+
+test("doBuy claims success only through evaluateWalletOutcome, never inline", () => {
+  assert.ok(SCRIPT.includes("evaluateWalletOutcome(res)"), "doBuy must use the shared classifier");
+  assert.ok(!/res\.status\.Failure\)\s*throw/.test(SCRIPT), "the old inline failure check must be gone");
+});
+
+// The exact buy_cover arguments, lifted from the page, must match the contract's
+// ABI: product_id + payout + obs_date + beneficiary, with the payout carried as
+// the same string the contract quoted against (no numeric rounding).
+const argsSrc = extractFunction(SCRIPT, "buildBuyArgs");
+const buildBuyArgs = new Function(`${argsSrc}; return buildBuyArgs;`)();
+
+test("buy_cover arguments match the contract ABI exactly", () => {
+  const args = buildBuyArgs({ id: "rain-lagos" }, "1000000000000000000000000", 1794522722, "biz.near");
+  assert.deepEqual(args, { product_id: "rain-lagos", payout: "1000000000000000000000000", obs_date: 1794522722, beneficiary: "biz.near" });
+});
+
+test("an empty beneficiary is sent as null, never as an empty string", () => {
+  assert.equal(buildBuyArgs({ id: "p" }, "1", 1, "").beneficiary, null);
+  assert.equal(buildBuyArgs({ id: "p" }, "1", 1, undefined).beneficiary, null);
+});
+
+test("the payout argument stays an exact string for a u128 beyond Number.MAX_SAFE_INTEGER", () => {
+  const payout = "999999999999999983222784"; // the value JSON.parse rounds
+  const args = buildBuyArgs({ id: "p" }, payout, 1, null);
+  assert.equal(args.payout, payout, "the payout must not be rounded through a number");
+  assert.equal(typeof args.payout, "string");
+});
+
 test("the failover list excludes the CORS-blocked, deprecated public endpoint", () => {
   const m = SCRIPT.match(/var RPC = \[([\s\S]*?)\];/);
   assert.ok(m, "RPC endpoint list not found");

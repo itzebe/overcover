@@ -4,3 +4,5 @@ target/
 dist/
 *.log
 .env
+agent/audit*.log.jsonl
+shots/

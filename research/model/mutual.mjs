@@ -270,8 +270,9 @@ export class Mutual {
     o.counterValueTenths = BigInt(counterValueTenths);
     o.bond = bond;
     o.challengedAt = this.now;
-    this.capital += bond; // held; released or forfeited on resolution
-    this.checkInvariant();
+    // The bond is HELD by the contract, not counted as pool capital, until the
+    // dispute is resolved. On uphold it is forfeited to the pool; on nullify it
+    // is refunded. Holding it separately keeps `capital` honest during a dispute.
     return key;
   }
 
@@ -284,12 +285,12 @@ export class Mutual {
     if (!o || !o.disputed) throw new ContractError("no open dispute");
     if (uphold) {
       o.disputed = false;
-      o.bond = 0n; // bond stays in the pool
+      this.capital += o.bond; // forfeited to the pool
+      o.bond = 0n;
       o.resolvedUpheld = true;
     } else {
       o.nullified = true;
-      // refund the challenger's bond
-      this.capital -= o.bond;
+      o.refundTo = o.challenger; // refund the challenger's bond
       o.bond = 0n;
       o.resolvedNullified = true;
     }

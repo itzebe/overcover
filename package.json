@@ -1,0 +1,19 @@
+{
+  "name": "overcover",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "keys": "node driver/keys.js",
+    "deploy": "node driver/deploy.js",
+    "seed": "node driver/seed.js",
+    "demo": "node driver/demo.js",
+    "attestor": "node driver/attestor.js",
+    "test:attestor": "node --test tests/*.test.js",
+    "test:contract": "cd contract && cargo +stable test",
+    "test:model": "node research/model/attacks.mjs"
+  },
+  "dependencies": {
+    "near-api-js": "^5.1.1"
+  }
+}

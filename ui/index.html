@@ -275,6 +275,30 @@
   .buy-result.err h4 { color: var(--bad); }
   .buy-result p { font-size: 13.5px; color: var(--ink2); margin: 0 0 8px; }
   .buy-result .mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  .buy-hint { margin: 10px 0 0; font-size: 13px; color: var(--muted); min-height: 1.2em; }
+
+  /* Wallet picker: a real modal, so a click on "Connect wallet" is answered where
+     the user is looking, at every viewport. */
+  .wp-dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, 94vw); width: 100%; }
+  .wp-dialog::backdrop { background: rgba(19,26,22,.55); }
+  .wp-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(19,26,22,.28); }
+  .wp-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .wp-head h2 { font-family: var(--serif); font-size: 20px; font-weight: 660; margin: 0; letter-spacing: -.01em; }
+  .wp-sub { font-size: 13.5px; color: var(--muted); margin: 8px 0 16px; }
+  .wp-intro { font-size: 13.5px; color: var(--ink2); margin: 0 0 14px; }
+  .wp-opt { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .wp-opt:first-child { border-top: 0; }
+  .wp-pick { min-height: 44px; justify-self: start; min-width: 150px; text-align: left; }
+  .wp-opt-off .wp-pick { opacity: .6; }
+  .wp-note { font-size: 12.5px; color: var(--muted); }
+  .wp-note.ok { color: var(--good); }
+  .wp-install { grid-column: 2; font-size: 12.5px; font-weight: 600; color: var(--accent); }
+  .wp-status { margin: 14px 0 0; font-size: 13px; color: var(--ink2); min-height: 1.2em; }
+  .wp-status.err { color: var(--bad); font-weight: 600; }
+  .wp-status.ok { color: var(--good); font-weight: 600; }
+  .wp-empty { font-size: 13.5px; color: var(--ink2); margin: 0; }
+  .wp-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; }
+  .wp-foot a { color: var(--accent); font-weight: 600; }
 
   /* ---------------- agent console ---------------- */
   .agent { margin-top: 6px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); padding: 22px 24px; }
@@ -379,7 +403,7 @@
     <div class="mast-right">
       <span class="net"><span id="dot" class="dot load"></span><span id="netlabel">connecting…</span></span>
       <span id="wallet-slot" class="wallet">
-        <button id="wallet-connect" class="btn" type="button">Connect wallet</button>
+        <button id="wallet-connect" class="btn" type="button" data-wallet="connect">Connect wallet</button>
       </span>
       <button id="refresh" class="btn" type="button">Refresh</button>
     </div>
@@ -397,7 +421,8 @@
         <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
         <p class="sub">Overcover covers one clearly-defined event at a time: rainfall below a set level, in a named city, on a named date. If the signed reading meets the trigger, the payout follows from contract rules — no adjuster, no queue.</p>
         <div class="actions">
-          <a class="btn-gold" href="#cover">See the cover available</a>
+          <button class="btn-gold" type="button" data-wallet="connect">Connect a wallet</button>
+          <a class="btn-ghost" href="#cover">See the cover available</a>
           <a class="btn-ghost" href="#how">How a claim settles</a>
         </div>
         <p class="proof-line">
@@ -619,14 +644,14 @@
 
     <!-- Purchase: the human journey. Every number below is re-checked against the
          contract; the transaction is signed inside the user's own wallet. -->
-    <div class="buy" id="buy-panel" aria-labelledby="buy-h">
+    <div class="buy" id="buy-panel" aria-labelledby="buy-h" tabindex="-1">
       <div class="buy-head">
         <div>
           <h3 id="buy-h">Buy this cover with your own wallet</h3>
           <p class="buy-sub">You sign the transaction in your wallet. Overcover never sees your key, and the premium is fixed by the contract — not by this page.</p>
         </div>
         <span class="wallet" id="buy-wallet-slot">
-          <button id="buy-wallet-connect" class="btn" type="button">Connect wallet</button>
+          <button id="buy-wallet-connect" class="btn" type="button" data-wallet="connect">Connect wallet</button>
         </span>
       </div>
 
@@ -647,7 +672,7 @@
         <button id="b-buy" class="btn-gold" type="button" disabled>Buy cover</button>
         <span class="buy-status" id="b-status" role="status" aria-live="polite"></span>
       </div>
-      <div class="buy-actions" id="b-wallet-choices"></div>
+      <p class="buy-hint" id="b-hint"></p>
 
       <div class="buy-note" id="b-note">
         <b>What happens when you press Buy:</b> your wallet asks you to approve a single
@@ -912,6 +937,21 @@
     <span>Testnet only — no real funds. Figures are contract state; if a read fails, the page says so instead of showing a stale number as live.</span>
   </div>
 </footer>
+
+<dialog id="wallet-dialog" class="wp-dialog" aria-labelledby="wp-title">
+  <div class="wp-box">
+    <div class="wp-head">
+      <h2 id="wp-title">Connect a wallet</h2>
+      <button class="btn-s" type="button" data-wallet-close aria-label="Close">Close</button>
+    </div>
+    <p class="wp-sub">A NEAR wallet holds your account and signs transactions. Overcover never sees your key — you approve each action inside the wallet.</p>
+    <div id="wallet-choices"></div>
+    <p class="wp-status" id="wallet-picker-status" role="status" aria-live="polite"></p>
+    <div class="wp-foot">
+      <a href="#cover" data-buy-jump>Not sure yet? See what you can cover →</a>
+    </div>
+  </div>
+</dialog>
 
 
 <script src="vendor/wallet-bundle.js"></script>
@@ -1246,6 +1286,23 @@
   }
   function clearError() { el("error-slot").innerHTML = ""; }
 
+  // When the very first read fails, the per-section placeholders ("Loading
+  // products…", a lone "—") would sit there forever, looking like a page that
+  // is still working. Say plainly that nothing loaded and what to do next.
+  function renderLoadFailed() {
+    var box = '<div class="card"><div class="empty"><span class="e-t">Could not load from the contract</span>' +
+      "The live read did not complete, so nothing is shown here rather than a stale or invented number. " +
+      "Use Refresh to try again.</div></div>";
+    el("products").innerHTML = box;
+    el("policies").innerHTML = box;
+    el("observations").innerHTML = box;
+    var sel = el("q-product");
+    if (sel) sel.innerHTML = "";
+    ["q-premium", "q-reserve", "q-rate", "q-capacity"].forEach(function (id) { if (el(id)) el(id).textContent = "—"; });
+    if (el("q-terms")) el("q-terms").innerHTML = "";
+    if (el("q-readonly")) el("q-readonly").innerHTML = "<b>Nothing to price.</b> The contract could not be read, so no quote is available.";
+  }
+
   // ---------------------------------------------------------------- wallet
 
   // The wallet bundle (ui/vendor/wallet-bundle.js) owns every interaction with a
@@ -1273,32 +1330,90 @@
     updateBuyEnabled();
   }
 
-  function walletPick() {
-    var w = WALLET;
-    if (!w) return;
-    var avail = w.status().available.filter(function (m) { return m.available !== false; });
-    var any = w.status().available;
-    var msg = avail.length
-      ? "Choose a NEAR wallet: " + avail.map(function (m) { return m.name; }).join(", ") + "."
-      : "No NEAR wallet extension was detected in this browser. Install HERE or Meteor, then reload. Available modules: " + any.map(function (m) { return m.name; }).join(", ") + ".";
-    setBuyStatus(msg, avail.length ? false : true);
-    var host = el("b-wallet-choices");
-    host.innerHTML = avail.map(function (m) {
-      return '<button class="btn" type="button" data-wallet-id="' + esc(m.id) + '">' + esc(m.name) + "</button>";
+  // ------------------------------------------------------------- wallet picker
+  // The picker is a modal so it appears where the user is looking, whether they
+  // clicked "Connect wallet" in the header or in the buy panel. It also states
+  // honestly which wallets this browser can actually complete, instead of
+  // offering a flow that dead-ends.
+
+  function walletDialog() { return el("wallet-dialog"); }
+
+  function walletChoicesHTML(available) {
+    return available.map(function (m) {
+      var canUse = m.present !== false;
+      var note = m.present === false
+        ? '<span class="wp-note">not detected in this browser</span>'
+        : (m.extensionOnly ? '<span class="wp-note ok">browser extension detected</span>' : '<span class="wp-note ok">opens its own app or window</span>');
+      var install = m.present === false && m.downloadUrl
+        ? '<a class="wp-install" href="' + esc(m.downloadUrl) + '" target="_blank" rel="noopener">Install ' + esc(m.name) + " ↗</a>"
+        : "";
+      return '<div class="wp-opt' + (canUse ? "" : " wp-opt-off") + '">' +
+        '<button class="btn wp-pick" type="button" data-wallet-id="' + esc(m.id) + '"' + (canUse ? "" : " disabled") + ">" +
+        esc(m.name) + "</button>" + note + install + "</div>";
     }).join("");
   }
 
+  function renderWalletPicker() {
+    var host = el("wallet-choices");
+    if (!host) return;
+    if (!WALLET) {
+      host.innerHTML = '<p class="wp-empty">The wallet library did not load, so no wallet can be connected right now. Reload the page to try again.</p>';
+      return;
+    }
+    var st = WALLET.status();
+    if (!st.ready) {
+      host.innerHTML = '<p class="wp-empty">The wallet library is still starting. Try again in a moment.</p>';
+      return;
+    }
+    var available = st.available || [];
+    var usable = available.filter(function (m) { return m.present !== false; });
+    var intro = usable.length
+      ? "Choose a NEAR wallet to connect. Your account is created and approved inside the wallet — Overcover never sees your key."
+      : "None of the supported NEAR wallets were detected in this browser. Install one below, then reload this page.";
+    host.innerHTML = '<p class="wp-intro">' + intro + "</p>" + walletChoicesHTML(available);
+  }
+
+  function openWalletPicker() {
+    var d = walletDialog();
+    if (!d) return;
+    if (typeof d.showModal === "function") { if (!d.open) d.showModal(); }
+    else { d.setAttribute("open", ""); }
+    setWalletPickerStatus("");
+    renderWalletPicker();
+    var first = d.querySelector(".wp-pick:not([disabled])");
+    if (first) { try { first.focus(); } catch (e) {} }
+  }
+
+  function closeWalletPicker() {
+    var d = walletDialog();
+    if (!d) return;
+    if (typeof d.close === "function" && d.open) d.close();
+    else d.removeAttribute("open");
+  }
+
+  function setWalletPickerStatus(msg, kind) {
+    var s = el("wallet-picker-status");
+    if (!s) return;
+    s.textContent = msg || "";
+    s.className = "wp-status" + (kind === "err" ? " err" : kind === "ok" ? " ok" : "");
+  }
+
   function connectWallet(id) {
-    if (!WALLET) { setBuyStatus("The wallet library did not load. Reload the page.", true); return; }
-    setBuyStatus("Opening " + id + "…", false);
+    if (!WALLET) { setWalletPickerStatus("The wallet library did not load. Reload the page.", "err"); return; }
+    var mod = (WALLET.status().available || []).filter(function (m) { return m.id === id; })[0];
+    var name = mod ? mod.name : id;
+    setWalletPickerStatus("Opening " + name + "… approve the connection in the wallet window.", null);
     WALLET.connect(id).then(function (accountId) {
       walletState.connected = true;
       walletState.accountId = accountId;
       renderWallet();
-      var host = el("b-wallet-choices"); if (host) host.innerHTML = "";
-      setBuyStatus("Connected as " + accountId + ". You can buy cover below.", false, true);
+      setWalletPickerStatus("Connected as " + accountId + ".", "ok");
+      setBuyStatus("Connected as " + accountId + ". Set the cover terms below, then press Buy cover.", false, true);
+      setTimeout(closeWalletPicker, 650);
     }).catch(function (e) {
-      setBuyStatus("Could not connect: " + (e && e.message ? e.message : String(e)), true);
+      var msg = e && e.message ? e.message : String(e);
+      setWalletPickerStatus("Could not connect: " + msg, "err");
+      setBuyStatus("Could not connect: " + msg, true);
     });
   }
 
@@ -1311,14 +1426,21 @@
     });
   }
 
-  // One delegated listener handles both wallet slots and the picker buttons.
+  // One delegated listener handles both wallet slots, the picker buttons, the
+  // dialog's own controls, and the in-page calls to action.
   document.addEventListener("click", function (ev) {
     var t = ev.target;
     if (!t || !t.getAttribute) return;
-    if (t.getAttribute("data-wallet") === "connect") { ev.preventDefault(); walletPick(); }
+    if (t.getAttribute("data-wallet") === "connect") { ev.preventDefault(); openWalletPicker(); }
     else if (t.getAttribute("data-wallet") === "disconnect") { ev.preventDefault(); disconnectWallet(); }
     else if (t.getAttribute("data-wallet-id")) { ev.preventDefault(); connectWallet(t.getAttribute("data-wallet-id")); }
+    else if (t.getAttribute("data-wallet-close")) { ev.preventDefault(); closeWalletPicker(); }
+    else if (t.getAttribute("data-buy-jump")) { ev.preventDefault(); closeWalletPicker(); var b = el("buy-panel"); if (b) { b.scrollIntoView({ behavior: "smooth", block: "start" }); if (b.focus) b.focus(); } }
   });
+
+  // Close the picker when the user clicks the backdrop (outside the dialog box).
+  var _wd = walletDialog();
+  if (_wd) _wd.addEventListener("click", function (ev) { if (ev.target === _wd) closeWalletPicker(); });
 
   if (WALLET) {
     WALLET.subscribe(function (st) {
@@ -1349,6 +1471,14 @@
     if (!b) return;
     b.disabled = buyState.busy || !walletState.connected || !quoteState.selected;
     b.textContent = buyState.busy ? "Waiting for your wallet…" : "Buy cover";
+    // Say why the button cannot be used yet, so a first-time visitor is never
+    // left pressing a dead control with no explanation.
+    var h = el("b-hint");
+    if (!h) return;
+    if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
+    else if (!quoteState.selected) h.textContent = "Pick the cover and payout you want above to enable buying.";
+    else if (!walletState.connected) h.textContent = "Connect a wallet to buy this cover.";
+    else h.textContent = "";
   }
 
   // The observation date defaults to the product's minimum lead plus one day, in
@@ -1827,7 +1957,10 @@
       showError(msg, state.haveData, state.lastOk);
       setFreshness(state.haveData ? "stale" : "failed", state.lastOk);
       el("hero-dot").className = "dot " + (state.haveData ? "stale" : "failed");
-      if (!state.haveData) el("hero-live").textContent = "Could not read the pool from the contract.";
+      if (!state.haveData) {
+        el("hero-live").textContent = "Could not read the pool from the contract.";
+        renderLoadFailed();
+      }
     });
   }
 

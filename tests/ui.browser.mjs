@@ -25,7 +25,7 @@ const SHOTS = path.join(root, "shots");
 const EXEC = process.env.CHROME_PATH || "/home/openhands/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome";
 const STATIC_PORT = 8700 + Math.floor(Math.random() * 90);
 const AGENT_PORT = 8800 + Math.floor(Math.random() * 90);
-const VIEWPORTS = [320, 390, 768, 1280, 1440];
+const VIEWPORTS = [320, 360, 390, 412, 768, 1280, 1440];
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json" };
 
 function serveStatic() {
@@ -114,6 +114,31 @@ async function main() {
 
     const hasWallet = await page.locator("#wallet-slot button, #buy-wallet-slot button").count();
     check(hasWallet > 0, `[${w}px] wallet control missing`);
+
+    // The reported defect: "Connect wallet" looked static. A click must open the
+    // picker where the user is looking, and it must be honest about availability.
+    try {
+      await page.locator("#wallet-slot [data-wallet='connect']").click();
+      await page.waitForFunction(() => document.querySelector("#wallet-dialog")?.open === true, null, { timeout: 5000 });
+      const picker = await page.evaluate(() => {
+        const d = document.querySelector("#wallet-dialog");
+        const r = d.getBoundingClientRect();
+        return {
+          inViewport: r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0,
+          opts: document.querySelectorAll(".wp-pick").length,
+          installs: document.querySelectorAll(".wp-install").length,
+          overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        };
+      });
+      check(picker.opts >= 1, `[${w}px] the picker offered no wallets`);
+      check(picker.inViewport, `[${w}px] the picker opened off-screen`);
+      check(picker.overflowX <= 1, `[${w}px] the picker caused ${picker.overflowX}px of horizontal overflow`);
+      await page.screenshot({ path: path.join(SHOTS, `wallet-picker-${w}.png`), fullPage: false });
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => document.querySelector("#wallet-dialog")?.open === false, null, { timeout: 5000 }).catch(() => {});
+    } catch (e) {
+      check(false, `[${w}px] wallet picker did not open: ${e.message}`);
+    }
 
     await page.screenshot({ path: path.join(SHOTS, `console-${w}.png`), fullPage: false });
     if (w === 1280) await page.screenshot({ path: path.join(SHOTS, "console-1280-full.png"), fullPage: true });

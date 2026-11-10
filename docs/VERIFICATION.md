@@ -63,7 +63,7 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests
-npm run test:console    # 29 regression + live-RPC tests
+npm run test:console    # 39 regression + live-RPC tests
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 ```
 

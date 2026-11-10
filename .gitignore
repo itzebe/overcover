@@ -6,3 +6,6 @@ dist/
 .env
 agent/audit*.log.jsonl
 shots/
+
+# agent working notes (not part of the product)
+.openhands/

@@ -167,8 +167,8 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 29 regression + live-RPC tests          (browser console)
-npm run test:agent      # 27 limits + API tests                   (autonomous agent)
+npm run test:console    # 39 regression + live-RPC tests          (browser console)
+npm run test:agent      # 34 limits + API + u128-precision tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 ```
 
@@ -214,7 +214,7 @@ Full detail, including the trust boundary and residual risks, in [`docs/SECURITY
 - The demo uses a **60-second challenge window**; production uses 3600 s.
 - The demo reports the **same real Open-Meteo reading** the threshold was derived from, so the
   outcome is deterministic. The reading is genuine; it is pinned, not fabricated.
-- The live contract carries **17 products**, of which 2 are the canonical named products and 15 are
+- The live contract carries **22 products**, of which 2 are the canonical named products and 20 are
   demo-generated test rows. The console groups the latter so the real cover stays legible.
 - The **autonomous agent** ships in dry-run and is run by the operator, not hosted by Overcover: a
   public endpoint that signed with a funded key would let any visitor spend that balance. The

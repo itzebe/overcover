@@ -1,90 +1,136 @@
 [
   {
     "label": "add_product:rain-lagos",
-    "hash": "5gvcJmRSKY9krdqouwKF1WmSZU4XJeFmAxxuPqKcdJ6Y",
-    "explorer": "https://testnet.nearblocks.io/txns/5gvcJmRSKY9krdqouwKF1WmSZU4XJeFmAxxuPqKcdJ6Y",
-    "rpc": "https://testnet.nearblocks.io/txns/5gvcJmRSKY9krdqouwKF1WmSZU4XJeFmAxxuPqKcdJ6Y",
-    "at": "2026-11-10T12:10:19.073Z"
+    "hash": "EtDcnKzkdAihJXfiiJTmbxMfZVEuSKQPfDvfTW2RVvi6",
+    "explorer": "https://testnet.nearblocks.io/txns/EtDcnKzkdAihJXfiiJTmbxMfZVEuSKQPfDvfTW2RVvi6",
+    "rpc": "https://testnet.nearblocks.io/txns/EtDcnKzkdAihJXfiiJTmbxMfZVEuSKQPfDvfTW2RVvi6",
+    "at": "2026-11-10T12:49:37.511Z"
   },
   {
     "label": "add_product:rain-bergen-dry",
-    "hash": "fJ1BNm8qqddcTPQcpumq6GAs3rZ8ztfvDi3Tbs5JKBn",
-    "explorer": "https://testnet.nearblocks.io/txns/fJ1BNm8qqddcTPQcpumq6GAs3rZ8ztfvDi3Tbs5JKBn",
-    "rpc": "https://testnet.nearblocks.io/txns/fJ1BNm8qqddcTPQcpumq6GAs3rZ8ztfvDi3Tbs5JKBn",
-    "at": "2026-11-10T12:10:23.271Z"
+    "hash": "5JSr4vh43qJjf4ytWLJmNGtXWPunpSBxVQsbkALEsrSF",
+    "explorer": "https://testnet.nearblocks.io/txns/5JSr4vh43qJjf4ytWLJmNGtXWPunpSBxVQsbkALEsrSF",
+    "rpc": "https://testnet.nearblocks.io/txns/5JSr4vh43qJjf4ytWLJmNGtXWPunpSBxVQsbkALEsrSF",
+    "at": "2026-11-10T12:49:41.664Z"
   },
   {
     "label": "deposit:lp-alice-overcover.testnet:3",
-    "hash": "6fCDwHyyuoNuUmRii5pm71hotRZtmGin3vCQVaQodFty",
-    "explorer": "https://testnet.nearblocks.io/txns/6fCDwHyyuoNuUmRii5pm71hotRZtmGin3vCQVaQodFty",
-    "rpc": "https://testnet.nearblocks.io/txns/6fCDwHyyuoNuUmRii5pm71hotRZtmGin3vCQVaQodFty",
-    "at": "2026-11-10T12:10:28.064Z"
+    "hash": "13ik86WVkUZKm624zmzL4BZ1Aa4LeWNjs9ymrqqqH5fG",
+    "explorer": "https://testnet.nearblocks.io/txns/13ik86WVkUZKm624zmzL4BZ1Aa4LeWNjs9ymrqqqH5fG",
+    "rpc": "https://testnet.nearblocks.io/txns/13ik86WVkUZKm624zmzL4BZ1Aa4LeWNjs9ymrqqqH5fG",
+    "at": "2026-11-10T12:49:47.027Z"
   },
   {
     "label": "deposit:lp-bob-overcover.testnet:2",
-    "hash": "BPRcvetFqZk27G3SYU7Qxjv82SXjrqpNrSJCACDqgpX",
-    "explorer": "https://testnet.nearblocks.io/txns/BPRcvetFqZk27G3SYU7Qxjv82SXjrqpNrSJCACDqgpX",
-    "rpc": "https://testnet.nearblocks.io/txns/BPRcvetFqZk27G3SYU7Qxjv82SXjrqpNrSJCACDqgpX",
-    "at": "2026-11-10T12:10:31.695Z"
+    "hash": "3VVrTUMxvquTXVNoxrqGDsA4BN7Ap2ysqLTzhkfJtCgD",
+    "explorer": "https://testnet.nearblocks.io/txns/3VVrTUMxvquTXVNoxrqGDsA4BN7Ap2ysqLTzhkfJtCgD",
+    "rpc": "https://testnet.nearblocks.io/txns/3VVrTUMxvquTXVNoxrqGDsA4BN7Ap2ysqLTzhkfJtCgD",
+    "at": "2026-11-10T12:49:50.881Z"
   },
   {
     "label": "buy_cover:grower-overcover.testnet:rain-lagos",
-    "hash": "A7JM85rqpUmeH33GRu6dKbnu1cFvmZye77KuFZa2PwWe",
-    "explorer": "https://testnet.nearblocks.io/txns/A7JM85rqpUmeH33GRu6dKbnu1cFvmZye77KuFZa2PwWe",
-    "rpc": "https://testnet.nearblocks.io/txns/A7JM85rqpUmeH33GRu6dKbnu1cFvmZye77KuFZa2PwWe",
-    "at": "2026-11-10T12:10:36.030Z"
+    "hash": "71qVqbJTD9fmSG5ZchPWvWz5BS2pAAidwuYcUM3yYHJY",
+    "explorer": "https://testnet.nearblocks.io/txns/71qVqbJTD9fmSG5ZchPWvWz5BS2pAAidwuYcUM3yYHJY",
+    "rpc": "https://testnet.nearblocks.io/txns/71qVqbJTD9fmSG5ZchPWvWz5BS2pAAidwuYcUM3yYHJY",
+    "at": "2026-11-10T12:49:55.128Z"
   },
   {
     "label": "buy_cover:grower-overcover.testnet:rain-bergen-dry",
-    "hash": "8ZdzmNJhGATUqEDRpTvWNA8chh8wwNrLfYXxRQPbJxDr",
-    "explorer": "https://testnet.nearblocks.io/txns/8ZdzmNJhGATUqEDRpTvWNA8chh8wwNrLfYXxRQPbJxDr",
-    "rpc": "https://testnet.nearblocks.io/txns/8ZdzmNJhGATUqEDRpTvWNA8chh8wwNrLfYXxRQPbJxDr",
-    "at": "2026-11-10T12:10:40.412Z"
+    "hash": "3u82VzkdnrWp2w2ZsC8DZeAVUQkd8vUjv6U8bfoJGSdm",
+    "explorer": "https://testnet.nearblocks.io/txns/3u82VzkdnrWp2w2ZsC8DZeAVUQkd8vUjv6U8bfoJGSdm",
+    "rpc": "https://testnet.nearblocks.io/txns/3u82VzkdnrWp2w2ZsC8DZeAVUQkd8vUjv6U8bfoJGSdm",
+    "at": "2026-11-10T12:49:59.322Z"
   },
   {
     "label": "report_observation:lagos",
-    "hash": "EDFFeJFeMzPVuSX7QkKMLrCztAumja51K2Yq1UnzTE5q",
-    "explorer": "https://testnet.nearblocks.io/txns/EDFFeJFeMzPVuSX7QkKMLrCztAumja51K2Yq1UnzTE5q",
-    "rpc": "https://testnet.nearblocks.io/txns/EDFFeJFeMzPVuSX7QkKMLrCztAumja51K2Yq1UnzTE5q",
-    "at": "2026-11-10T12:11:05.368Z",
-    "valueTenths": 9,
-    "reportedAt": 1794312661
+    "hash": "DY78N1Uced9cuv3hqEDbGo82Mq1umCHF6z6NNdVV7Q8d",
+    "explorer": "https://testnet.nearblocks.io/txns/DY78N1Uced9cuv3hqEDbGo82Mq1umCHF6z6NNdVV7Q8d",
+    "rpc": "https://testnet.nearblocks.io/txns/DY78N1Uced9cuv3hqEDbGo82Mq1umCHF6z6NNdVV7Q8d",
+    "at": "2026-11-10T12:50:24.274Z",
+    "valueTenths": 2,
+    "reportedAt": 1794315020
   },
   {
     "label": "report_observation:bergen",
-    "hash": "5XGtQjF1pzbW7FTHF7cfs32sGNWrUj7s26vuWAMqB1UJ",
-    "explorer": "https://testnet.nearblocks.io/txns/5XGtQjF1pzbW7FTHF7cfs32sGNWrUj7s26vuWAMqB1UJ",
-    "rpc": "https://testnet.nearblocks.io/txns/5XGtQjF1pzbW7FTHF7cfs32sGNWrUj7s26vuWAMqB1UJ",
-    "at": "2026-11-10T12:11:09.702Z",
-    "valueTenths": 0,
-    "reportedAt": 1794312665
+    "hash": "434PN4cAvXXTUaFATtwPX159L193aAxHigJfwHC9SWnr",
+    "explorer": "https://testnet.nearblocks.io/txns/434PN4cAvXXTUaFATtwPX159L193aAxHigJfwHC9SWnr",
+    "rpc": "https://testnet.nearblocks.io/txns/434PN4cAvXXTUaFATtwPX159L193aAxHigJfwHC9SWnr",
+    "at": "2026-11-10T12:50:28.387Z",
+    "valueTenths": 1,
+    "reportedAt": 1794315024
   },
   {
     "label": "resolve:1",
-    "hash": "4ik54TXpvXahEBW5LJJpE9FviuYkqs5zoiE86smGNp5z",
-    "explorer": "https://testnet.nearblocks.io/txns/4ik54TXpvXahEBW5LJJpE9FviuYkqs5zoiE86smGNp5z",
-    "rpc": "https://testnet.nearblocks.io/txns/4ik54TXpvXahEBW5LJJpE9FviuYkqs5zoiE86smGNp5z",
-    "at": "2026-11-10T12:12:11.908Z"
+    "hash": "7k9tffekj6a823mk1BjGNQr8tp21Bs14Cn7ScyCUxSxX",
+    "explorer": "https://testnet.nearblocks.io/txns/7k9tffekj6a823mk1BjGNQr8tp21Bs14Cn7ScyCUxSxX",
+    "rpc": "https://testnet.nearblocks.io/txns/7k9tffekj6a823mk1BjGNQr8tp21Bs14Cn7ScyCUxSxX",
+    "at": "2026-11-10T12:51:30.767Z"
   },
   {
     "label": "resolve:2",
-    "hash": "CGtpBrnMijZQq7dgCdxFBeWRYDoxMwf8yUCR6mDHzEQ4",
-    "explorer": "https://testnet.nearblocks.io/txns/CGtpBrnMijZQq7dgCdxFBeWRYDoxMwf8yUCR6mDHzEQ4",
-    "rpc": "https://testnet.nearblocks.io/txns/CGtpBrnMijZQq7dgCdxFBeWRYDoxMwf8yUCR6mDHzEQ4",
-    "at": "2026-11-10T12:12:20.731Z"
+    "hash": "83jtxBxXkdg1Agvd73s4xhqNGfgYK8hR14fa43eFYXqK",
+    "explorer": "https://testnet.nearblocks.io/txns/83jtxBxXkdg1Agvd73s4xhqNGfgYK8hR14fa43eFYXqK",
+    "rpc": "https://testnet.nearblocks.io/txns/83jtxBxXkdg1Agvd73s4xhqNGfgYK8hR14fa43eFYXqK",
+    "at": "2026-11-10T12:51:39.861Z"
   },
   {
     "label": "withdraw:lp-bob-overcover.testnet:2",
-    "hash": "GQGgc84ubXHANbGo2gx7q34MVQmpT4PRsSKdyMV5PSMC",
-    "explorer": "https://testnet.nearblocks.io/txns/GQGgc84ubXHANbGo2gx7q34MVQmpT4PRsSKdyMV5PSMC",
-    "rpc": "https://testnet.nearblocks.io/txns/GQGgc84ubXHANbGo2gx7q34MVQmpT4PRsSKdyMV5PSMC",
-    "at": "2026-11-10T12:12:27.893Z"
+    "hash": "5JhzDNP2BjSP7xZTLyDrLGQC8qfuLaqUxUsyFxy2YvYU",
+    "explorer": "https://testnet.nearblocks.io/txns/5JhzDNP2BjSP7xZTLyDrLGQC8qfuLaqUxUsyFxy2YvYU",
+    "rpc": "https://testnet.nearblocks.io/txns/5JhzDNP2BjSP7xZTLyDrLGQC8qfuLaqUxUsyFxy2YvYU",
+    "at": "2026-11-10T12:51:47.211Z"
   },
   {
     "label": "withdraw:lp-alice-overcover.testnet:2.075000",
-    "hash": "3U9Fkx8zZ2CNJeQ331CBzGaAESoD5MRTKP1R8Fjcn9r1",
-    "explorer": "https://testnet.nearblocks.io/txns/3U9Fkx8zZ2CNJeQ331CBzGaAESoD5MRTKP1R8Fjcn9r1",
-    "rpc": "https://testnet.nearblocks.io/txns/3U9Fkx8zZ2CNJeQ331CBzGaAESoD5MRTKP1R8Fjcn9r1",
-    "at": "2026-11-10T12:12:35.114Z"
+    "hash": "5E8J43umCatzBLWUEMSb8SoGj54WgZoGLEmFtbNFvCSE",
+    "explorer": "https://testnet.nearblocks.io/txns/5E8J43umCatzBLWUEMSb8SoGj54WgZoGLEmFtbNFvCSE",
+    "rpc": "https://testnet.nearblocks.io/txns/5E8J43umCatzBLWUEMSb8SoGj54WgZoGLEmFtbNFvCSE",
+    "at": "2026-11-10T12:51:54.430Z"
+  },
+  {
+    "label": "report_observation:lagos",
+    "hash": "EA7XYXxcZnoB7KoGgF6QoTXgF8dKMEuM7nLUuwrWNts7",
+    "explorer": "https://testnet.nearblocks.io/txns/EA7XYXxcZnoB7KoGgF6QoTXgF8dKMEuM7nLUuwrWNts7",
+    "rpc": "https://testnet.nearblocks.io/txns/EA7XYXxcZnoB7KoGgF6QoTXgF8dKMEuM7nLUuwrWNts7",
+    "at": "2026-11-10T12:52:01.115Z",
+    "valueTenths": 2,
+    "reportedAt": 1794315116
+  },
+  {
+    "label": "challenge:lagos",
+    "hash": "4nMq63G16EysG1AFpEf2Z4qVtYGVTvgUwUwzB8mLymCt",
+    "explorer": "https://testnet.nearblocks.io/txns/4nMq63G16EysG1AFpEf2Z4qVtYGVTvgUwUwzB8mLymCt",
+    "rpc": "https://testnet.nearblocks.io/txns/4nMq63G16EysG1AFpEf2Z4qVtYGVTvgUwUwzB8mLymCt",
+    "at": "2026-11-10T12:52:05.464Z"
+  },
+  {
+    "label": "resolve_dispute:lagos:true",
+    "hash": "71ur346e4Ne4L487w9j61UtSaCXQyHdBYkztpQSrDnJy",
+    "explorer": "https://testnet.nearblocks.io/txns/71ur346e4Ne4L487w9j61UtSaCXQyHdBYkztpQSrDnJy",
+    "rpc": "https://testnet.nearblocks.io/txns/71ur346e4Ne4L487w9j61UtSaCXQyHdBYkztpQSrDnJy",
+    "at": "2026-11-10T12:52:09.290Z"
+  },
+  {
+    "label": "report_observation:lagos",
+    "hash": "Cnihf1UGZeStsWKHoSCrmwc5MbzjHJ4zSDuMGHpXseRY",
+    "explorer": "https://testnet.nearblocks.io/txns/Cnihf1UGZeStsWKHoSCrmwc5MbzjHJ4zSDuMGHpXseRY",
+    "rpc": "https://testnet.nearblocks.io/txns/Cnihf1UGZeStsWKHoSCrmwc5MbzjHJ4zSDuMGHpXseRY",
+    "at": "2026-11-10T12:52:13.257Z",
+    "valueTenths": 999,
+    "reportedAt": 1794315129
+  },
+  {
+    "label": "challenge:lagos",
+    "hash": "AY8RjTebHKKG9wyajbqAKNYA7ZJYh6wEx6KuF56qWVSy",
+    "explorer": "https://testnet.nearblocks.io/txns/AY8RjTebHKKG9wyajbqAKNYA7ZJYh6wEx6KuF56qWVSy",
+    "rpc": "https://testnet.nearblocks.io/txns/AY8RjTebHKKG9wyajbqAKNYA7ZJYh6wEx6KuF56qWVSy",
+    "at": "2026-11-10T12:52:16.898Z"
+  },
+  {
+    "label": "resolve_dispute:lagos:false",
+    "hash": "5CC7RqUS8zvs4ZJKU1s6iihp5x6KPZEGBp1mMZkzuGpV",
+    "explorer": "https://testnet.nearblocks.io/txns/5CC7RqUS8zvs4ZJKU1s6iihp5x6KPZEGBp1mMZkzuGpV",
+    "rpc": "https://testnet.nearblocks.io/txns/5CC7RqUS8zvs4ZJKU1s6iihp5x6KPZEGBp1mMZkzuGpV",
+    "at": "2026-11-10T12:52:22.116Z"
   }
 ]

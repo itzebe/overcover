@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { connectNear, view, fromYocto, toYocto, balanceYocto, loadIdentities, loadState, saveState } from "./near.js";
-import { contractId, addProduct, deposit, buyCover, withdraw, reportObservation, resolve, expectFailure } from "./actions.js";
+import { contractId, addProduct, deposit, buyCover, withdraw, reportObservation, resolve, expectFailure, challengeObservation, resolveDispute } from "./actions.js";
 import { observeCity } from "./oracle.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -74,7 +74,7 @@ async function main() {
 
   // 2. capital ------------------------------------------------------------
   head("2. Stake capital into the pool");
-  await ensureMin(near, ids, "lp_alice", 3); await ensureMin(near, ids, "lp_bob", 2); await ensureMin(near, ids, "biz_grower", 1.2);
+  await ensureMin(near, ids, "lp_alice", 4); await ensureMin(near, ids, "lp_bob", 3); await ensureMin(near, ids, "biz_grower", 2);
   await deposit(near, ids.lp_alice.accountId, "3");
   await deposit(near, ids.lp_bob.accountId, "2");
   let p = await pool(near);
@@ -151,8 +151,37 @@ async function main() {
   p = await pool(near);
   line(`  capital ${fmt(p.capital)}  reserved ${fmt(p.reserved)}  available ${fmt(p.available)}`);
 
+  // 12. the oracle is challengeable ---------------------------------------
+  head("12. The signed index is challengeable — both outcomes");
+  const bond = fromYocto(cfg.challenge_bond).toFixed(4);
+  await ensureMin(near, ids, "watchdog", 1);
+
+  // (a) a frivolous challenge: the report stands, the challenger loses the bond
+  const frivDate = nowS() - 25;
+  await reportObservation(near, { city: "lagos", obsDate: frivDate, nonce: nowS() + 11, valueTenthsOverride: lagos.valueTenths });
+  const beforeF = await pool(near);
+  await challengeObservation(near, ids.watchdog.accountId, { city: "lagos", obsDate: frivDate, counterValueTenths: 0, bondNear: bond });
+  const heldF = await pool(near);
+  line(`  a challenger disputes a TRUE reading and posts a ${bond} NEAR bond`);
+  line(`  held_bonds ${fmt(beforeF.held_bonds)} -> ${fmt(heldF.held_bonds)}`);
+  await resolveDispute(near, { city: "lagos", obsDate: frivDate, uphold: true });
+  const afterF = await pool(near);
+  line(`  owner upholds the true reading -> report stands, bond forfeited to the pool`);
+  line(`  capital ${fmt(heldF.capital)} -> ${fmt(afterF.capital)}  bonds_forfeited ${fmt(afterF.bonds_forfeited)}`);
+
+  // (b) a genuine false report: the report is nullified, the bond is returned
+  const badDate = nowS() - 15;
+  await reportObservation(near, { city: "lagos", obsDate: badDate, nonce: nowS() + 13, valueTenthsOverride: 999 });
+  await challengeObservation(near, ids.watchdog.accountId, { city: "lagos", obsDate: badDate, counterValueTenths: lagos.valueTenths, bondNear: bond });
+  line(`  a challenger disputes a FALSE 99.9 mm reading with the real ${(lagos.valueTenths / 10).toFixed(1)} mm`);
+  await resolveDispute(near, { city: "lagos", obsDate: badDate, uphold: false });
+  const afterB = await pool(near);
+  const badObs = await view(near, c, "get_observation", { city: "lagos", obs_date: badDate });
+  line(`  owner nullifies the false report -> challenger's bond returned`);
+  line(`  observation nullified=${badObs.nullified}  held_bonds ${fmt(afterB.held_bonds)}`);
+
   // 12. final solvency ----------------------------------------------------
-  head("12. Final solvency + reconciliation");
+  head("13. Final solvency + reconciliation");
   const recon = await view(near, c, "reconcile", {});
   p = await pool(near);
   line(`  capital=${p.capital}  reserved=${p.reserved}  available=${p.available}`);
@@ -161,7 +190,7 @@ async function main() {
   line(`  reconcile (capital == deposited - withdrawn + premiums + bonds - paid): ${recon}`);
 
   // 13. transactions ------------------------------------------------------
-  head("13. Verified testnet transactions (demo-log.json)");
+  head("14. Verified testnet transactions (demo-log.json)");
   for (const e of JSON.parse(fs.readFileSync(path.join(root, "demo-log.json"), "utf8")))
     line(`  ${e.label.padEnd(36)} ${e.explorer}`);
 

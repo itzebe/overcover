@@ -67,6 +67,7 @@ enum StorageKey {
     PolicyIds,
     Providers,
     Observations,
+    ObservationIds,
 }
 
 #[near(serializers = [borsh, json])]
@@ -143,6 +144,8 @@ pub struct Overcover {
     pub policy_ids: UnorderedSet<u64>,
     pub providers: LookupMap<AccountId, Provider>,
     pub observations: LookupMap<Vec<u8>, Observation>,
+    /// Ordered set of observation keys, so views can enumerate them.
+    pub observation_ids: UnorderedSet<Vec<u8>>,
 
     // ---- pool accounting (all yoctoNEAR) ----
     /// Deposits - withdrawals + premiums - payouts. Excludes held dispute bonds.
@@ -185,6 +188,7 @@ impl Overcover {
             policy_ids: UnorderedSet::new(StorageKey::PolicyIds),
             providers: LookupMap::new(StorageKey::Providers),
             observations: LookupMap::new(StorageKey::Observations),
+            observation_ids: UnorderedSet::new(StorageKey::ObservationIds),
             capital: 0,
             reserved: 0,
             held_bonds: 0,
@@ -492,6 +496,7 @@ impl Overcover {
             bond: 0,
         };
         self.observations.insert(&key, &o);
+        self.observation_ids.insert(&key);
         log_event(
             "observation_reported",
             &[
@@ -682,6 +687,14 @@ impl Overcover {
             deposited: 0,
             withdrawn: 0,
         })
+    }
+
+    /// All observations reported so far (most recent first is the caller's job).
+    pub fn list_observations(&self) -> Vec<Observation> {
+        self.observation_ids
+            .iter()
+            .filter_map(|k| self.observations.get(&k))
+            .collect()
     }
 
     pub fn get_observation(&self, city: String, obs_date: u64) -> Option<Observation> {

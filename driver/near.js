@@ -16,7 +16,7 @@ export const WASM = path.join(
 export const RPC_ENDPOINTS = [
   process.env.OVERCOVER_RPC,
   "https://test.rpc.fastnear.com",
-  "https://rpc.testnet.near.org",
+  "https://rpc.testnet.fastnear.com",
   "https://near-testnet.drpc.org",
 ].filter(Boolean);
 

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Overcover — mutual console</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b23; --line: #262d38; --ink: #e8edf4; --muted: #8b97a8;
+    --accent: #e0954a; --good: #57b47f; --bad: #d76b6b;
+    --mono: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  header { border-bottom: 1px solid var(--line); padding: 18px 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; }
+  .brand { font-size: 20px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; }
+  .brand small { display: block; font-size: 11px; letter-spacing: .08em; color: var(--muted); text-transform: none; margin-top: 3px; }
+  .conn { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .dot.ok { background: var(--good); } .dot.bad { background: var(--bad); }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px; display: grid; gap: 22px; }
+  section h2 { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+  .stat .k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font-family: var(--mono); font-size: 22px; margin-top: 6px; }
+  .stat .v.good { color: var(--good); } .stat .v.bad { color: var(--bad); } .stat .v.accent { color: var(--accent); }
+  .stat .u { font-size: 12px; color: var(--muted); margin-left: 4px; }
+  .bar { height: 34px; background: #1b222c; border: 1px solid var(--line); border-radius: 4px; position: relative; overflow: hidden; margin-top: 10px; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #2f6b4c, var(--good)); transition: width .5s ease; }
+  .bar .fill.over { background: var(--bad); }
+  .bar .lbl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; }
+  .invariant { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-family: var(--mono); font-size: 12px; }
+  .invariant .pill { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); }
+  .invariant .pill.good { color: var(--good); border-color: #2f6b4c; }
+  .invariant .pill.bad { color: var(--bad); border-color: #6b3030; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  td.num, th.num { text-align: right; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .tag.active { color: var(--good); border-color: #2f6b4c; }
+  .tag.settled_paid { color: var(--accent); border-color: #6b532f; }
+  .tag.settled_no_pay { color: var(--muted); }
+  .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 14px 0; }
+  footer { max-width: 1180px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .err { color: var(--bad); font-family: var(--mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Overcover<small>autonomous parametric risk mutual · NEAR testnet</small></div>
+  <div class="conn"><span id="dot" class="dot"></span><span id="conn">connecting…</span></div>
+</header>
+<main>
+  <section>
+    <h2>Pool solvency</h2>
+    <div class="grid">
+      <div class="stat"><div class="k">Capital</div><div class="v accent"><span id="capital">—</span><span class="u">NEAR</span></div></div>
+      <div class="stat"><div class="k">Reserved (promised)</div><div class="v"><span id="reserved">—</span><span class="u">NEAR</span></div></div>
+      <div class="stat"><div class="k">Available</div><div class="v"><span id="available">—</span><span class="u">NEAR</span></div></div>
+      <div class="stat"><div class="k">Premiums collected</div><div class="v"><span id="premiums">—</span><span class="u">NEAR</span></div></div>
+      <div class="stat"><div class="k">Paid out</div><div class="v"><span id="paid">—</span><span class="u">NEAR</span></div></div>
+      <div class="stat"><div class="k">Policies</div><div class="v"><span id="npol">—</span></div></div>
+    </div>
+    <div class="bar"><div id="fill" class="fill" style="width:0%"></div><div class="lbl" id="barlbl">reserved 0% of capital</div></div>
+    <div class="invariant">
+      <span id="pill-solvent" class="pill">reserved ≤ capital</span>
+      <span id="pill-recon" class="pill">reconcile</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Products — immutable risk definitions</h2>
+    <div id="products"><div class="empty">loading…</div></div>
+  </section>
+
+  <section>
+    <h2>Policies — cover written</h2>
+    <div id="policies"><div class="empty">loading…</div></div>
+  </section>
+
+  <section>
+    <h2>Observations — signed index reports</h2>
+    <div id="observations"><div class="empty">no observations yet</div></div>
+  </section>
+</main>
+<footer>
+  Contract <span id="cid">—</span> · reads are direct RPC calls to NEAR testnet · no server, no keys in the browser.
+</footer>
+
+<script>
+const RPC = [
+  "https://test.rpc.fastnear.com",
+  "https://rpc.testnet.fastnear.com",
+  "https://near-testnet.drpc.org",
+  "https://rpc.testnet.near.org",
+];
+const CONTRACT = new URLSearchParams(location.search).get("contract") || "contract.attestor-overcover.testnet";
+document.getElementById("cid").textContent = CONTRACT;
+
+const YOCTO = 1e24;
+const near = (y) => Number(BigInt(y)) / YOCTO;
+const fmt = (y, d = 4) => near(y).toFixed(d);
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+function decode(b64) {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+async function view(method, args = {}) {
+  const args_b64 = btoa(JSON.stringify(args));
+  let lastErr;
+  for (const url of RPC) {
+    try {
+      const res = await fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: "1", method: "query",
+          params: { request_type: "call_function", finality: "final",
+            account_id: CONTRACT, method_name: method, args_base64: args_b64 } }),
+      });
+      const j = await res.json();
+      if (j.error) throw new Error(j.error.cause?.name || j.error.message);
+      if (j.result?.result === undefined) throw new Error("no result");
+      return decode(j.result.result);
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+function productRows(products) {
+  if (!products.length) return '<div class="empty">no products published</div>';
+  return `<table><thead><tr><th>id</th><th>index</th><th class="num">trigger</th><th class="num">premium</th><th class="num">max payout</th><th class="num">reserved / cap</th></tr></thead><tbody>` +
+    products.map((p) => `<tr><td>${esc(p.id)}</td><td>${esc(p.city)}</td>
+      <td class="num">${(p.threshold_tenths / 10).toFixed(1)} mm</td>
+      <td class="num">${(p.premium_bp / 100).toFixed(2)}%</td>
+      <td class="num">${fmt(p.max_payout)}</td>
+      <td class="num">${fmt(p.reserved)} / ${fmt(p.max_total_coverage)}</td></tr>`).join("") + "</tbody></table>";
+}
+
+function policyRows(policies) {
+  if (!policies.length) return '<div class="empty">no cover written</div>';
+  return `<table><thead><tr><th>#</th><th>product</th><th class="num">payout</th><th class="num">premium</th><th>beneficiary</th><th>status</th></tr></thead><tbody>` +
+    policies.map((p) => `<tr><td>#${p.id}</td><td>${esc(p.product_id)}</td>
+      <td class="num">${fmt(p.payout)}</td><td class="num">${fmt(p.premium)}</td>
+      <td>${esc(String(p.beneficiary || p.buyer || "").slice(0, 22))}</td>
+      <td><span class="tag ${esc(p.status)}">${esc(p.status)}</span></td></tr>`).join("") + "</tbody></table>";
+}
+
+function observationRows(obs) {
+  if (!obs.length) return '<div class="empty">no observations yet</div>';
+  return `<table><thead><tr><th>index</th><th class="num">value</th><th class="num">obs date (UTC)</th><th class="num">reported</th><th>state</th></tr></thead><tbody>` +
+    obs.map((o) => `<tr><td>${esc(o.city)}</td><td class="num">${(o.value_tenths / 10).toFixed(1)} mm</td>
+      <td class="num">${new Date(o.obs_date * 1000).toISOString().slice(0, 16).replace("T", " ")}</td>
+      <td class="num">${o.reported_at}</td>
+      <td><span class="tag ${o.nullified ? "settled_no_pay" : o.disputed ? "settled_paid" : "active"}">${o.nullified ? "nullified" : o.disputed ? "challenged" : "signed"}</span></td></tr>`).join("") + "</tbody></table>";
+}
+
+async function tick() {
+  try {
+    const [pool, products, policies, recon, inv] = await Promise.all([
+      view("get_pool"), view("list_products"), view("list_policies"),
+      view("reconcile"), view("check_invariant"),
+    ]);
+    document.getElementById("dot").className = "dot ok";
+    document.getElementById("conn").textContent = CONTRACT;
+    document.getElementById("capital").textContent = fmt(pool.capital);
+    document.getElementById("reserved").textContent = fmt(pool.reserved);
+    document.getElementById("available").textContent = fmt(pool.available);
+    document.getElementById("premiums").textContent = fmt(pool.premiums_collected);
+    document.getElementById("paid").textContent = fmt(pool.total_paid);
+    document.getElementById("npol").textContent = pool.policy_count;
+
+    const cap = Number(BigInt(pool.capital)), res = Number(BigInt(pool.reserved));
+    const pct = cap > 0 ? Math.min(100, (res / cap) * 100) : 0;
+    const fill = document.getElementById("fill");
+    fill.style.width = pct + "%";
+    fill.className = "fill" + (res > cap ? " over" : "");
+    document.getElementById("barlbl").textContent = `reserved ${pct.toFixed(1)}% of capital`;
+
+    const ps = document.getElementById("pill-solvent");
+    ps.textContent = `reserved ≤ capital: ${inv ? "true" : "FALSE"}`;
+    ps.className = "pill " + (inv ? "good" : "bad");
+    const pr = document.getElementById("pill-recon");
+    pr.textContent = `reconcile: ${recon ? "true" : "false"}`;
+    pr.className = "pill " + (recon ? "good" : "bad");
+
+    document.getElementById("products").innerHTML = productRows(products);
+    document.getElementById("policies").innerHTML = policyRows(policies);
+
+    const obs = await view("list_observations");
+    obs.sort((a, b) => b.reported_at - a.reported_at);
+    document.getElementById("observations").innerHTML = observationRows(obs);
+  } catch (e) {
+    document.getElementById("dot").className = "dot bad";
+    document.getElementById("conn").innerHTML = `<span class="err">RPC error: ${esc(e.message)}</span>`;
+  }
+}
+
+tick();
+setInterval(tick, 3000);
+</script>
+</body>
+</html>

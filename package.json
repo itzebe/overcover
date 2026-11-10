@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "keys": "node driver/keys.js",
-    "deploy": "node driver/deploy.js",
-    "seed": "node driver/seed.js",
+    "deploy": "OVERCOVER_DEMO_WINDOW=60 node driver/deploy.js",
     "demo": "node driver/demo.js",
-    "attestor": "node driver/attestor.js",
-    "test:attestor": "node --test tests/*.test.js",
-    "test:contract": "cd contract && cargo +stable test",
-    "test:model": "node research/model/attacks.mjs"
+    "test:contract": "cargo +stable test --manifest-path contract/Cargo.toml",
+    "test:model": "node research/model/attacks.mjs",
+    "test:onchain": "node --test tests/*.test.js",
+    "test": "npm run test:model && npm run test:contract"
   },
   "dependencies": {
     "near-api-js": "^5.1.1"

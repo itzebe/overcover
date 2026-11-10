@@ -5,6 +5,7 @@ verifiable, instant-paying cover against objective public indices, and lets anyo
 with guaranteed solvency.
 
 **Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
+**Live console:** https://itzebe.github.io/overcover/
 **Deployed code hash:** `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`
 **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
 **X demo post:** see [`docs/DEMO_POST.md`](docs/DEMO_POST.md)
@@ -103,21 +104,26 @@ client-side check. The rules live in the contract.
 ## 6. Verified testnet evidence
 
 Every row is a real transaction; run `npm run demo` to reproduce and regenerate `demo-log.json`.
+All 18 hashes resolve on-chain via the `tx` RPC method.
 
 | Step | Transaction |
 | --- | --- |
-| add_product rain-lagos | https://testnet.nearblocks.io/txns/FfoHwfMm46GpSftP3jTZYucXRSYMXWj85sBF4gfbuUfF |
-| add_product rain-bergen-dry | https://testnet.nearblocks.io/txns/DQDTYej8UyhziCteCv4vBimUcYRpe7oDVjQFJYKqa5Xt |
-| deposit (LP A) | https://testnet.nearblocks.io/txns/AtHjxY32iLzBSpMAaHotM3ZvYgPXzCyKuvwhYiYcDY39 |
-| deposit (LP B) | https://testnet.nearblocks.io/txns/72ynq1MRpNQ5SyKufEhpJSxuJe3NoJtVmcfihTa6p6uq |
-| buy_cover (rain-lagos) | https://testnet.nearblocks.io/txns/Ey2URRchg8k9HLbMJddGxJR266qJmneV5LSvzwU8HkkB |
-| buy_cover (capacity test) | https://testnet.nearblocks.io/txns/Ey3Aa1L5vDL7BFHS5ReJQD4pXXzYwF9K1wTiXRohjrs3 |
-| report_observation lagos | https://testnet.nearblocks.io/txns/3tVKmXJqTANmXxPKYwEtHDJ2GejmF3ok4pohtLry2GD6 |
-| report_observation bergen | https://testnet.nearblocks.io/txns/9eV2Geo8cBN7VbxXHfnck7mJHTjXLJk2w9mwzrw7zUHL |
-| resolve (paid) | https://testnet.nearblocks.io/txns/4sc4AzeCZfM33MsSpyfwEb87aX4yJ76KDzMgvDhu8SZd |
-| resolve (not triggered) | https://testnet.nearblocks.io/txns/8ohgy4ovEZ4JjHtyFXNtXw5Ug8FJVXxt6SowCvzZRw1q |
-| withdraw (LP B) | https://testnet.nearblocks.io/txns/5mMFD6qo82qAnfjAt6ByEHqhaZ4EKJcKYHfjvpKVipcS |
-| withdraw (LP A) | https://testnet.nearblocks.io/txns/EGHK78HPyC9hnY2qdFn8wRHDuZs4czuQUcxc4iZpaUe |
+| add_product rain-lagos | https://testnet.nearblocks.io/txns/BksQTpHzuZ5hDvGaUBBuNv1qgEzwSn7a3wTiMnm8rRR |
+| add_product rain-bergen-dry | https://testnet.nearblocks.io/txns/BfWA4n561dTD4i9bA5UL59zcwAbsa9duAKuZnNw8zkKL |
+| deposit (LP A) | https://testnet.nearblocks.io/txns/4VNLFJuzmjJyNCnmuvba6EaZCt3qLfR7r2he7oBN2Qxn |
+| deposit (LP B) | https://testnet.nearblocks.io/txns/BLETXja2zYDXybaVcvB1p2WCK72JiZTnHDfdWdAb3ema |
+| buy_cover (rain-lagos) | https://testnet.nearblocks.io/txns/HpNNqRyLCQHHrqF5AQBT4ZRSF6Fu9AUbRPNX7HkU7gwL |
+| buy_cover (rain-bergen-dry) | https://testnet.nearblocks.io/txns/5NW2sF3yNEfBwEbknbANKKzcru5CcBpG2zPzrbp7qUPG |
+| report_observation lagos | https://testnet.nearblocks.io/txns/CLFdnAs14lKNEGsKmLJ8rMtt8J3XmxaH9KjCzRV9Dp7D |
+| report_observation bergen | https://testnet.nearblocks.io/txns/DffaSbezWNJA7wyEdEmqGT41sCeYfKxmLJoye8ZTjVg9 |
+| resolve (paid) | https://testnet.nearblocks.io/txns/8nvB1dQfBNpJGqfiPcMBC6GScZnzZb3684aKvUzoSnJ3 |
+| resolve (not triggered) | https://testnet.nearblocks.io/txns/8sHQujtdYHByd3pydEstxtjd444SRVXJzxhA5CqnXgSD |
+| withdraw (LP B) | https://testnet.nearblocks.io/txns/4sizwY4TNri3o7CuEhsAZLJ2sZisiXyvQqxncUprcPP8 |
+| withdraw (LP A) | https://testnet.nearblocks.io/txns/FE5AVV3kdjxcTxukZ17MPFGeMQNd44jDAZu1RGxU4awf |
+| challenge lagos (→ upheld) | https://testnet.nearblocks.io/txns/EJwM57xGqM32iNrfES38BoDs8eRujp3V4s2zatmgrdpz |
+| resolve_dispute upheld (bond forfeited) | https://testnet.nearblocks.io/txns/ztxGRCatv7xvUSZx7gJKo6eGHaSTNx52JxMQ5ejXNW4 |
+| challenge lagos (→ rejected) | https://testnet.nearblocks.io/txns/CeaUg3X9R3urZQzSQhF2ewrs6k49ASVSzjnHdDSumB5e |
+| resolve_dispute rejected (report nullified) | https://testnet.nearblocks.io/txns/3i1ZwxY1MfkzDnCfhDK2YGaDeCH2wX8j5cpobfamEaG6 |
 
 ## 7. Verification results
 
@@ -125,9 +131,10 @@ Every row is a real transaction; run `npm run demo` to reproduce and regenerate 
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **12 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **18 passed, 0 failed** |
 | Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
+| Console accessibility (axe-core, WCAG 2.2 AA) | manual | **0 violations at 360 / 390 / 768 / 1024 / 1440 px** |
 
 Track ids for the submission form: `business` (primary), `swarms`, `defi`.
 

@@ -1,70 +1,72 @@
-# OVERCOVER — an autonomous parametric risk mutual for AI-operated businesses
+# OVERCOVER — programmable insurance for autonomous businesses
 
-> **Live on NEAR testnet:** `contract.attestor-overcover.testnet`
-> **Console:** `ui/index.html` — deployable as a static site (see [Deploy](#deploy))
-> **Tracks:** Business · Swarms · DeFi
+> **Live console:** https://itzebe.github.io/overcover/
+> **Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
+> **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
 > **License:** MIT
-> **Submission pack:** [`SUBMISSION.md`](SUBMISSION.md) — one-liner, evidence, demo script; X post in [`docs/DEMO_POST.md`](docs/DEMO_POST.md).
+> **Submission pack:** [`SUBMISSION.md`](SUBMISSION.md) · X demo post in [`docs/DEMO_POST.md`](docs/DEMO_POST.md)
+
+Overcover is a parametric risk mutual on NEAR: capital-backed cover that is defined by a product
+rather than negotiated by an underwriter, and settled by contract rules rather than a claims queue.
+
+---
+
+## The problem
+
+An autonomous business — a fleet, a cold-chain route, a market-making desk, a compute broker — can
+buy, sell and move money without a person in the loop. It cannot buy insurance. Every insurer
+underwrites the *legal person* behind the policy: an application, a signature, an adjuster, a claim
+queue measured in weeks. An agent that loses a shipment at 03:00 cannot wait for a human adjuster,
+and it has no legal identity to sign with. So a loss is simply absorbed.
+
+The capital that would underwrite those risks has no trustless way in either: no verifiable index,
+no dispute mechanism, and no on-chain guarantee that a pool never promises more than it holds.
+
+## What Overcover is
+
+An on-chain pool that writes fully-collateralised, machine-readable cover against objective public
+indices and settles it autonomously in seconds.
+
+- **Risk is defined, not negotiated.** A *product* fixes the city/index, the trigger threshold, the
+  premium rate, the payout bounds, the minimum lead time and a capacity cap. Once published it is
+  immutable, so a buyer cannot be re-priced and there is no discretion at claim time.
+- **Cover is a purchase, not an application.** `buy_cover(product, payout, obs_date)` charges the
+  premium the product fixes, reserves the payout from the pool immediately, and re-checks the
+  solvency invariant `reserved ≤ capital`.
+- **The index is observed by a signed oracle.** An attestor reports `(city, date, value)` signed
+  with ed25519; the contract verifies the signature, the freshness and a single-use nonce.
+- **The oracle's word is challengeable.** Anyone can dispute a reading by posting a bond; the owner
+  resolves. The loser's bond is forfeited into the pool.
+- **Settlement is deterministic.** Once the challenge window has elapsed, `resolve(policy_id)` pays
+  the beneficiary iff the validated reading meets the threshold — once, and only once.
 
 ## Try it in 60 seconds
 
-Do this, see that — no install, no keys, no account:
+Open **https://itzebe.github.io/overcover/**. No install, no keys, no account. It reads the live
+contract straight from your browser over public NEAR testnet RPC.
 
-1. **Open the console.** It reads the live contract directly from your browser over public NEAR
-   testnet RPC. You should see `Capital backing cover` and `Payouts promised` with real numbers, and
-   two green invariants: `reserved ≤ capital` and `reconcile`.
-2. **Read the "Why the promise holds" strip.** Three rules — immutable products, reserved payout,
-   challengeable oracle — each enforced in the contract.
-3. **Scroll to Products / Policies / Observations.** Real rows read from the contract, including a
-   **nullified** observation that was successfully challenged on-chain.
-4. **Open the Proof panel.** Copy the `curl` command and run it in a terminal: you get the same pool
-   JSON the page rendered. Every figure on screen is reproducible without trusting the page.
+1. The hero states the problem and shows the live pool: **capital backing cover** vs **payouts
+   promised**, with the solvency meter between them.
+2. **How a policy works** walks the eight contract rules, naming the actor and method for each.
+3. **Risk products**, **Policies written** and **Oracle readings** are real contract state. The
+   oracle table includes a **nullified** reading — one that was successfully challenged on-chain.
+4. **What cover would cost** quotes a live premium from the contract's own `quote` view.
+5. **Proof** lets you copy the exact `curl` and get the same JSON the page rendered.
 
 ```bash
-# the whole product is one view call — this is the same read the console makes
+# the whole pool in one view call — the same read the console makes
 curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"contract.attestor-overcover.testnet","method_name":"get_pool","args_base64":"e30="}}'
 ```
 
-## The problem
-
-AI agents are starting to run real businesses — fleets, cold-chain routes, market-making desks,
-compute brokers. They can buy, sell, and move money autonomously. What they **cannot** do is buy
-insurance. Every insurer underwrites the *legal person* behind the policy: an application, a
-signature, an adjuster, a claims queue measured in weeks. An agent that loses a shipment at 03:00
-cannot wait for a human adjuster, and it has no legal identity to sign a contract with.
-
-Meanwhile the pool of capital that *would* underwrite these risks has no safe, transparent,
-programmatic way to do so: no verifiable oracle, no dispute mechanism, no solvency guarantee.
-
-## What Overcover is
-
-A **parametric risk mutual** — an on-chain pool that writes fully-collateralised, machine-readable
-cover against objective public indices, and settles claims autonomously in seconds.
-
-- **The risk is defined, not negotiated.** The contract publishes *products*: a city/index, a
-  trigger threshold, a premium rate, payout bounds, a minimum lead time, and a capacity cap.
-  Once published, a product is immutable. There is no underwriter to argue with, and no
-  discretion at claim time.
-- **Cover is a purchase, not an application.** A business calls `buy_cover(product, payout, obs_date)`.
-  The premium is fixed by the product (`premium_bp`), the payout is reserved from the pool
-  immediately, and the solvency invariant `reserved ≤ capital` holds after every transaction.
-- **The index is observed by a signed oracle.** An attestor reports `(city, date, value)` signed
-  with ed25519. The contract verifies the signature, the freshness, and a replay nonce before it
-  will accept an observation.
-- **Anyone can dispute.** A challenger posts a bond; the owner resolves. The loser's bond is
-  forfeited into the pool. This is what keeps the oracle honest without a trusted third party.
-- **Settlement is deterministic.** Once the challenge window has elapsed, `resolve(policy)` pays
-  the beneficiary iff the signed observation meets the threshold. No adjuster, no queue.
-
 ## Why NEAR
 
 - **Fast finality** — a claim settles in seconds, which is what an autonomous business needs.
-- **Low fees** — small parametric payouts (a missed delivery, a rained-out event) are economic.
-- **Account model** — named accounts, ed25519 keys, and a cheap ed25519 verification host
-  function (`env::ed25519_verify`) make signed oracles first-class.
+- **Low fees** — small parametric payouts (a missed delivery, a rained-out event) stay economic.
+- **Account model** — named accounts, ed25519 keys, and a cheap `env::ed25519_verify` host function
+  make a signed oracle a first-class primitive.
 - **Free testnet** — the whole product runs on testnet with faucet-funded accounts and a keyless
-  public weather API. No paid infrastructure anywhere in the critical path.
+  public weather API. No paid infrastructure in the critical path.
 
 ## Architecture
 
@@ -82,17 +84,32 @@ cover against objective public indices, and settles claims autonomously in secon
                               └─────────────────────────────────────────────┘
 ```
 
-- **Contract** (`contract/`): Rust, `near-sdk`, legacy `LookupMap`/`UnorderedSet` collections.
-  Immutable products; policy issuance with capital reservation; signed-oracle verification;
-  bonded disputes with a challenge window; beneficiary payouts; per-product and pool capacity
-  caps; provider shares; a `reconcile` view for the solvency identity.
+- **Contract** (`contract/`): Rust, `near-sdk`, `LookupMap`/`UnorderedSet` collections. Immutable
+  products; policy issuance with capital reservation; signed-oracle verification; bonded disputes
+  with a challenge window; beneficiary payouts; per-product and pool capacity caps; provider
+  shares; a `reconcile` view for the solvency identity. Full surface in
+  [`docs/CONTRACT.md`](docs/CONTRACT.md).
 - **Oracle** (`driver/oracle.js`): reads Open-Meteo *current* precipitation and cross-checks it
   against the *hourly* series; refuses to sign if the two disagree by more than 0.5 mm.
 - **Attestor** (`driver/attestor.js`): signs the exact message the contract verifies.
-- **Driver** (`driver/`): identity graph, deploy with a clean-state reset, high-level actions,
-  and the full-cycle demo.
-- **Reference model** (`research/model/`): an executable BigInt model of the accounting rules and
-  a 31-attack suite that runs *before* the contract (Mission 1).
+- **Driver** (`driver/`): identity graph, deploy with a clean-state reset, high-level actions, and
+  the full-cycle demo.
+- **Reference model** (`research/model/`): an executable BigInt model of the accounting rules and a
+  31-attack suite that runs *before* the contract.
+
+## The console
+
+`ui/index.html` is a single, zero-dependency static file. It makes direct RPC `view` calls to the
+deployed contract and renders the pool, the solvency meter, the products, the policies, the signed
+observations and a live quote — no server, and no key, token or secret in the bundle.
+
+```bash
+python3 -m http.server 12000 --directory ui   # then open http://localhost:12000
+```
+
+It reads honestly: a failed read shows a **stale** warning with the time of the last good read, or a
+**no data** state — never a stale number presented as live. Any contract can be inspected with
+`?contract=<id>`; the default is `contract.attestor-overcover.testnet`.
 
 ## Run it
 
@@ -112,29 +129,19 @@ npm run demo
 The demo prints a real NEAR transaction hash for every step and writes `demo-log.json` with
 explorer links.
 
-## The console
-
-`ui/index.html` is a zero-dependency live console. It makes direct RPC `view` calls to the
-deployed contract and renders the pool, its solvency bar, the products, the policies and the
-signed observations — no server, no keys in the browser.
-
-```bash
-python3 -m http.server 12000 --directory ui   # then open http://localhost:12000
-```
-
 ## Verify it
 
 ```bash
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 12 regression + live-RPC tests          (browser console)
+npm run test:console    # 18 regression + live-RPC tests          (browser console)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 ```
 
-`npm run test:onchain` sends real attacks to the deployed contract and asserts each one is
-**refused with the expected reason** — capacity, premium, lead time, signature, replay, staleness,
-bond, challenge window, ownership, provider share. It requires a fresh `npm run deploy` first.
+`npm run test:onchain` sends real attacks to the deployed contract and asserts each is **refused
+with the expected reason** — capacity, premium, lead time, signature, replay, staleness, bond,
+challenge window, ownership, provider share. It requires a fresh `npm run deploy` first.
 
 ## Verification evidence
 
@@ -142,85 +149,56 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 
 | Claim | How to check |
 | --- | --- |
-| Deployed bytecode matches this source | `cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the code the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. |
+| Deployed bytecode matches this source | `cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the module the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. |
 | The pool is solvent right now | `get_pool` returns `reserved ≤ capital` and `solvent: true`; `reconcile` returns `true`. |
 | Every demo transaction is real | `demo-log.json` holds 18 hashes; each resolves via `tx` RPC and on `testnet.nearblocks.io`. |
 | The oracle is challengeable, both ways | The log includes `challenge` + `resolve_dispute:true` (report upheld, bond forfeited) **and** `resolve_dispute:false` (report nullified, bond returned). |
-
-## Judging demo — 60 seconds
-
-The first ten seconds state the problem and show the product working; the rest explains why the
-approach is defensible. Open the console and follow top to bottom.
-
-1. **0–10s — the problem and the product.** "An autonomous business can buy, sell and move money,
-   but it cannot buy insurance — underwriting needs a legal person and a claims queue measured in
-   weeks." The console is already showing a live pool with real capital.
-2. **10–25s — the pool is provable.** Point at `Capital backing cover`, `Payouts promised` and the
-   two green invariants. "This is not a claim on a slide; it is contract state, and the page reads
-   it with no server in between."
-3. **25–40s — how the promise holds.** Walk the three rules: risk is published and immutable; the
-   payout is reserved at purchase; the oracle's word is challengeable with a bond.
-4. **40–55s — the real thing.** Scroll to Policies and Observations. Show a settled payout and a
-   **nullified** observation — a reading that was successfully challenged on-chain.
-5. **55–60s — close on proof.** Open the Proof panel, copy the `curl`, run it: the terminal returns
-   the same numbers the page shows. "Don't trust the page. Reproduce it."
-
-## Deploy
-
-The console is a single static file with no build step. `vercel.json` sets `ui/` as the output
-directory and disables the build, so any static host works:
-
-```bash
-vercel deploy --prod          # uses vercel.json; serves ui/index.html at /
-```
-
-Reads go straight from the browser to public NEAR testnet RPC endpoints — there is no backend, and
-no key, token or secret is present in the bundle. The contract is selected with `?contract=<id>`,
-defaulting to `contract.attestor-overcover.testnet`.
-
-## 60-second demo script
-
-1. **Open the console** — the header shows the live contract id and a green connection dot; the
-   pool panel reads real capital and reserved capital from testnet.
-2. **"This is fully-collateralised cover."** Reserved 1.5 of 1.6 NEAR capital — the solvency bar
-   fills and `reserved ≤ capital: true` is computed from on-chain state, not asserted.
-3. **Scroll to Products** — immutable risk definitions: index, trigger threshold, premium, max
-   payout, reserved vs capacity cap.
-4. **Scroll to Policies** — cover written, each with payout, premium, beneficiary and status
-   (`active` / `settled_paid` / `settled_no_pay`).
-5. **Scroll to Observations** — signed index reports, including a **nullified** one that was
-   successfully challenged.
-6. **Close on the footer** — reads are direct RPC calls to NEAR testnet, no server, no keys in the
-   browser. Every number on screen is contract state.
-
-## NEAR integrations and their purpose
-
-| Integration | Purpose |
-| --- | --- |
-| `env::ed25519_verify` | Verify the oracle's signature on-chain; the trust anchor. |
-| `Promise` transfer | Pay the beneficiary and return provider capital. |
-| Account model / named accounts | Business, LP, attestor, challenger are distinct testnet accounts. |
-| Testnet RPC + faucet | Free infrastructure for the entire lifecycle. |
-| `nearblocks.io` explorer | Public, third-party evidence of every transaction. |
+| The console is accessible | `axe-core` (WCAG 2.2 AA) reports 0 violations at 360/390/768/1024/1440 px, with no horizontal overflow. |
 
 ## Security model
 
-- **Immutability** — products cannot be changed after publication, so a buyer cannot be re-priced.
+- **Immutability** — products cannot be changed after publication.
 - **Reservation accounting** — a payout is reserved at purchase; the pool can never promise more
   than it holds (`reserved ≤ capital`, checked after every mutation).
 - **Signed, bound observations** — the signature covers city, date, value, report time, nonce and
-  the contract id, so a value cannot be reused, replayed, or moved to another contract.
+  the contract id, so a value cannot be reused, replayed or moved to another contract.
 - **Freshness + replay** — observations must be recent and nonces single-use.
-- **Bonded disputes** — the oracle's word is challengeable; a false report is punished.
-- **Fail-closed messages** — every refusal aborts with a human-readable reason (`panic_utf8`),
-  never a silent trap.
+- **Bonded disputes** — a false report is punished; a nullified reading cannot settle a policy.
+- **Fail-closed messages** — every refusal aborts with a human-readable reason, never a silent trap.
+
+Full detail, including the trust boundary and residual risks, in [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Honest limitations
 
 - The oracle is a **single trusted attestor** with a bonded dispute path, not yet a decentralised
-  oracle. The dispute path is implemented and unit-tested but has not been exercised on the live
-  testnet demo end to end (it needs a challenge window to elapse after a dispute).
+  oracle. The dispute path is implemented, unit-tested, and has been **exercised on the live demo**
+  in both directions (upheld and nullified) — but it still relies on the owner to resolve.
 - The demo uses a **60-second challenge window**; production uses 3600 s.
 - The demo reports the **same real Open-Meteo reading** the threshold was derived from, so the
   outcome is deterministic. The reading is genuine; it is pinned, not fabricated.
+- The live contract carries **17 products**, of which 2 are the canonical named products and 15 are
+  demo-generated test rows. The console groups the latter so the real cover stays legible.
 - Testnet only. No audit. Not for real funds.
+
+## Deploy
+
+The console is a single static file with no build step, published to **GitHub Pages** from the
+`gh-pages` branch by [`.github/workflows/pages.yml`](.github/workflows/pages.yml). The workflow
+copies `ui/` to the branch root with a `.nojekyll` marker; the site is
+https://itzebe.github.io/overcover/. Any static host works equally well.
+
+Reads go straight from the browser to public NEAR testnet RPC endpoints — there is no backend and
+no secret in the bundle.
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`SUBMISSION.md`](SUBMISSION.md) | Competition submission: one-liner, evidence, track fit, demo script |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Components, data flow, trust boundaries |
+| [`docs/CONTRACT.md`](docs/CONTRACT.md) | Full contract interface and state model |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Security model, threat model, residual risk |
+| [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | How to reproduce every claim, with exact commands |
+| [`docs/DEMO.md`](docs/DEMO.md) | 60-second judging script and the recorded demo |
+| [`docs/FAQ.md`](docs/FAQ.md) | Honest answers to the obvious hard questions |
+| [`AGENTS.md`](AGENTS.md) | Orientation for agents and new contributors |

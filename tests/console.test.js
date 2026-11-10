@@ -132,3 +132,69 @@ test("live RPC get_pool decodes to a solvency-checked pool", { timeout: 30000 },
   assert.ok(BigInt(pool.reserved) <= BigInt(pool.capital), "reserved must not exceed capital");
   assert.equal(pool.solvent, true);
 });
+
+// ---------------------------------------------------------------------------
+// Product transformation: the states and honesty rules a financial interface
+// must hold. These assert the shipped page, not a re-implementation.
+// ---------------------------------------------------------------------------
+
+test("the page defines distinct loading, live, stale and failed states", () => {
+  for (const s of ["live", "stale", "failed"]) {
+    assert.ok(new RegExp(`dot\\.${s}\\b`).test(HTML), `missing .dot.${s} style`);
+  }
+  assert.ok(/state === "stale"/.test(SCRIPT), "a stale branch must exist in the poll loop");
+  assert.ok(/No data — every RPC endpoint failed/.test(SCRIPT), "the failed state must say there is no data");
+  assert.ok(/Stale — the latest read failed/.test(SCRIPT), "the stale state must warn the figures are not current");
+});
+
+test("a failed read is never presented as live: freshness is derived from the read", () => {
+  const tickStart = SCRIPT.indexOf("function tick()");
+  const catchIdx = SCRIPT.indexOf(".catch(function (e) {", tickStart);
+  assert.ok(tickStart !== -1 && catchIdx !== -1, "tick() with a catch handler must exist");
+  const successBlock = SCRIPT.slice(tickStart, catchIdx);
+  const catchBlock = SCRIPT.slice(catchIdx, catchIdx + 700);
+  assert.ok(/setFreshness\("live"/.test(successBlock), "live freshness belongs on the success path");
+  assert.ok(!/setFreshness\("live"/.test(catchBlock), "the catch path must not claim live");
+});
+
+test("the quote reads the contract's own quote view rather than trusting a local figure", () => {
+  assert.ok(SCRIPT.includes('view("quote"'), "the quote must be confirmed by the contract");
+  assert.ok(/ceilDiv\(/.test(SCRIPT), "the local premium must use the contract's ceil rule");
+});
+
+test("demo evidence in the page matches the recorded demo log", () => {
+  const log = JSON.parse(fs.readFileSync(path.join(root, "demo-log.json"), "utf8"));
+  const hashes = new Set(log.map((e) => e.hash));
+  const embedded = [...SCRIPT.matchAll(/"([1-9A-HJ-NP-Za-km-z]{40,})"/g)].map((m) => m[1]);
+  assert.ok(embedded.length >= 6, `expected several embedded tx hashes, found ${embedded.length}`);
+  for (const h of embedded) {
+    assert.ok(hashes.has(h), `embedded hash ${h} is not in demo-log.json (fabricated evidence)`);
+  }
+});
+
+test("throwaway demo products are grouped, so canonical cover stays legible", () => {
+  assert.ok(/var MACHINE_ID = \/\^p-/.test(SCRIPT), "a machine-id pattern must exist");
+  assert.ok(/MACHINE_ID\.test\(p\.id\)/.test(SCRIPT), "products must be split by id shape");
+  assert.ok(/details class="legacy"/.test(SCRIPT), "the demo-generated group must be foldable");
+});
+
+test("muted and accent text meet WCAG AA contrast on their backgrounds", () => {
+  const lum = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const f = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const ratio = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
+    return (x + 0.05) / (y + 0.05);
+  };
+  const val = (name) => {
+    const m = HTML.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, "i"));
+    assert.ok(m, `--${name} token not found`);
+    return m[1];
+  };
+  const paper = val("paper");
+  assert.ok(ratio(val("muted"), paper) >= 4.5, "muted text must reach 4.5:1 on paper");
+  assert.ok(ratio(val("accent"), paper) >= 4.5, "accent text must reach 4.5:1 on paper");
+  assert.ok(ratio(val("accent"), val("accent-w")) >= 4.5, "accent text must reach 4.5:1 on its tint");
+});

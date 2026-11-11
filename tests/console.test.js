@@ -516,3 +516,125 @@ test("every static Connect control is wired from first paint (no dead-click wind
   assert.equal(connects.length, 2, "expected the header and buy-panel Connect buttons");
   for (const b of connects) assert.match(b, /data-wallet="connect"/, `a static Connect button is not wired: ${b}`);
 });
+
+// ---- the reported defect: the wallet dialog's Close button did not close it.
+// Root cause: the button carried a valueless `data-wallet-close` attribute, so
+// `getAttribute("data-wallet-close")` returned "" (falsy) and the delegated
+// handler's truthy test never fired. ----
+
+test("the Close control is a real dialog form submit, not a script-only button", () => {
+  const dialog = HTML.slice(HTML.indexOf("<dialog id=\"wallet-dialog\""), HTML.indexOf("</dialog>") + 9);
+  assert.match(dialog, /<form[^>]*method="dialog"/, "Close must submit a method=dialog form so it closes without JS");
+  const close = dialog.match(/<button[^>]*data-wallet-close[^>]*>/)[0];
+  assert.match(close, /type="submit"/, "the Close button must submit the form");
+  assert.match(close, /aria-label="Close dialog"/, "the Close button needs an accessible name");
+});
+
+test("boolean dialog attributes are read with hasAttribute, never getAttribute truthiness", () => {
+  assert.match(SCRIPT, /hasAttribute\("data-wallet-close"\)/, "Close must be matched by attribute presence");
+  assert.match(SCRIPT, /hasAttribute\("data-buy-jump"\)/, "the in-page jump link must be matched by attribute presence");
+  assert.doesNotMatch(SCRIPT, /getAttribute\("data-wallet-close"\)/, "the falsy getAttribute test is the defect and must not return");
+});
+
+test("the dialog handles Escape, backdrop click and focus restoration", () => {
+  assert.match(SCRIPT, /addEventListener\("cancel"/, "Escape must be handled so close goes through one path");
+  assert.match(SCRIPT, /ev\.target === _wd/, "a backdrop click must close the dialog");
+  assert.match(SCRIPT, /addEventListener\("close"/, "focus must be restored on close");
+  assert.match(SCRIPT, /walletOpener/, "the opener element must be remembered for focus restoration");
+});
+
+test("the page behind the modal is scroll-locked while it is open", () => {
+  assert.match(HTML, /body:has\(#wallet-dialog\[open\]\)\s*\{\s*overflow:\s*hidden/, "the body must not scroll behind an open modal");
+});
+
+// ---- retired wallet: MyNearWallet no longer accepts new connections and must
+// be gone from the product, not merely hidden. ----
+
+test("MyNearWallet is fully removed from the shipped product", () => {
+  const pkg = fs.readFileSync(path.join(root, "package.json"), "utf8");
+  const lock = fs.readFileSync(path.join(root, "package-lock.json"), "utf8");
+  const walletJs = fs.readFileSync(path.join(root, "ui", "wallet.js"), "utf8");
+  const bundle = fs.readFileSync(path.join(root, "ui", "vendor", "wallet-bundle.js"), "utf8");
+  for (const [name, src] of [["ui/index.html", HTML], ["ui/wallet.js", walletJs], ["package.json", pkg], ["package-lock.json", lock]]) {
+    assert.doesNotMatch(src, /my-near-wallet|MyNearWallet|mynearwallet/i, `a retired-wallet reference remains in ${name}`);
+  }
+  // The minified bundle keeps only the two supported modules.
+  assert.match(bundle, /id:"here-wallet"/, "HERE Wallet must remain");
+  assert.match(bundle, /id:"meteor-wallet"/, "Meteor Wallet must remain");
+  assert.doesNotMatch(bundle, /id:"my-near-wallet"/, "the retired wallet must not be registered");
+  // Only HERE and Meteor are set up.
+  assert.match(walletJs, /modules:\s*\[setupHereWallet\(\),\s*setupMeteorWallet\(\)\]/, "only the two supported wallets may be registered");
+});
+
+// ---- discoverability: search engines and AI crawlers. ----
+
+test("robots.txt allows crawlers and points at the sitemap", () => {
+  const robots = fs.readFileSync(path.join(root, "ui", "robots.txt"), "utf8");
+  assert.match(robots, /User-agent: \*/);
+  assert.match(robots, /Allow: \//);
+  assert.match(robots, /Sitemap: https:\/\/overcover\.vercel\.app\/sitemap\.xml/);
+  assert.doesNotMatch(robots, /Disallow: \/\s*$/m, "public product pages must not be blocked");
+});
+
+test("sitemap.xml lists the canonical production URL", () => {
+  const sitemap = fs.readFileSync(path.join(root, "ui", "sitemap.xml"), "utf8");
+  assert.match(sitemap, /<loc>https:\/\/overcover\.vercel\.app\/<\/loc>/);
+});
+
+test("llms.txt and llms-full.txt exist and state the real product", () => {
+  const short = fs.readFileSync(path.join(root, "ui", "llms.txt"), "utf8");
+  const full = fs.readFileSync(path.join(root, "ui", "llms-full.txt"), "utf8");
+  for (const doc of [short, full]) {
+    assert.match(doc, /contract\.attestor-overcover\.testnet/);
+    assert.match(doc, /NEAR testnet/);
+    assert.match(doc, /HERE Wallet/);
+  }
+  assert.match(full, /MyNearWallet.*removed|removed.*MyNearWallet/s, "the removal must be documented, not hidden");
+});
+
+test("the head carries canonical, social and theme metadata in the served HTML", () => {
+  assert.match(HTML, /<link rel="canonical" href="https:\/\/overcover\.vercel\.app\/" \/>/);
+  assert.match(HTML, /<meta property="og:title"/);
+  assert.match(HTML, /<meta property="og:image" content="https:\/\/overcover\.vercel\.app\/og\.png"/);
+  assert.match(HTML, /<meta name="twitter:card" content="summary_large_image"/);
+  assert.match(HTML, /<meta name="theme-color" content="#10251d"/);
+  assert.match(HTML, /<html lang="en">/);
+});
+
+test("the OG image is a real 1200x630 PNG that ships with the site", () => {
+  const buf = fs.readFileSync(path.join(root, "ui", "og.png"));
+  assert.equal(buf.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", "must be a PNG");
+  assert.equal(buf.readUInt32BE(16), 1200, "OG image width must be 1200");
+  assert.equal(buf.readUInt32BE(20), 630, "OG image height must be 630");
+});
+
+test("the JSON-LD block is valid JSON and makes only truthful claims", () => {
+  const m = HTML.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  assert.ok(m, "a JSON-LD block must be present");
+  const data = JSON.parse(m[1]);
+  const types = data["@graph"].map((n) => n["@type"]);
+  for (const t of ["Organization", "WebSite", "SoftwareApplication", "WebPage"]) {
+    assert.ok(types.includes(t), `structured data must include ${t}`);
+  }
+  const flat = JSON.stringify(data);
+  assert.doesNotMatch(flat, /aggregateRating|reviewCount|ratingValue/, "no invented ratings");
+  assert.doesNotMatch(flat, /\$\d/, "no invented pricing beyond free");
+});
+
+// ---- the public UI must never expose an owner-only contract method. ----
+
+test("the public UI can only ever sign buy_cover, never an owner-only method", () => {
+  const walletJs = fs.readFileSync(path.join(root, "ui", "wallet.js"), "utf8");
+  const bundle = fs.readFileSync(path.join(root, "ui", "vendor", "wallet-bundle.js"), "utf8");
+  // Our own code (the page and the wallet module) must never name an Overcover
+  // owner-only method. Generic library words like "deposit" (a NEAR transaction
+  // field) and "reset" are not method calls and are deliberately excluded.
+  for (const forbidden of ["owner_withdraw", "set_lifeline_enabled", "seed_merchant", "add_shock"]) {
+    assert.doesNotMatch(HTML, new RegExp(forbidden), `the page must not reference ${forbidden}`);
+    assert.doesNotMatch(walletJs, new RegExp(forbidden), `the wallet module must not reference ${forbidden}`);
+  }
+  // The wallet's function-call access key is scoped to buy_cover alone.
+  assert.match(walletJs, /signIn\(\{\s*contractId:\s*CONTRACT_ID,\s*methodNames:\s*\["buy_cover"\]\s*\}\)/);
+  assert.match(bundle, /methodNames:\["buy_cover"\]/, "the built bundle must carry the buy_cover scope");
+});
+

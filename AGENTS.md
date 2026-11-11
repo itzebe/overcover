@@ -49,10 +49,12 @@ npm run demo                  # run the full economic cycle, write demo-log.json
 - **The console stays dependency-free.** No framework, no build step, no CDN. Plain HTML/CSS/JS.
   Keep the invariant `main > section { min-width: 0 }` and the `.scroll` table wrappers — tests
   depend on them to prevent mobile overflow.
-- **Accessibility is a gate.** WCAG 2.2 AA: run `axe-core` and keep 0 violations at 360/390/768/
-  1024/1440 px. Muted and accent text must clear 4.5:1 (a test computes this from the tokens).
-- **Keep the console honest about scope.** It is read-only: it holds no wallet and signs nothing, and
-  it says so. Do not imply it can transact.
+- **Accessibility is a gate.** WCAG 2.2 AA: run `npm run axe` (axe-core) and keep 0 violations at
+  320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog. Muted and accent text
+  must clear 4.5:1 (a test computes this from the tokens).
+- **Keep the console honest about scope.** It reads the contract and, with the user's own wallet,
+  signs exactly one `buy_cover` call. It holds no key and never fabricates state: a failed read is
+  shown as stale or "no data", never as live. Do not imply it can call an owner-only method.
 - **One concern per change.** Do not reformat code you did not need to touch.
 
 ## Deploying the console

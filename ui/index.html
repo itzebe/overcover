@@ -6,6 +6,27 @@
 <meta name="color-scheme" content="light" />
 <meta name="description" content="Overcover — parametric insurance for businesses that cannot afford to wait for a claims process. Cover is defined up front, the payout is reserved from a capital pool, and settlement follows a signed public reading. Live on NEAR testnet; every figure is read from the contract." />
 <title>Overcover — parametric insurance, settled on contract rules</title>
+<link rel="canonical" href="https://overcover.vercel.app/" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="theme-color" content="#10251d" />
+<meta name="application-name" content="Overcover" />
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Overcover" />
+<meta property="og:title" content="Overcover — parametric insurance, settled on contract rules" />
+<meta property="og:description" content="Cover is defined up front, the payout is reserved from a capital pool, and settlement follows a signed public reading. Live on NEAR testnet; every figure is read from the contract." />
+<meta property="og:url" content="https://overcover.vercel.app/" />
+<meta property="og:image" content="https://overcover.vercel.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Overcover — parametric insurance settled on contract rules, on NEAR testnet." />
+<meta property="og:locale" content="en_US" />
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Overcover — parametric insurance, settled on contract rules" />
+<meta name="twitter:description" content="Cover is defined up front, the payout is reserved from a capital pool, and settlement follows a signed public reading. Live on NEAR testnet." />
+<meta name="twitter:image" content="https://overcover.vercel.app/og.png" />
+<meta name="twitter:image:alt" content="Overcover — parametric insurance settled on contract rules, on NEAR testnet." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2310251d'/%3E%3Cpath d='M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z' fill='none' stroke='%23f0c987' stroke-width='2'/%3E%3C/svg%3E" />
 <style>
   /* ============================================================
@@ -279,10 +300,13 @@
 
   /* Wallet picker: a real modal, so a click on "Connect wallet" is answered where
      the user is looking, at every viewport. */
-  .wp-dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, 94vw); width: 100%; }
+  .wp-dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, 94vw); width: 100%; max-height: calc(100vh - 24px); }
   .wp-dialog::backdrop { background: rgba(19,26,22,.55); }
-  .wp-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(19,26,22,.28); }
-  .wp-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  /* Lock the page behind the modal. Progressive enhancement: browsers without
+     :has() simply keep the page scrollable, which is harmless. */
+  body:has(#wallet-dialog[open]) { overflow: hidden; }
+  .wp-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(19,26,22,.28); max-height: calc(100vh - 24px); overflow: auto; }
+  .wp-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0; }
   .wp-head h2 { font-family: var(--serif); font-size: 20px; font-weight: 660; margin: 0; letter-spacing: -.01em; }
   .wp-sub { font-size: 13.5px; color: var(--muted); margin: 8px 0 16px; }
   .wp-intro { font-size: 13.5px; color: var(--ink2); margin: 0 0 14px; }
@@ -383,6 +407,57 @@
 
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://overcover.vercel.app/#org",
+      "name": "Overcover",
+      "url": "https://overcover.vercel.app/",
+      "logo": "https://overcover.vercel.app/og.png",
+      "description": "Overcover is an open-source parametric insurance mutual that runs on NEAR testnet.",
+      "sameAs": ["https://github.com/itzebe/overcover"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://overcover.vercel.app/#website",
+      "url": "https://overcover.vercel.app/",
+      "name": "Overcover",
+      "publisher": { "@id": "https://overcover.vercel.app/#org" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://overcover.vercel.app/#app",
+      "name": "Overcover",
+      "url": "https://overcover.vercel.app/",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/itzebe/overcover/blob/main/LICENSE",
+      "codeRepository": "https://github.com/itzebe/overcover",
+      "description": "A browser console that reads a NEAR testnet smart contract and lets a visitor buy parametric rainfall insurance cover. Cover terms are fixed in the contract; the payout is reserved from a capital pool; settlement follows a signed, challengeable public reading.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free to use on NEAR testnet. No payment is collected by Overcover."
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://overcover.vercel.app/#webpage",
+      "url": "https://overcover.vercel.app/",
+      "name": "Overcover — parametric insurance, settled on contract rules",
+      "isPartOf": { "@id": "https://overcover.vercel.app/#website" },
+      "about": { "@id": "https://overcover.vercel.app/#app" },
+      "inLanguage": "en"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -938,13 +1013,13 @@
   </div>
 </footer>
 
-<dialog id="wallet-dialog" class="wp-dialog" aria-labelledby="wp-title">
+<dialog id="wallet-dialog" class="wp-dialog" aria-labelledby="wp-title" aria-describedby="wp-desc">
   <div class="wp-box">
-    <div class="wp-head">
+    <form method="dialog" class="wp-head">
       <h2 id="wp-title">Connect a wallet</h2>
-      <button class="btn-s" type="button" data-wallet-close aria-label="Close">Close</button>
-    </div>
-    <p class="wp-sub">A NEAR wallet holds your account and signs transactions. Overcover never sees your key — you approve each action inside the wallet.</p>
+      <button class="btn-s" type="submit" data-wallet-close aria-label="Close dialog">Close</button>
+    </form>
+    <p class="wp-sub" id="wp-desc">A NEAR wallet holds your account and signs transactions. Overcover never sees your key — you approve each action inside the wallet.</p>
     <div id="wallet-choices"></div>
     <p class="wp-status" id="wallet-picker-status" role="status" aria-live="polite"></p>
     <div class="wp-foot">
@@ -1337,6 +1412,7 @@
   // offering a flow that dead-ends.
 
   function walletDialog() { return el("wallet-dialog"); }
+  var walletOpener = null; // element to refocus when the dialog closes
 
   function walletChoicesHTML(available) {
     return available.map(function (m) {
@@ -1368,14 +1444,15 @@
     var available = st.available || [];
     var usable = available.filter(function (m) { return m.present !== false; });
     var intro = usable.length
-      ? "Choose a NEAR wallet to connect. Your account is created and approved inside the wallet — Overcover never sees your key."
-      : "None of the supported NEAR wallets were detected in this browser. Install one below, then reload this page.";
+      ? "Choose a NEAR wallet. HERE Wallet signs you in with email or a social account inside its own app — no extension needed. Meteor Wallet is a browser extension. Overcover never sees your key."
+      : "None of the supported NEAR wallets were detected in this browser. Install Meteor Wallet below, or use HERE Wallet, which needs no extension — then try again.";
     host.innerHTML = '<p class="wp-intro">' + intro + "</p>" + walletChoicesHTML(available);
   }
 
   function openWalletPicker() {
     var d = walletDialog();
     if (!d) return;
+    walletOpener = document.activeElement;
     if (typeof d.showModal === "function") { if (!d.open) d.showModal(); }
     else { d.setAttribute("open", ""); }
     setWalletPickerStatus("");
@@ -1431,16 +1508,30 @@
   document.addEventListener("click", function (ev) {
     var t = ev.target;
     if (!t || !t.getAttribute) return;
-    if (t.getAttribute("data-wallet") === "connect") { ev.preventDefault(); openWalletPicker(); }
+    // hasAttribute, not getAttribute: these are boolean attributes written as
+    // `data-wallet-close` with no value, so getAttribute returns "" (falsy) and an
+    // `if (getAttribute(...))` test would never fire — the original Close defect.
+    if (t.hasAttribute("data-wallet-close")) { ev.preventDefault(); closeWalletPicker(); }
+    else if (t.getAttribute("data-wallet") === "connect") { ev.preventDefault(); openWalletPicker(); }
     else if (t.getAttribute("data-wallet") === "disconnect") { ev.preventDefault(); disconnectWallet(); }
     else if (t.getAttribute("data-wallet-id")) { ev.preventDefault(); connectWallet(t.getAttribute("data-wallet-id")); }
-    else if (t.getAttribute("data-wallet-close")) { ev.preventDefault(); closeWalletPicker(); }
-    else if (t.getAttribute("data-buy-jump")) { ev.preventDefault(); closeWalletPicker(); var b = el("buy-panel"); if (b) { b.scrollIntoView({ behavior: "smooth", block: "start" }); if (b.focus) b.focus(); } }
+    else if (t.hasAttribute("data-buy-jump")) { ev.preventDefault(); closeWalletPicker(); var b = el("buy-panel"); if (b) { b.scrollIntoView({ behavior: "smooth", block: "start" }); if (b.focus) b.focus(); } }
   });
 
   // Close the picker when the user clicks the backdrop (outside the dialog box).
   var _wd = walletDialog();
-  if (_wd) _wd.addEventListener("click", function (ev) { if (ev.target === _wd) closeWalletPicker(); });
+  if (_wd) {
+    _wd.addEventListener("click", function (ev) { if (ev.target === _wd) closeWalletPicker(); });
+    // Restore focus to whatever opened the dialog when it closes, for any close
+    // path (Close button, Escape, backdrop, the in-page "see the cover" link).
+    _wd.addEventListener("close", function () {
+      if (walletOpener && typeof walletOpener.focus === "function") { try { walletOpener.focus(); } catch (e) {} }
+      walletOpener = null;
+    });
+    // Escape fires `cancel`; close explicitly so focus restoration runs through the
+    // same path as the Close button.
+    _wd.addEventListener("cancel", function (ev) { ev.preventDefault(); closeWalletPicker(); });
+  }
 
   if (WALLET) {
     WALLET.subscribe(function (st) {

@@ -98,6 +98,16 @@ async function main() {
   agentProc = agent;
   await waitAgent();
 
+  // The public discoverability files must be served, not only present on disk.
+  for (const f of ["robots.txt", "sitemap.xml", "llms.txt", "llms-full.txt", "og.png"]) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${STATIC_PORT}/${f}`);
+      check(res.ok, `public file /${f} did not serve (HTTP ${res.status})`);
+    } catch (e) {
+      check(false, `public file /${f} could not be fetched: ${e.message}`);
+    }
+  }
+
   const browser = await chromium.launch({ executablePath: EXEC, args: ["--no-sandbox"] });
 
   for (const w of VIEWPORTS) {
@@ -115,8 +125,11 @@ async function main() {
     const hasWallet = await page.locator("#wallet-slot button, #buy-wallet-slot button").count();
     check(hasWallet > 0, `[${w}px] wallet control missing`);
 
-    // The reported defect: "Connect wallet" looked static. A click must open the
-    // picker where the user is looking, and it must be honest about availability.
+    // The reported defect: "Connect wallet" looked static, and the picker's
+    // Close button did nothing. A click must open the picker where the user is
+    // looking; Close, Escape and a backdrop click must each close it; and the
+    // picker must be honest about availability.
+    const dialogOpen = () => page.evaluate(() => document.querySelector("#wallet-dialog").open);
     try {
       await page.locator("#wallet-slot [data-wallet='connect']").click();
       await page.waitForFunction(() => document.querySelector("#wallet-dialog")?.open === true, null, { timeout: 5000 });
@@ -127,15 +140,38 @@ async function main() {
           inViewport: r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0,
           opts: document.querySelectorAll(".wp-pick").length,
           installs: document.querySelectorAll(".wp-install").length,
+          names: [...document.querySelectorAll(".wp-pick")].map((b) => b.textContent.trim()),
           overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          bodyOverflow: getComputedStyle(document.body).overflow,
         };
       });
       check(picker.opts >= 1, `[${w}px] the picker offered no wallets`);
       check(picker.inViewport, `[${w}px] the picker opened off-screen`);
       check(picker.overflowX <= 1, `[${w}px] the picker caused ${picker.overflowX}px of horizontal overflow`);
+      check(!picker.names.some((n) => /mynear/i.test(n)), `[${w}px] a retired wallet is still offered: ${picker.names.join(", ")}`);
+      check(picker.bodyOverflow === "hidden", `[${w}px] the page is not scroll-locked behind the modal`);
       await page.screenshot({ path: path.join(SHOTS, `wallet-picker-${w}.png`), fullPage: false });
+
+      // Close path 1: the Close button (the original defect).
+      await page.locator("[data-wallet-close]").click();
+      await page.waitForTimeout(150);
+      check((await dialogOpen()) === false, `[${w}px] the Close button did not close the dialog`);
+
+      // Close path 2: Escape.
+      await page.locator("#wallet-slot [data-wallet='connect']").click();
+      await page.waitForFunction(() => document.querySelector("#wallet-dialog")?.open === true, null, { timeout: 5000 });
       await page.keyboard.press("Escape");
-      await page.waitForFunction(() => document.querySelector("#wallet-dialog")?.open === false, null, { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(150);
+      check((await dialogOpen()) === false, `[${w}px] Escape did not close the dialog`);
+
+      // Close path 3: a backdrop click, and focus restored to the opener.
+      await page.locator("#wallet-slot [data-wallet='connect']").click();
+      await page.waitForFunction(() => document.querySelector("#wallet-dialog")?.open === true, null, { timeout: 5000 });
+      await page.mouse.click(4, 4);
+      await page.waitForTimeout(150);
+      check((await dialogOpen()) === false, `[${w}px] a backdrop click did not close the dialog`);
+      const focusId = await page.evaluate(() => document.activeElement && (document.activeElement.id || document.activeElement.getAttribute("data-wallet")));
+      check(focusId === "connect" || focusId === "wallet-connect", `[${w}px] focus was not restored to the opener (got ${focusId})`);
     } catch (e) {
       check(false, `[${w}px] wallet picker did not open: ${e.message}`);
     }

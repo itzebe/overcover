@@ -14,7 +14,6 @@
 import { setupWalletSelector } from "@near-wallet-selector/core";
 import { setupHereWallet } from "@near-wallet-selector/here-wallet";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
-import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
 
 const NETWORK_ID = "testnet";
 const CONTRACT_ID = "contract.attestor-overcover.testnet";
@@ -34,16 +33,14 @@ function emit() {
 
 // The near-wallet-selector modules hardcode `available: true`, so a plain
 // `available` check lists wallets that are not actually installed and can never
-// connect. Detect the ones that only work through an injected provider, so the
-// picker can label them honestly instead of promising a flow that dead-ends.
-// HERE and MyNearWallet can still open their own web/app flow, so only a
-// genuinely extension-only wallet is reported as not installed.
+// connect. Meteor Wallet is injected-only; detect its provider so the picker can
+// label it honestly instead of promising a flow that dead-ends. HERE Wallet runs
+// its own app/web flow (the user enters their email or social login inside HERE),
+// so it needs no injected provider and is always offered.
 const EXTENSION_ONLY = { "meteor-wallet": true };
 function injectedPresent(id) {
   try {
-    if (id === "here-wallet") return !!globalThis.herewallet;
     if (id === "meteor-wallet") return !!globalThis.meteorWallet;
-    if (id === "my-near-wallet") return !!globalThis.mynearwallet;
   } catch (e) { /* reading a cross-origin global must never break the picker */ }
   return false;
 }
@@ -76,7 +73,7 @@ async function setup() {
   if (selector) return selector;
   selector = await setupWalletSelector({
     network: NETWORK_ID,
-    modules: [setupHereWallet(), setupMeteorWallet(), setupMyNearWallet()],
+    modules: [setupHereWallet(), setupMeteorWallet()],
   });
   // Keep the account id in sync if the wallet changes it (extension switch,
   // session expiry, sign-out from inside the extension).
@@ -108,7 +105,7 @@ function withTimeout(promise, ms, message) {
 }
 
 /** Connect a named wallet module. `walletId` is one of here-wallet,
- *  meteor-wallet, my-near-wallet. Throws with a human-readable reason. */
+ *  meteor-wallet. Throws with a human-readable reason. */
 async function connect(walletId) {
   await setup();
   const module = selector.store.getState().modules.find((m) => m.id === walletId);

@@ -132,12 +132,27 @@ It reads honestly: a failed read shows a **stale** warning with the time of the 
 ## Buying cover with a wallet, and the autonomous agent
 
 `ui/wallet.js` (bundled to `ui/vendor/wallet-bundle.js` by `npm run build:wallet`) is the only code
-that touches a NEAR wallet. It holds **no private key**: it asks the user's wallet extension
-(HERE, Meteor, MyNearWallet) to sign one `buy_cover` call with the contract's own premium attached.
+that touches a NEAR wallet. It holds **no private key**: it asks the user's wallet to sign one
+`buy_cover` call with the contract's own premium attached. Two wallets are supported:
+
+- **HERE Wallet** — signs in with email or a social account inside the HERE app; no browser
+  extension needed. This is the email-based onboarding path.
+- **Meteor Wallet** — a browser extension.
+
+**MyNearWallet has been removed.** The integration was retired (MyNearWallet no longer accepts new
+application connections), so it is gone from the picker, the bundle and the dependency tree rather
+than shown as a working option. The site itself does **not** ship an email/MPC embedded wallet: a
+frontend MPC provider (evaluated: MetaMask Embedded Wallets, formerly Web3Auth) hands the user's
+private key to the page and needs a project client ID, both of which break the guarantee that no key
+ever reaches the page — so HERE Wallet's own email sign-in is offered instead (see
+[`docs/SECURITY.md`](docs/SECURITY.md)).
+
 The wallet picker is a modal, so it opens where the user clicked — from the header, the hero, or the
-buy panel — and it states honestly which wallets this browser can actually complete (a wallet that
-is not installed is disabled with an install link, not offered as a flow that dead-ends). A connect
-attempt is bounded by a timeout, so a wallet that never answers reports an error instead of hanging.
+buy panel. It closes on the Close button, on Escape, and on a backdrop click, restores focus to the
+control that opened it, and locks the page behind it. It states honestly which wallets this browser
+can actually complete (a wallet that is not installed is disabled with an install link, not offered
+as a flow that dead-ends). A connect attempt is bounded by a timeout, so a wallet that never answers
+reports an error instead of hanging.
 The console reports a policy as bought only from the wallet's confirmed outcome (it inspects
 `status.Failure` and requires a real transaction hash), never optimistically.
 
@@ -171,7 +186,7 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 54 regression + live-RPC tests          (browser console)
+npm run test:console    # 66 regression + live-RPC tests          (browser console)
 npm run test:agent      # 34 limits + API + u128-precision tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 ```
@@ -179,7 +194,10 @@ npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs 
 `npm run test:agent` covers the spending-limits policy engine (a denied buy never touches the
 network) and the agent HTTP API (strict field validation, `413` on oversized bodies, idempotent
 retries). `npm run ui:qa` is an optional Playwright check of the console at 320–1440 px, including a
-live dry-run agent round-trip; it needs a Chromium and is not part of `npm test`.
+live dry-run agent round-trip and the wallet dialog's open/close paths (Close button, Escape,
+backdrop) and focus restoration; it needs a Chromium and is not part of `npm test`. `npm run axe`
+runs axe-core (WCAG 2.2 AA) over the page and the wallet dialog at 320–1440 px and expects zero
+violations.
 
 `npm run test:onchain` sends real attacks to the deployed contract and asserts each is **refused
 with the expected reason** — capacity, premium, lead time, signature, replay, staleness, bond,
@@ -195,8 +213,11 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 | The pool is solvent right now | `get_pool` returns `reserved ≤ capital` and `solvent: true`; `reconcile` returns `true`. |
 | Every demo transaction is real | `demo-log.json` holds 18 hashes; each resolves via `tx` RPC and on `testnet.nearblocks.io`. |
 | The oracle is challengeable, both ways | The log includes `challenge` + `resolve_dispute:true` (report upheld, bond forfeited) **and** `resolve_dispute:false` (report nullified, bond returned). |
-| The console is accessible | `axe-core` (WCAG 2.2 AA) reports 0 violations at 360/390/768/1024/1440 px, with no horizontal overflow. |
+| The console is accessible | `npm run axe` (axe-core, WCAG 2.2 AA) reports 0 violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog, with no horizontal overflow. |
 | The wallet picker opens where you click, at every width | `npm run ui:qa` clicks Connect at 320–1440 px and asserts the modal is in-viewport with no overflow; `npm run test:console` covers the installed/not-installed labelling and the connect timeout. |
+| The wallet dialog closes on every path | `npm run ui:qa` asserts the Close button, Escape and a backdrop click each close the dialog and restore focus; `npm run test:console` asserts the Close control is a real `method="dialog"` submit and that the valueless `data-wallet-close` attribute is matched with `hasAttribute`, not a falsy `getAttribute`. |
+| Search engines and AI crawlers can find and describe the product | `/robots.txt`, `/sitemap.xml`, `/llms.txt` and `/llms-full.txt` ship in `ui/` and are asserted by `npm run test:console`; the head carries canonical, Open Graph, Twitter and JSON-LD metadata in the served HTML. |
+| MyNearWallet is gone | `npm run test:console` asserts no `my-near-wallet`/`MyNearWallet` reference remains in the page, `ui/wallet.js`, `package.json` or `package-lock.json`, and that the bundle registers only HERE and Meteor. |
 
 ## Security model
 
@@ -227,6 +248,25 @@ Full detail, including the trust boundary and residual risks, in [`docs/SECURITY
 - **Rate limits and single-flight locks in the agent service are per-instance**, not global across
   processes. They reduce accidental double-spends; they are not a distributed lock.
 - Testnet only. No audit. Not for real funds.
+
+## Discoverability
+
+The public console is built to be found and understood by search engines and AI
+answer engines:
+
+- `/robots.txt` allows all crawlers (and names GPTBot, ClaudeBot, PerplexityBot,
+  Google-Extended and Applebot-Extended) and points at the sitemap.
+- `/sitemap.xml` lists the canonical URL `https://overcover.vercel.app/`.
+- `/llms.txt` and `/llms-full.txt` describe the product, the economic loop, the
+  wallet and security model, the agent architecture and the honest limitations in
+  plain text for language models.
+- The head carries a canonical link, Open Graph and Twitter card metadata (with a
+  real 1200×630 `og.png`), a theme colour and a language declaration, all in the
+  served HTML rather than injected after JavaScript runs.
+- Truthful JSON-LD (`Organization`, `WebSite`, `SoftwareApplication`, `WebPage`)
+  describes the product without invented ratings, reviews or pricing.
+
+These files state only what the application actually does.
 
 ## Deploy
 

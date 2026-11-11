@@ -15,21 +15,23 @@
     "build:wallet": "node scripts/build-wallet.mjs",
     "agent": "node agent/server.mjs",
     "test": "npm run test:model && npm run test:contract && npm run test:console && npm run test:agent",
-    "ui:qa": "node tests/ui.browser.mjs"
+    "ui:qa": "node tests/ui.browser.mjs",
+    "axe": "node tests/axe.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",
     "@near-wallet-selector/here-wallet": "^10.1.4",
     "@near-wallet-selector/meteor-wallet": "^10.1.4",
-    "@near-wallet-selector/my-near-wallet": "^10.1.4",
     "near-api-js": "^5.1.1"
   },
   "devDependencies": {
+    "axe-core": "^4.14.0",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
     "esbuild": "^0.28.2",
     "events": "^3.3.0",
     "path-browserify": "^1.0.1",
+    "playwright-core": "^1.65.0",
     "process": "^0.11.10",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5",

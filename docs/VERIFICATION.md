@@ -63,7 +63,7 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests
-npm run test:console    # 54 regression + live-RPC tests
+npm run test:console    # 66 regression + live-RPC tests
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 ```
 
@@ -79,9 +79,10 @@ that the catch path cannot claim "live", that every embedded transaction hash is
 `demo-log.json` (so no fabricated evidence), and that the muted and accent tokens clear 4.5:1
 contrast.
 
-Independently, `axe-core` (WCAG 2.2 AA) reports **0 violations** at 360 / 390 / 768 / 1024 / 1440 px
-with **no horizontal overflow**, and the failure and stale states were exercised in a real browser
-(reads blocked at the network layer).
+Independently, `npm run axe` runs `axe-core` (WCAG 2.2 AA) and reports **0 violations** at
+320 / 360 / 390 / 768 / 1024 / 1280 / 1440 px for the page **and** the wallet dialog, with **no
+horizontal overflow**, and the failure and stale states were exercised in a real browser (reads
+blocked at the network layer).
 
 ## 6. The product rules hold
 

@@ -50,6 +50,12 @@ OVERCOVER_DEMO_WINDOW=60 npm run deploy
 clean), deploys the new wasm, calls `new(...)`, then registers the metrics, the 3-of-5 operator
 quorum and the 3 independent resolvers. The address `contract.attestor-overcover.testnet` is stable.
 
+**In-place upgrade note.** This runbook recreates the account and calls `new(...)`, so it does not use
+`migrate`. If you instead upgrade the wasm **in place** and call `migrate`, it must be a **self-call
+from the contract account** (`predecessor == current_account_id`): the security pre-audit hardened
+`migrate` so a third party can no longer overwrite all state (see `docs/SECURITY_PRE_AUDIT.md`,
+finding SEC-1). A call from any other account is refused.
+
 ## 4. Verify the deploy
 
 ```bash

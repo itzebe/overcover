@@ -199,7 +199,7 @@ npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
 npm run test:console    # 87 regression + live-RPC tests          (browser console + end-to-end wallet journey)
-npm run test:agent      # 45 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
+npm run test:agent      # 51 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
 npm run test:agent-eval # 32 product-feed schema/premium + agent-eval boundary + independent-client integration tests
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run products:feed   # regenerate ui/products.json from the live contract
@@ -258,6 +258,9 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 - **Fail-closed messages** — every refusal aborts with a human-readable reason, never a silent trap.
 
 Full detail, including the trust boundary and residual risks, in [`docs/SECURITY.md`](docs/SECURITY.md).
+An internal security pre-audit — with a reproduced critical finding (an unauthenticated `migrate()` on
+the deployed v1 contract, fixed in the v2 source), two agent races fixed under concurrency, and the
+service-auth hardening — is in [`docs/SECURITY_PRE_AUDIT.md`](docs/SECURITY_PRE_AUDIT.md).
 
 ## Honest limitations
 
@@ -318,6 +321,7 @@ is read-only and runs the same policy engine in the browser.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Components, data flow, trust boundaries |
 | [`docs/CONTRACT.md`](docs/CONTRACT.md) | Full contract interface and state model |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Security model, threat model, residual risk |
+| [`docs/SECURITY_PRE_AUDIT.md`](docs/SECURITY_PRE_AUDIT.md) | Internal pre-audit: reproduced findings, fixes and residual risk |
 | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | How to reproduce every claim, with exact commands |
 | [`docs/DEMO.md`](docs/DEMO.md) | 60-second judging script and the recorded demo |
 | [`docs/JUDGE_DEMO.md`](docs/JUDGE_DEMO.md) | 2–3 minute judge demonstration, checklist and backup plan |

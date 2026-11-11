@@ -184,9 +184,9 @@ captured in this environment. A judge can complete it in two minutes by followin
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **78 passed, 0 failed** |
-| Agent limits + API + u128 precision | `npm run test:agent` | **36 passed, 0 failed** |
-| Product feed + agent evaluation | `npm run test:agent-eval` | **22 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
+| Console regression + live RPC | `npm run test:console` | **87 passed, 0 failed** |
+| Agent limits + API + u128 precision | `npm run test:agent` | **51 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
+| Product feed + agent evaluation | `npm run test:agent-eval` | **32 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
 | Live adversarial tests | `npm run test:onchain` | **17 tests** — refused-with-the-expected-reason against the LIVE contract; needs a fresh `npm run deploy` and the gitignored operator identities (not run in the CI environment) |
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, public read-only + local dry-run round-trip OK, wallet picker opens in-viewport** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
@@ -221,3 +221,10 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
   nothing). Its rate limits and single-flight locks are **per-instance**, not a global distributed
   lock.
 - Testnet only; unaudited; not for real funds.
+- The **deployed v1 contract** exports `migrate()`, which is unauthenticated because it is
+  `#[init(ignore_state)]` (it runs before state is read, so it cannot check the stored owner). An
+  internal security pre-audit reproduced a full state takeover against the exact deployed bytecode
+  and **fixed it in the v2 source** (`ensure!(predecessor == current_account_id)`), verified by the
+  attack being refused and by Rust regression tests. The fix ships with the v2 deploy (PR #9); until
+  that deploy happens the **live testnet contract remains vulnerable**. Full detail:
+  `docs/SECURITY_PRE_AUDIT.md`.

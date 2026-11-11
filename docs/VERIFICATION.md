@@ -71,7 +71,7 @@ npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests
 npm run test:console    # 87 regression + live-RPC tests (page regressions + end-to-end wallet journey)
-npm run test:agent      # 45 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
+npm run test:agent      # 51 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
 npm run test:agent-eval # 32 product-feed schema/premium + agent boundary + independent-client integration
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 # v2 lifecycle on a local neard node (branch feat/decentralized-insurance-lifecycle only):

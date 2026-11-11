@@ -38,7 +38,7 @@ bytecode** and is fixed in the v2 source (`ensure!(predecessor == current_accoun
 the same attack being refused and by two Rust regression tests.
 
 **The live v1 contract is still vulnerable** until it is redeployed, which needs the operator key
-that this environment does not hold. The v2 deploy is the fix; see `docs/DEPLOY_RUNBOOK.md`. Full
+that this environment does not hold. The v2 deploy is the fix (its runbook is `docs/DEPLOY_RUNBOOK.md` on PR #9's branch). Full
 detail, reproduction and the other pre-audit findings (agent idempotency and limit races, service
 auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 

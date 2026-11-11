@@ -5,9 +5,10 @@ This is the exact, ordered set of steps to move the **v2** contract (the branch
 that the previous deploys used; **no faucet is involved** — the contract sub-account is funded from
 the existing `attestor-overcover.testnet` identity.
 
-Do not run these steps until CI is green and the branch is merged, and do not run them against
-mainnet. The console reads whatever contract id it is pointed at, so no UI change is needed for the
-deploy itself; the UI is already version-aware.
+Do not run these steps until CI on the branch is green. Deploy from the branch **first**, then merge —
+that keeps `main` aligned with what is actually on chain (the whole point of the bytecode proof).
+Do not run them against mainnet. The console reads whatever contract id it is pointed at, so no UI
+change is needed for the deploy itself; the UI is already version-aware.
 
 ## 0. Prerequisites
 

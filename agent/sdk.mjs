@@ -19,15 +19,17 @@ export class AgentClientError extends Error {
 }
 
 export class AgentClient {
-  constructor({ baseUrl = "http://127.0.0.1:8787", fetchImpl = fetch } = {}) {
+  constructor({ baseUrl = "http://127.0.0.1:8787", token = "", fetchImpl = fetch } = {}) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.token = token;
     this.fetch = fetchImpl;
   }
 
   async #req(method, path, body, headers = {}) {
+    const auth = this.token ? { Authorization: `Bearer ${this.token}` } : {};
     const res = await this.fetch(this.baseUrl + path, {
       method,
-      headers: body ? { "Content-Type": "application/json", ...headers } : headers,
+      headers: body ? { "Content-Type": "application/json", ...auth, ...headers } : { ...auth, ...headers },
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await res.text();

@@ -182,3 +182,45 @@ test("concurrent buys with the same idempotency key execute exactly once", async
   assert.equal(replays.length, 1, "exactly one of the two concurrent responses is a replay");
   assert.equal(replays[0].premiumYocto, (a.idempotentReplay ? b : a).premiumYocto, "the replay returns the original premium");
 });
+
+// API authentication: when the service is exposed (a token is configured), a
+// caller without the bearer token must be refused before anything happens. A
+// loopback service with no token configured stays open (local development).
+test("a configured token is required: a request without it is 401", async () => {
+  const { spawn } = await import("node:child_process");
+  const { KeyPair } = await import("near-api-js");
+  const port = 8000 + Math.floor(Math.random() * 900);
+  const base = `http://127.0.0.1:${port}`;
+  const kp = KeyPair.fromRandom("ed25519");
+  const child = spawn(process.execPath, [path.join(root, "agent", "server.mjs")], {
+    env: {
+      ...process.env,
+      OVERCOVER_AGENT_ACCOUNT: "agent-probe.testnet",
+      OVERCOVER_AGENT_SECRET_KEY: kp.toString(),
+      OVERCOVER_AGENT_PORT: String(port),
+      OVERCOVER_AGENT_HOST: "127.0.0.1",
+      OVERCOVER_AGENT_DRY_RUN: "1",
+      OVERCOVER_AGENT_TOKEN: "s3cret-token",
+      OVERCOVER_AGENT_AUDIT: path.join(root, "agent", "audit.test.log.jsonl"),
+    },
+    stdio: ["ignore", "ignore", "ignore"],
+  });
+  try {
+    const deadline = Date.now() + 15000;
+    let up = false;
+    while (Date.now() < deadline) { try { if ((await fetch(base + "/api/v1/health")).status === 401) { up = true; break; } } catch {} await new Promise((r) => setTimeout(r, 200)); }
+    assert.ok(up, "server must start and require the token");
+
+    const noAuth = await fetch(base + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(`auth-${Date.now()}`) });
+    assert.equal(noAuth.status, 401, "a buy without the token must be 401");
+
+    const wrong = await fetch(base + "/api/v1/health", { headers: { Authorization: "Bearer nope" } });
+    assert.equal(wrong.status, 401, "a wrong token must be 401");
+
+    const ok = await fetch(base + "/api/v1/health", { headers: { Authorization: "Bearer s3cret-token" } });
+    assert.equal(ok.status, 200, "the correct token is accepted");
+    assert.equal((await ok.json()).accountId, "agent-probe.testnet");
+  } finally {
+    child.kill("SIGTERM");
+  }
+});

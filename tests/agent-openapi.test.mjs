@@ -88,3 +88,9 @@ test("a documented 403 denial is exactly what the service returns", async () => 
   assert.equal(j.error, "denied");
   assert.ok(Array.isArray(j.reasons) && j.reasons.length >= 1);
 });
+
+test("the spec documents bearer auth and the 401 it can return", () => {
+  assert.deepEqual(spec.security, [{ bearerAuth: [] }], "the spec must require bearer auth globally");
+  assert.equal(spec.components.securitySchemes.bearerAuth.scheme, "bearer");
+  assert.match(spec.components.responses.Unauthorized.description, /bearer token/);
+});

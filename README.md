@@ -205,11 +205,14 @@ npm run test:contract   # 40 Rust unit tests                      (contract logi
 npm run test:console    # 90 regression + live-RPC tests          (browser console + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
 npm run test:agent-eval # 32 product-feed schema/premium + agent-eval boundary + independent-client integration tests
+npm run test:deploy     # 3 deploy-path regressions (a stale, guard-less wasm is refused)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run products:feed   # regenerate ui/products.json from the live contract
 npm run verify:proof    # one-command independent proof of the headline claims (bytecode,
                         #   solvency, all 18 demo txs, the agent's buys, settled outcomes)
 npm run verify:migration # SEC-1 proof: the deployed v1 migrate() takeover, and the v2 guard
+npm run verify:upgrade  # SEC-1 guard on the COMPILED wasm on a real local neard node (needs neard)
+npm run verify:testnet-deploy  # a real, isolated v2 deploy to NEAR testnet (needs the faucet)
 npm run verify:agent    # the agent's spend-authorization engine vs the live product definition
 npm run verify:connectivity  # the public console works with no local agent (needs a Chromium)
 npm run verify:live     # the LIVE production URL at 320–1440 px (needs a Chromium)
@@ -243,6 +246,7 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 | --- | --- |
 | Deployed bytecode matches this source | The repo pins Rust **1.99.1** (`rust-toolchain.toml`). Because the wasm embeds the **absolute cargo registry path**, a byte-identical rebuild also needs the same `CARGO_HOME`. Reproduce exactly: `CARGO_HOME=/home/openhands/.cargo cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the module the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. CI does the same (`verify:proof`). A different `CARGO_HOME` changes the hash — the match confirms *source ↔ bytecode* under the pinned environment, not byte-reproducibility from an arbitrary one. |
 | The pool is solvent right now | `get_pool` returns `reserved ≤ capital` and `solvent: true`; `reconcile` returns `true`. |
+| The SEC-1 fix ships safely and the live contract can be upgraded without wiping state | `npm run test:deploy` proves both deploy paths refuse a stale, guard-less wasm. `npm run verify:upgrade` runs the **compiled** wasm on a real `neard` node and shows a third-party `migrate()` is refused while the contract's own self-call is accepted. `node driver/upgrade.js --plan` prints the exact in-place upgrade operations and costs (needs no key). `npm run verify:testnet-deploy` performs a real, isolated v2 deploy to NEAR testnet and buys one policy. |
 | Every demo transaction is real | `demo-log.json` holds 18 hashes; each resolves via `tx` RPC and on `testnet.nearblocks.io`. |
 | The oracle is challengeable, both ways | The log includes `challenge` + `resolve_dispute:true` (report upheld, bond forfeited) **and** `resolve_dispute:false` (report nullified, bond returned). |
 | The console is accessible | `npm run axe` (axe-core, WCAG 2.2 AA) reports 0 violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog, with no horizontal overflow. |

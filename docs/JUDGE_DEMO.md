@@ -200,8 +200,13 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   the stored owner), so any account could overwrite all state. It was reproduced against the exact
   deployed bytecode and **fixed in the v2 source**, verified by the attack being refused, by Rust
   regression tests (`sec1_*`) and by `npm run verify:migration` (6/6). The fix is merged into `main`
-  (PR #9) and ships with the v2 deploy, which needs the operator key. Do not claim the live contract
-  is hardened until that deploy happens — say this plainly and point to `docs/SECURITY_PRE_AUDIT.md`.
+  (PR #9) and the deploy path is now safe: `npm run test:deploy` proves both deploy scripts refuse a
+  stale (guard-less) wasm, `npm run verify:upgrade` proves the guard on the compiled wasm (8/8), and
+  `node driver/upgrade.js` upgrades the live contract **in place** — address, pool and policies
+  preserved — with a `--plan` mode that sends nothing. The v2 build is also proven on a real,
+  isolated testnet deployment (`npm run verify:testnet-deploy`, 9/9). Closing SEC-1 **on the live
+  address** still needs the operator key. Do not claim the live contract is hardened until that
+  upgrade happens — say this plainly and point to `docs/SECURITY_PRE_AUDIT.md`.
 
 ## Backup procedure (if a wallet extension or testnet is unavailable)
 

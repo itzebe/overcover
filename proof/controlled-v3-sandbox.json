@@ -1,0 +1,209 @@
+{
+  "mode": "SANDBOX",
+  "network": "local",
+  "rootId": "test.near",
+  "wasmSha256": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57",
+  "wasmBytes": 489602,
+  "txs": {
+    "create:owner": "72hMAYfC4WF7hmyrmxYNpfWgCKgrfVKNxFHiNG5NvFDR",
+    "create:buyer": "GbhHSVqCsFrN8JtYntWtdXx3MgDJtmqNB7iXY27iPjJN",
+    "create:attacker": "8HT2EcPvpwUTPLnnsZHwoRm96ZN8HABep3b7oFuzg6TK",
+    "create:op1": "GFgZLMVocKV8XZEkpVPHcNdatWqSd5VnfePqJBc44aFb",
+    "create:op2": "FxqW3GzzUG1cAW3nNZmnUe5q6hMyYAUn9dCiD7RwXekL",
+    "create:op3": "9fVWUMv9T48itxm1iYHhze3psUMsQBXrBY6TrMYoFcPk",
+    "create:op4": "G3u4ct5U6Us8eurxtfxsAQ8ywxG9WmzLJgi1AeBQmmxk",
+    "create:op5": "7tEnqMhmJEcwDxwFQ3FVghmuT1LAMxaV3ELit6A2RxC",
+    "create:res1": "8T1CcX5d1sgbb4pSaHJBuE49P18gs6mhH5tSg7uioE8M",
+    "create:res2": "6fTBqxf6QTx2UgEWLhxzY5xphGHYTMK2BZLPPyoPt6UX",
+    "create:res3": "HEj4UTaVQeEvoB37F4vVtM8M54jS9QLeJCyZom9QGEVc",
+    "create:res4": "E8UrmWjyweC6F6a29xAvFdFztmg8wR57AwL4fhSmupay",
+    "create:res5": "C6iGiy8KBq7EHrxm5rAmkH4oG1j5G4YK11DNRAm1Qw74",
+    "create:contract": "6zNRVXRxi7eCw1EtBafPZ5cYLetUDfG3M9wntXqWWkPB",
+    "deploy": "ApLbhyuZoUzg978RSAZXjHG38XNhfmT2bJGgh931oULe",
+    "new": "9GV1YGVjEqkrPELn6zgiskpAN6y3aWiXTfLHvy8jmxZ4",
+    "set_quorum": "AeTmvM7iAnHsJP9fboxgvHcdJAWtEi4PpnigD2th9RyB",
+    "set_resolver_quorum": "G9Rm3aPeDMmVTkSwWuFyd8A6rWnkSyG7bebmvUkgjagV",
+    "set_dispute_window": "6PEFSk8SmQLo6tfP2Tcj5izjNtT4WTKtFE42QG1NsWd5",
+    "deposit": "oKmZ2NNPDQmCBcwiLPeFZ3CDqsxB6Lbfw2j4H9Jn2AC",
+    "challenge": "3dZJ9M1dZByxpkehXrS2Eg9FPiJYXdoKEFcKBKpyZw2X",
+    "resolver_vote": "9mWW11fb9ffzeDuBjeeK4yRKchmcyPu4JAvPCY518QoB",
+    "resolve": "9fngoNuE9WS1KSdjLm2TGRgFsUorB6EKbm2xTEhBVsqv",
+    "set_prod_window": "CNc3NexwfzqFJVjtXQA1jFd5KwbC9cnM7YBKnQvbjNGA"
+  },
+  "checks": [
+    {
+      "name": "created the funding root (local)",
+      "ok": true,
+      "detail": "test.near"
+    },
+    {
+      "name": "created the identity graph + contract account",
+      "ok": true,
+      "detail": "contract.test.near"
+    },
+    {
+      "name": "deployed the compiled v3 wasm",
+      "ok": true,
+      "detail": "489602 bytes, sha256 52c11c22fe52bd26…"
+    },
+    {
+      "name": "initialised with the controlled owner",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "challenge window is the accelerated demo value",
+      "ok": true,
+      "detail": "window=20s"
+    },
+    {
+      "name": "five operators are registered (3-of-5)",
+      "ok": true,
+      "detail": "active=5"
+    },
+    {
+      "name": "five independent resolvers are registered (3-of-5)",
+      "ok": true,
+      "detail": "active=5"
+    },
+    {
+      "name": "the operators are distinct accounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the resolvers are distinct accounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no operator or resolver is the owner (no shared controller)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the metric product is published",
+      "ok": true,
+      "detail": "heat-lagos/heat"
+    },
+    {
+      "name": "the pool holds the deposit",
+      "ok": true,
+      "detail": "capital=500000000000000000000000"
+    },
+    {
+      "name": "buy_cover returns a policy id",
+      "ok": true,
+      "detail": "policy=1"
+    },
+    {
+      "name": "the policy belongs to the buyer and froze the challenge window",
+      "ok": true,
+      "detail": "buyer=buyer.test.near window=20"
+    },
+    {
+      "name": "the payout is reserved against capital",
+      "ok": true,
+      "detail": "reserved=300000000000000000000000"
+    },
+    {
+      "name": "a forged operator signature is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "a non-operator cannot submit a reading",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "a 2-of-5 sub-quorum does NOT finalise (threshold enforced)",
+      "ok": true,
+      "detail": "finalized=0 observation=none"
+    },
+    {
+      "name": "a 3-of-5 quorum finalises the observation",
+      "ok": true,
+      "detail": "quorum=3 value=450"
+    },
+    {
+      "name": "the observation is disputed",
+      "ok": true,
+      "detail": "threshold=3"
+    },
+    {
+      "name": "the OWNER cannot vote on a dispute (no unilateral adjudication)",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "an operator that signed the reading cannot resolve its own dispute",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "the challenger cannot resolve their own dispute",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "a 3-of-5 resolver quorum upholds the reading",
+      "ok": true,
+      "detail": "disputed=false uphold=true"
+    },
+    {
+      "name": "the policy settled and paid (value above threshold)",
+      "ok": true,
+      "detail": "status=settled_paid paid=300000000000000000000000"
+    },
+    {
+      "name": "the pool released the reservation and stayed solvent",
+      "ok": true,
+      "detail": "reserved=0 solvent=true"
+    },
+    {
+      "name": "SEC-1 closed on the new module: third-party migrate() is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
+    },
+    {
+      "name": "the owner is unchanged after the refused migrate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the production challenge window is restored for future policies",
+      "ok": true,
+      "detail": "window=3600s"
+    }
+  ],
+  "contractId": "contract.test.near",
+  "ownerId": "owner.test.near",
+  "operatorIds": [
+    "op1.test.near",
+    "op2.test.near",
+    "op3.test.near",
+    "op4.test.near",
+    "op5.test.near"
+  ],
+  "resolverIds": [
+    "res1.test.near",
+    "res2.test.near",
+    "res3.test.near",
+    "res4.test.near",
+    "res5.test.near"
+  ],
+  "policyId": 1,
+  "passed": 29,
+  "total": 29,
+  "config": {
+    "owner": "owner.test.near",
+    "attestor": "DFyuHpPTWUhTzqiz938czj5ZYDJrmXKn4B3CwRuU7qFU",
+    "challenge_bond": "100000000000000000000000",
+    "challenge_window_sec": 20,
+    "settle_delay_sec": 0,
+    "quorum": 3,
+    "resolver_quorum": 3,
+    "dispute_window_sec": 3600
+  }
+}

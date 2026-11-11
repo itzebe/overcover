@@ -43,18 +43,26 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
 `demo-log.json` holds 18 hashes covering the whole cycle: publish, deposit, buy cover, report,
 settle (paid and no-pay), and both dispute outcomes. Each resolves via RPC. (The `tx` method
 requires a `sender_account_id`; the node rejects an empty value with HTTP 400 but does not check it
-against the transaction, so any valid account id works.)
+against the transaction, so any valid account id works. Use an **archival** endpoint: the
+non-archival ones keep only a recent tx cache and return `NOT_OBSERVED` for these weeks-old txs.)
 
 ```bash
 python3 - <<'PY'
 import json, urllib.request
+ENDPOINTS = ["https://archival-rpc.testnet.fastnear.com", "https://archival-rpc.testnet.near.org"]
 for e in json.load(open("demo-log.json")):
-    req = urllib.request.Request("https://test.rpc.fastnear.com",
-        data=json.dumps({"jsonrpc":"2.0","id":1,"method":"tx","params":{"tx_hash":e["hash"],"sender_account_id":"contract.attestor-overcover.testnet","wait_until":"FINAL"}}).encode(),
-        headers={"Content-Type":"application/json"})
-    r = json.load(urllib.request.urlopen(req))
-    ok = "result" in r and "Failure" not in (r["result"].get("status") or {})
-    print(("OK  " if ok else "FAIL"), e["label"])
+    for url in ENDPOINTS:
+        try:
+            req = urllib.request.Request(url,
+                data=json.dumps({"jsonrpc":"2.0","id":1,"method":"tx","params":{"tx_hash":e["hash"],"sender_account_id":"contract.attestor-overcover.testnet","wait_until":"FINAL"}}).encode(),
+                headers={"Content-Type":"application/json"})
+            r = json.load(urllib.request.urlopen(req))
+        except Exception as ex:          # 429 rate limit, or NOT_OBSERVED on a non-archival node
+            last = ex; continue
+        ok = "result" in r and "Failure" not in (r["result"].get("status") or {})
+        print(("OK  " if ok else "FAIL"), e["label"]); break
+    else:
+        print("FAIL", e["label"], "—", last)
 PY
 ```
 
@@ -70,13 +78,15 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 npm ci --ignore-scripts
 npm run test:model      # 66 attacks, 66 defended, 0 exploitable  (reference model)
 npm run test:contract   # 62 Rust unit tests
-npm run test:console    # 87 regression + live-RPC tests (page regressions + end-to-end wallet journey)
+npm run test:console    # 90 regression + live-RPC tests (page regressions + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
 npm run test:agent-eval # 32 product-feed schema/premium + agent boundary + independent-client integration
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 # v3 lifecycle on a local neard node:
 #   npm run verify:sandbox                # 21/21 (compiled v3 wasm, real neard)
 #   npm run verify:upgrade-preservation   # in-place upgrade of the live v1 bytecode preserves state
+#   npm run verify:controlled-v3:plan     # the controlled v3 testnet deployment plan (sends nothing)
+#   npm run verify:controlled-v3:sandbox  # 29/29 — controlled v3 deploy + SEC-1 closure on a real neard
 ```
 
 `test:onchain` sends real attacks to the deployed contract and asserts each is **refused with the
@@ -136,8 +146,24 @@ development still works. Run it against production with
 
 - **No professional audit.** The contract has not been audited.
 - **No mainnet deployment.** Testnet only; not for real funds.
-- **Single attestor.** The oracle is not decentralised; the dispute path mitigates but does not
-  remove that. See [`SECURITY.md`](SECURITY.md).
+- **Single attestor on the deployed v1 contract.** The oracle on the live address is not
+  decentralised; the dispute path mitigates but does not remove that. The merged **v3** source
+  replaces it with a 3-of-5 operator quorum and independent resolvers, proven on a fresh deployment
+  by `npm run verify:controlled-v3:sandbox` (29/29) — but v3 is not on the live address (see below).
+- **The v3 contract is not deployed to the live address, and the legacy key is unrecoverable.** The
+  live `contract.attestor-overcover.testnet` runs **v1**, whose `migrate()` is unauthenticated
+  (**SEC-1**). Closing it on that address needs the account's FullAccess private key
+  (`ed25519:CwZBmKyV…`), which is **not recoverable from the chain** and not held in this
+  environment; the exhaustive search and the on-chain creation trail are recorded in
+  [`AUTHORITY_RECOVERY.md`](AUTHORITY_RECOVERY.md). Two supported routes remain: the operator runs
+  the state-preserving in-place upgrade (`node driver/upgrade.js`), or the controlled v3 deployment
+  (`node proof/controlled-v3-deploy.mjs`) stands up a fresh, SEC-1-closed contract. **Do not claim the
+  live address is hardened until one of those has run.**
+- **The controlled v3 testnet deployment did not run this session.** The free testnet faucet
+  (`helper.testnet.near.org`) returned HTTP 429 on every probe. The identical harness was run against
+  the identical compiled wasm on a local `neard` node (29/29, mode `SANDBOX`); the only untested part
+  of the testnet path is the faucet account-creation step. Re-run `node proof/controlled-v3-deploy.mjs`
+  when the faucet recovers.
 - **`npm run test:onchain` is not run in this environment.** The 17 live adversarial tests need the
   gitignored operator identities (`keys/identities.json`, `keys/state.json`) and a fresh deploy, so
   they cannot run without a funded operator key. The suite exists and fails cleanly with an

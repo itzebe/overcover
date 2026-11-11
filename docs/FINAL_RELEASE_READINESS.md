@@ -23,6 +23,9 @@ npm run verify:upgrade      # 8/8 — the SEC-1 guard on the compiled wasm (real
 npm run verify:upgrade-preservation  # state PRESERVED + the migrated policy still settles (real v1 bytecode)
 npm run verify:connectivity # 12/12 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
+npm run verify:sandbox               # 21/21 — the decentralised lifecycle on a real neard
+npm run verify:controlled-v3:plan    # prints the controlled v3 deployment plan; sends nothing
+npm run verify:controlled-v3:sandbox # 29/29 — controlled v3 deploy + SEC-1 closure on a real neard
 npm run axe                 # 0 violations, page + dialog
 npm run ui:qa               # 7 viewports, real agent round-trip
 npm run fixture:capture     # refresh tests/fixtures/contract-snapshot.json from the live contract
@@ -132,7 +135,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
 | Vercel deployment | FIXED AND VERIFIED | Project `overcover`; production alias `overcover.vercel.app`. | `GET /v6/deployments?…&target=production` shows a READY production deployment. |
-| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` matches `main` (`cadcb0a`, PR #20, at the time of writing). | `GET /v6/deployments`; the served `index.html` sha256 equals the working-tree file. |
+| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` matches `main` (`6d28aeaef5fe`, PR #21, at the time of writing). | `GET /v6/deployments`; the served `index.html` sha256 equals the working-tree file. |
 | API availability | NOT APPLICABLE | The console is a static page reading public NEAR RPC; there is no product API. | — |
 | Browser functionality | FIXED AND VERIFIED | Page loads and renders live contract state. | `verify:live` (5 widths, 0 console errors); browser probe: 0 console errors. |
 | Wallet compatibility | FIXED AND VERIFIED (integration) | HERE + Meteor; honest availability. | `verify:connectivity`; `ui:qa`. Live extension approval BLOCKED BY HUMAN ACTION. |
@@ -417,6 +420,27 @@ Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SE
     and `AGENTS.md` still said "60 attacks / 41 Rust / 21 Rust / 31 attacks" and described the source
     as v2. Corrected to the measured values (model 66, contract 62) and `contract/VERSION` = 3.
 
+## Defects fixed in this mission (2026-11-11, authority recovery + controlled v3 deployment)
+
+32. **The legacy contract's control could not be established, and the SEC-1 closure depended on an
+    unrecoverable key.** Root cause: the live `contract.attestor-overcover.testnet` holds exactly one
+    FullAccess key (`ed25519:CwZBmKyV…`) whose private half was generated locally at account creation
+    and never exported; it is not on the chain and not in this environment. Fix: `docs/AUTHORITY_RECOVERY.md`
+    records the exhaustive credential search (all empty/absent), the on-chain creation trail, and the
+    supported alternative — a **controlled v3 deployment** to a fresh, operator-controlled account
+    that does not need the legacy key.
+33. **There was no reproducible proof that the decentralised v3 design and the SEC-1 guard hold on a
+    *deployed* module with a real multi-operator quorum.** Root cause: the sandbox lifecycle used a
+    2-of-3 quorum and did not assert the SEC-1 refusal or the resolver independence on the deployed
+    module. Fix: `proof/controlled-v3-deploy.mjs` (`npm run verify:controlled-v3[:sandbox]`) deploys the
+    compiled v3 wasm to a fresh account, configures a **3-of-5** operator quorum and a **3-of-5**
+    resolver quorum, and asserts 29 properties against the deployed module — sub-quorum non-finalisation,
+    forged-signature refusal, non-operator refusal, owner/challenger/signer vote exclusion, resolver-quorum
+    decision, third-party `migrate()` refusal (SEC-1), and pool reservation/settlement solvency. It
+    **fails closed** if the wasm lacks the SEC-1 guard. Evidence: `proof/controlled-v3-sandbox.json`
+    (29/29, mode `SANDBOX`). Testnet mode creates a real account from the free faucet and writes
+    `proof/controlled-v3-deploy.json`; it SKIPs cleanly when the faucet is rate-limited (as it was).
+
 ## Blockchain evidence (real testnet)
 
 **Isolated v2 deployment — `npm run verify:testnet-deploy` (9/9), 2026-11-11.** A throwaway
@@ -468,14 +492,24 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
   (domain-separated length-prefixed observation message, multi-operator oracle quorum, per-policy
   challenge window, frozen per-dispute resolver threshold, owner-excluded resolvers, generic metric
   model, hardened `migrate`) is implemented and proven end-to-end in a **local sandbox**
-  (`npm run verify:sandbox` = 21/21), and the in-place `migrate` is proven **state-preserving** against
-  the exact live v1 bytecode (`npm run verify:upgrade-preservation`). It is **not** on the live address
+  (`npm run verify:sandbox` = 21/21), the in-place `migrate` is proven **state-preserving** against the
+  exact live v1 bytecode (`npm run verify:upgrade-preservation`), and the **controlled v3 deployment**
+  harness proves the whole decentralised design plus SEC-1 closure against the compiled module
+  (`npm run verify:controlled-v3:sandbox` = **29/29**). It is **not** on the live address
   `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the contract's full-access
-  key, which this environment does not hold. The public console therefore reads the live **v1**
-  contract; its v2 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1 vulnerability
-  remains live** until the operator runs `node driver/upgrade.js` (non-destructive, ~4.63 NEAR
-  refundable stake). Status: IMPLEMENTED, VERIFIED IN SANDBOX AND ON AN ISOLATED TESTNET
-  DEPLOY, MIGRATION PROVEN STATE-PRESERVING, MERGED — the single remaining BLOCKED BY HUMAN ACTION item.
+  key (`ed25519:CwZBmKyV…`), which this environment does not hold and which is **not recoverable from
+  the chain** — see `docs/AUTHORITY_RECOVERY.md`. The public console therefore reads the live **v1**
+  contract; its v2/v3 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1 vulnerability
+  remains live** until either the operator runs `node driver/upgrade.js` (non-destructive, ~4.63 NEAR
+  refundable stake) or the controlled deployment in §5 of that document is run. Status: IMPLEMENTED,
+  VERIFIED IN SANDBOX AND ON AN ISOLATED TESTNET DEPLOY, MIGRATION PROVEN STATE-PRESERVING,
+  CONTROLLED-DEPLOY PROOF 29/29, MERGED — the single remaining BLOCKED BY HUMAN ACTION item.
+- **The controlled v3 testnet deployment did not run this session.** It needs the free testnet faucet
+  to fund the fresh identity graph; `helper.testnet.near.org` returned **HTTP 429** on every probe
+  (`near-faucet.io` → 404, `faucet.testnet.near.org` → connection failure). The identical harness was
+  run against the identical compiled wasm on a local `neard` node (`29/29`, mode `SANDBOX`); the only
+  untested part of the testnet path is the faucet account creation itself. Status: BLOCKED BY EXTERNAL
+  SERVICE. Re-run `node proof/controlled-v3-deploy.mjs` when the faucet recovers.
 - **No professional audit; testnet only.** Not for real funds. An internal pre-audit
   (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
   not a substitute for a third-party audit.

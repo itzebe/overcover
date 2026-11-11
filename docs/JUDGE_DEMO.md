@@ -15,12 +15,15 @@ transactions. Nothing is staged.
 > v3** (metric-agnostic products, a domain-separated multi-operator oracle quorum, independent
 > dispute resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, and a
 > state-preserving in-place `migrate`). v3 is implemented and proven end-to-end on a real local
-> `neard` node (`npm run verify:sandbox`, 21/21) and its in-place upgrade is proven state-preserving
-> against the exact live v1 bytecode (`npm run verify:upgrade-preservation`), but it is **not yet
-> deployed to the live address** — closing SEC-1 there needs the operator key (see
-> `docs/DEPLOY_RUNBOOK.md`). The demo below runs against whatever is deployed — currently v1, which
-> the console renders with a version gate. Where a check's numbers differ between the two, both are
-> given.
+> `neard` node (`npm run verify:sandbox`, 21/21), its in-place upgrade is proven state-preserving
+> against the exact live v1 bytecode (`npm run verify:upgrade-preservation`), and the **controlled v3
+> deployment** harness proves the full decentralised design plus SEC-1 closure against the compiled
+> module (`npm run verify:controlled-v3:sandbox`, **29/29**). It is **not yet deployed to the live
+> address** — the legacy account's FullAccess key is not held here and is not recoverable from the
+> chain (see `docs/AUTHORITY_RECOVERY.md`), so closing SEC-1 on that address is the operator's step,
+> or the controlled deployment stands up a fresh, SEC-1-closed contract instead. The demo below runs
+> against whatever is deployed — currently v1, which the console renders with a version gate. Where a
+> check's numbers differ between the two, both are given.
 
 ---
 
@@ -174,8 +177,10 @@ immediately; a further buy returns `403` with "agent is disabled".
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 66/0, contract 62/0, console 90/0, agent 51/0, sim 71/0 | `npm test` |
-| 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` | `GET /v6/deployments?...&target=production` |
+| 11 | Tests pass | model 66/0, contract 62/0, console 90/0, agent 51/0, sim 71/0, agent-eval 32/0 | `npm test` |
+| 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = `6d28aeaef5fe` | `GET /v6/deployments?...&target=production` |
+| 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 29/29 checks | `npm run verify:controlled-v3:sandbox` |
+| 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |
 
 ## Honesty details a judge may probe
 
@@ -201,15 +206,19 @@ These are deliberate, not accidents. If a judge asks, the answers are:
 - **The deployed contract is v1 and has one known issue.** An internal security pre-audit found that
   the **deployed v1** contract's `migrate()` is unauthenticated (`#[init(ignore_state)]` cannot check
   the stored owner), so any account could overwrite all state. It was reproduced against the exact
-  deployed bytecode and **fixed in the v2 source**, verified by the attack being refused, by Rust
+  deployed bytecode and **fixed in the v2/v3 source**, verified by the attack being refused, by Rust
   regression tests (`sec1_*`) and by `npm run verify:migration` (6/6). The fix is merged into `main`
-  (PR #9) and the deploy path is now safe: `npm run test:deploy` proves both deploy scripts refuse a
-  stale (guard-less) wasm, `npm run verify:upgrade` proves the guard on the compiled wasm (8/8), and
-  `node driver/upgrade.js` upgrades the live contract **in place** — address, pool and policies
-  preserved — with a `--plan` mode that sends nothing. The v2 build is also proven on a real,
-  isolated testnet deployment (`npm run verify:testnet-deploy`, 9/9). Closing SEC-1 **on the live
-  address** still needs the operator key. Do not claim the live contract is hardened until that
-  upgrade happens — say this plainly and point to `docs/SECURITY_PRE_AUDIT.md`.
+  and the deploy path is now safe: `npm run test:deploy` proves both deploy scripts refuse a stale
+  (guard-less) wasm, `npm run verify:upgrade` proves the guard on the compiled wasm (8/8),
+  `npm run verify:controlled-v3:sandbox` proves a third-party `migrate()` is refused on a freshly
+  **deployed** v3 module (29/29), and `node driver/upgrade.js` upgrades the live contract **in place**
+  — address, pool and policies preserved — with a `--plan` mode that sends nothing. Closing SEC-1
+  **on the live address** still needs that account's FullAccess key
+  (`ed25519:CwZBmKyV…`), which this environment does not hold and which cannot be recovered from the
+  chain; the alternative is the controlled deployment to a fresh, SEC-1-closed account
+  (`node proof/controlled-v3-deploy.mjs`). Do not claim the live contract is hardened until one of
+  those happens — say this plainly and point to `docs/SECURITY_PRE_AUDIT.md` and
+  `docs/AUTHORITY_RECOVERY.md`.
 
 ## Backup procedure (if a wallet extension or testnet is unavailable)
 
@@ -223,6 +232,11 @@ These are deliberate, not accidents. If a judge asks, the answers are:
 - **NEAR testnet RPC is slow or down.** The console shows **stale** with the last good read — that is
   the designed behaviour, not a failure. Fall back to `demo-log.json` (18 real hashes) and
   `npm run verify:proof` (which re-derives everything from public RPC).
+- **The faucet is rate-limited (the testnet v3 deploy cannot run).** Do not wait on it. Run
+  `npm run verify:controlled-v3:sandbox` — the identical harness against the identical compiled wasm
+  on a local `neard` node (29/29) — and say plainly that only the faucet account-creation step is
+  exercised on testnet. State that the legacy address's key is unrecoverable
+  (`docs/AUTHORITY_RECOVERY.md`).
 - **Vercel URL unreachable.** Use the mirror https://itzebe.github.io/overcover/ (byte-identical
   `index.html`).
 - **Nothing loads at all.** Run the read-only proof locally: `npm ci --ignore-scripts && npm run

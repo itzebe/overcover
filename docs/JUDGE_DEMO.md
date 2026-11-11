@@ -178,7 +178,7 @@ immediately; a further buy returns `403` with "agent is disabled".
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
 | 11 | Tests pass | model 66/0, contract 62/0, console 90/0, agent 51/0, sim 71/0, agent-eval 32/0 | `npm test` |
-| 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = `48b216c6d581` | `GET /v6/deployments?...&target=production` |
+| 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
 | 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 29/29 checks | `npm run verify:controlled-v3:sandbox` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |
 

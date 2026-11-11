@@ -9,6 +9,8 @@ committed artefacts; none of them writes on-chain.
 | `npm run verify:proof` | The deployed module is exactly this source; the pool is solvent and reconciles; all 18 `demo-log.json` transactions are real and successful; the agent's purchases are real `buy_cover` calls (each tied to its on-chain policy via the committed `proof/agent-purchases.json`); the settled policies paid what the console says. Exits non-zero on any mismatch. Runs on a clean clone — it needs no local key and no gitignored file. |
 | `npm run verify:agent` | The agent's spend-authorization engine refuses an over-limit buy and permits an in-limit one, against the **live** product definition. When a local agent key exists, the shipped `createAgent`/`decide` path is run too and must agree. |
 | `npm run verify:connectivity` | The public console works with **no local agent**: it boots the real agent service in dry-run, drives the real page in a browser with all localhost requests blocked, and checks the security boundary (no localhost default, read-only verdict == shared engine on the live quote, invalid bodies rejected, limits enforced, no owner-only method, `buy_cover` the only signing path). Set `LIVE_URL` to run it against production. |
+| `npm run verify:upgrade` | The **compiled** v2 wasm closes SEC-1 on a real local `neard` node: a third-party `migrate()` is refused, the owner and state are untouched, a repeat is still refused, and the contract's own self-call `migrate()` (the redeploy path) is accepted. 8/8. |
+| `npm run verify:testnet-deploy` | A **real, isolated v2 deployment on NEAR testnet** (faucet-funded): deploys the compiled wasm, initialises it, publishes a product, funds the pool, buys one policy (real `buy_cover`), and then shows a third-party `migrate()` is refused on the live chain. Writes contract id, wasm sha256 and tx hashes to `proof/testnet-v2-deploy.json`. Skips cleanly if the faucet is rate-limited (`REQUIRE_TESTNET=1` to force). |
 | `npm run verify:live` | The **live production URL** (`https://overcover.vercel.app/`) loads at 320/390/768/1280/1440 px with zero console errors and zero horizontal overflow. Screenshots land in `proof/shots/`. |
 
 Evidence written by the scripts:
@@ -25,24 +27,31 @@ Every command above is a **read**. Nothing in this directory calls `reset`, `see
 `resolve_dispute`, `set_paused`, `withdraw` or any other state-changing method against
 `contract.attestor-overcover.testnet`.
 
-## Isolated fresh deployment — blocked, and why
+## Isolated fresh deployment
 
-The strongest possible proof would be a **fresh, isolated deployment** of the contract that anyone
-can reproduce end-to-end without touching the shared town. That is not possible from this
-environment right now, for a funding reason that is worth stating plainly:
+A **fresh, isolated deployment** of the v2 contract is reproducible from a clean clone with network
+access and a working testnet faucet:
 
-- Deploying the contract and running the full cycle needs roughly **3.5–3.7 NEAR** of testnet
-  storage and gas. Testnet accounts must be created and funded through the NEAR testnet faucet.
-- The faucet is rate-limited (`429 Rate limit exceeded, retry in 8 hours`) and the only funded
-  account available holds about **0.84 NEAR** — far below what a fresh deployment costs.
-- No other free faucet accepted the request (`helper.testnet.near.org` 429; the historical
-  `testnet-faucet.near.org` no longer resolves).
+```bash
+npm ci --ignore-scripts
+npm run verify:testnet-deploy   # creates a throwaway identity graph, deploys, proves the guard
+```
 
-So the reproducible proof here rests on the **already-deployed** contract, whose entire history is
-on-chain and independently checkable — which is the point. The bytecode comparison in
-`verify:proof` is what ties the running contract back to this exact source.
+`proof/testnet-v2-deploy.mjs` does exactly that on real testnet: it funds a throwaway root from the
+faucet, creates the identity graph, deploys the **compiled** wasm, initialises and configures it,
+funds the pool, buys one real policy, and then shows a third-party `migrate()` is refused on the live
+chain. The contract id, wasm sha256 and every transaction hash are written to
+`proof/testnet-v2-deploy.json`. It is not a unit test — it is a real deployment you can inspect on a
+block explorer.
 
-If you have a funded testnet account, you can run the isolated cycle yourself from a clean clone:
+The shared **live** contract `contract.attestor-overcover.testnet` is a separate, earlier deployment
+(v1). Closing SEC-1 **on that address** is not something a read-only proof can do: it needs the
+contract's full-access key, held only by the operator (`docs/DEPLOY_RUNBOOK.md`, `node
+driver/upgrade.js`). The bytecode comparison in `verify:proof` is what ties the running live contract
+back to its exact source meanwhile.
+
+If the faucet is rate-limited, the script prints `SKIP` and exits 0; set `REQUIRE_TESTNET=1` to make a
+missing faucet a failure.
 
 ```bash
 npm ci --ignore-scripts

@@ -16,8 +16,10 @@ Reproduce the whole thing:
 npm ci --ignore-scripts
 npm run test:model && npm run test:contract && npm run test:console && npm run test:agent
 npm run test:agent-eval     # 32 — product-feed schema/premium + agent boundary (offline) + independent-client integration
+npm run test:deploy         # 3 — the deploy/upgrade paths refuse a stale (guard-less) wasm
 npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
 npm run verify:agent        # limits engine vs the live product
+npm run verify:upgrade      # 8/8 — the SEC-1 guard on the compiled wasm (real neard node)
 npm run verify:connectivity # 12/12 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
 npm run axe                 # 0 violations, page + dialog
@@ -334,6 +336,59 @@ Console tests went 78 → 87; agent tests 36 → 45; agent-eval 22 → 32.
 
 Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SECURITY_PRE_AUDIT.md`**.
 
+## Defects fixed in this mission (2026-11-11, v2 testnet deploy — `fix/v2-deploy-tooling`)
+
+25. **CRITICAL — a stale `overcover.wasm` would deploy the SEC-1 vulnerability.** Root cause: the
+    `contract/target/.../overcover.wasm` committed to the working tree (built before the SEC-1 fix)
+    carries the v2 exports but **no** migrate guard. `npm run deploy` would have deployed it and left
+    the takeover open, while every test still passed (the tests exercise the source, not the artifact).
+    Found by running the new `proof/upgrade-guard.mjs` against the prebuilt artifact: a third-party
+    `migrate()` was *accepted* (owner became the attacker). Fix: both `driver/deploy.js` and the new
+    `driver/upgrade.js` now refuse to run unless the wasm contains the guard string
+    (`migrate may only be called by the contract account itself`), before any destructive step.
+    Regressions: `tests/upgrade-guard-refusal.test.mjs` (3) + `proof/upgrade-guard.mjs` (8/8).
+26. **The deploy runbook described an in-place upgrade that had no implementation.** Root cause:
+    `driver/deploy.js` only does the destructive delete-and-recreate path; the runbook's "in-place
+    upgrade note" was prose with no script, so the only shipped path wiped the pool and policies.
+    Fix: `driver/upgrade.js` (DeployContract + self-call `migrate` + reconfigure) with a `--plan`
+    mode that prints the exact operations and costs and sends nothing, plus shared `configureContract`
+    extracted from `deploy.js`. Proven on the compiled wasm by `proof/upgrade-guard.mjs`.
+27. **The SEC-1 guard was proven in Rust unit tests but never on the compiled wasm.** Root cause: the
+    sandbox lifecycle exercised the happy path and the paused-refusal, not the migrate guard. Fix:
+    `proof/upgrade-guard.mjs` (8/8) runs the built wasm on a real `neard` node and asserts the
+    third-party refusal, the unchanged state, the repeated refusal and the permitted self-call. Added
+    to CI (`npm run verify:upgrade`, `REQUIRE_SANDBOX=1`).
+
+## Blockchain evidence (real testnet)
+
+**Isolated v2 deployment — `npm run verify:testnet-deploy` (9/9), 2026-11-11.** A throwaway
+faucet-funded identity graph deployed the compiled v2 wasm to real NEAR testnet and exercised it:
+
+- Contract: `contract.ovc-v2-deploy-mwccnjmr.testnet` (isolated; the shared live contract is
+  untouched — see below).
+- Deployed module sha256 `78ddebb145f88c963ad1c33e22f5a798b0e1777454d9e6edee1cad53532f6471`
+  (462,785 bytes) — independently re-read from the chain and byte-identical to the local build.
+  `code_hash` `98pC7CzB4tjtNjBpcQNbQRF1PY6q7q1zpxS7LQ5GTND6`.
+- A real `buy_cover` created policy 1: tx
+  `682okkqHhQ6XieGa5MHrAwcRyxhUXn9EsLXRKq8rDHsb` (signer `buyer.ovc-v2-deploy-mwccnjmr.testnet`,
+  `SuccessValue`), policy `{"id":1,"buyer":"buyer.ovc-v2-deploy-mwccnjmr.testnet","product_id":"heat-lagos","payout":"300000000000000000000000","premium":"15000000000000000000000","status":"active"}`
+  read back over raw RPC.
+- SEC-1 on the live chain: a third-party `migrate()` from `attacker.…` panicked with
+  `migrate may only be called by the contract account itself`; the owner was unchanged afterwards.
+- Configured state read back: 3 operators (quorum 2), 3 resolvers, 1 metric product.
+- Evidence file: `proof/testnet-v2-deploy.json`.
+
+**The shared live contract is unchanged by this mission.** `contract.attestor-overcover.testnet`
+still serves v1: `code_hash` `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, module sha256
+`1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. Closing SEC-1 there needs the
+operator key (see below).
+
+**Live-contract evidence (unchanged, re-verified).** `npm run verify:proof` → 12/12: the deployed v1
+module is byte-identical to the v1 source (`18ec7f08`); the pool is solvent (capital 14.05 / reserved
+10.50 NEAR) and reconciles; all 18 `demo-log.json` transactions resolve on-chain; the two autonomous
+agent purchases are real `buy_cover` calls each tied to its policy; the settled policies paid as
+shown. `npm run verify:agent` confirms the spend engine against the live product definition.
+
 ## Not fixed / not verified (honest list)
 
 - **A live HERE/Meteor extension approval is not captured** — it needs an interactive browser with the
@@ -344,18 +399,20 @@ Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SE
   cleanly with an actionable message; it is not part of `npm test`. Status: BLOCKED BY HUMAN ACTION
   (funded operator account).
 - **A fresh isolated contract deploy is not possible here** — it needs ~3.5–3.7 NEAR and the testnet
-  faucet is rate-limited. Status: BLOCKED BY EXTERNAL SERVICE. The proof rests on the already-deployed
-  contract, tied to source by the wasm sha256 (`1f30ccf1…`, rebuilt locally and matched).
-- **The v2 contract (with the SEC-1 fix) is merged but not deployed.** The v2 build (multi-operator
-  oracle quorum + resolver dispute resolution, generic metric model, hardened `migrate`) is
-  implemented and proven end-to-end in a **local sandbox** (`npm run verify:sandbox` = 21/21: buy →
-  operator quorum → dispute → resolver quorum → settle, plus refusals). It is now integrated with
-  `main` in PR #9 (merge of the PR head `0176877a`; CI green on `9c4182d5`). It is **not** on testnet,
-  because deploying it needs the funded operator key this environment does not hold
-  (`docs/DEPLOY_RUNBOOK.md`). The public console therefore reads the live **v1** contract; its v2
-  rendering path is present but gated (`CONTRACT_V2`), and the v1 path is the one exercised. The
-  **SEC-1 vulnerability remains live on testnet** until this deploy happens. Status: IMPLEMENTED AND
-  VERIFIED IN SANDBOX, MERGED, NOT DEPLOYED — the single remaining BLOCKED BY HUMAN ACTION item.
+  faucet was rate-limited in the earlier environment. The proof rests on the already-deployed
+  contract, tied to source by the wasm sha256 (`1f30ccf1…`, rebuilt locally and matched). In a
+  container where the faucet is available, `proof/testnet-v2-deploy.mjs` performs a real, isolated v2
+  deployment (see §"Blockchain evidence").
+- **The v2 contract (with the SEC-1 fix) is merged but not deployed to the live address.** The v2 build
+  (multi-operator oracle quorum + resolver dispute resolution, generic metric model, hardened
+  `migrate`) is implemented and proven end-to-end in a **local sandbox** (`npm run verify:sandbox` =
+  21/21) and on a **real, isolated testnet deployment** (`proof/testnet-v2-deploy.mjs`). It is **not**
+  on the live address `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the
+  contract's full-access key, which this environment does not hold. The public console therefore reads
+  the live **v1** contract; its v2 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1
+  vulnerability remains live** until the operator runs `node driver/upgrade.js` (non-destructive,
+  ~4.63 NEAR refundable stake). Status: IMPLEMENTED, VERIFIED IN SANDBOX AND ON AN ISOLATED TESTNET
+  DEPLOY, MERGED — the single remaining BLOCKED BY HUMAN ACTION item.
 - **No professional audit; testnet only.** Not for real funds. An internal pre-audit
   (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
   not a substitute for a third-party audit.

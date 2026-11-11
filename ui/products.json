@@ -1,0 +1,1348 @@
+{
+  "schema": "https://overcover.vercel.app/products.schema.json",
+  "generated_at": "2026-11-11T12:17:26.208Z",
+  "source": {
+    "network": "testnet",
+    "contract": "contract.attestor-overcover.testnet",
+    "rpc": "public NEAR testnet JSON-RPC call_function views",
+    "explorer": "https://testnet.nearblocks.io/address/contract.attestor-overcover.testnet",
+    "method": "list_products / get_config / get_pool / list_observations"
+  },
+  "protocol": {
+    "paused": false,
+    "solvent": true,
+    "capital_yocto": "14050000000000000000000000",
+    "reserved_yocto": "10500000000000000000000000",
+    "available_yocto": "3550000000000000000000000",
+    "policy_count": 15,
+    "challenge_window_sec": 60,
+    "challenge_bond_yocto": "100000000000000000000000"
+  },
+  "disclaimer": "Testnet prototype with test funds. Unaudited. Parametric (payout follows the index reading, not a loss assessment). Not an offer of real insurance.",
+  "products": [
+    {
+      "id": "p-1794315395272-3",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "1000000000000000000000000",
+        "reserved_yocto": "1000000000000000000000000",
+        "capacity_left_yocto": "0",
+        "capacity_left_near": "0.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794315406913-4",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 1000,
+        "rate_percent": "10.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "100000000000000000000000",
+          "premium_near": "0.1000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794315413714-5",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794315420789-6",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 100,
+        "rate_percent": "1.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000000",
+          "premium_yocto": "10000000000000000000000000",
+          "premium_near": "10.0000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1000.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "100000000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "100000000000000000000000000000",
+        "capacity_left_near": "100000.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794315450827-7",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "500000000000000000000000",
+          "premium_yocto": "25000000000000000000000",
+          "premium_near": "0.0250"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "500000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "0.5000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "500000000000000000000000",
+        "capacity_left_yocto": "9500000000000000000000000",
+        "capacity_left_near": "9.5000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "rain-lagos",
+      "named": true,
+      "sellable": true,
+      "kind": "offering",
+      "status": "available",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 2,
+        "threshold_mm": "0.2",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.2 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "100000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.1000",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "50000000000000000000000000",
+        "reserved_yocto": "4000000000000000000000000",
+        "capacity_left_yocto": "46000000000000000000000000",
+        "capacity_left_near": "46.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "rain-bergen-dry",
+      "named": true,
+      "sellable": false,
+      "kind": "broken-definition",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "bergen"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 5000,
+        "threshold_mm": "500.0",
+        "at_plausibility_ceiling": true,
+        "statement": "Pays if bergen rainfall is at or above 500.0 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "500000000000000000000000",
+          "premium_yocto": "25000000000000000000000",
+          "premium_near": "0.0250"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "500000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "0.5000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "500000000000000000000000",
+        "reserved_yocto": "500000000000000000000000",
+        "capacity_left_yocto": "0",
+        "capacity_left_near": "0.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319206542-3",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "1000000000000000000000000",
+        "reserved_yocto": "1000000000000000000000000",
+        "capacity_left_yocto": "0",
+        "capacity_left_near": "0.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319217925-4",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 1000,
+        "rate_percent": "10.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "100000000000000000000000",
+          "premium_near": "0.1000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319225200-5",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319232157-6",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 100,
+        "rate_percent": "1.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000000",
+          "premium_yocto": "10000000000000000000000000",
+          "premium_near": "10.0000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1000.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "100000000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "100000000000000000000000000000",
+        "capacity_left_near": "100000.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319261805-7",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "500000000000000000000000",
+          "premium_yocto": "25000000000000000000000",
+          "premium_near": "0.0250"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "500000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "0.5000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "500000000000000000000000",
+        "capacity_left_yocto": "9500000000000000000000000",
+        "capacity_left_near": "9.5000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319315964-3",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "1000000000000000000000000",
+        "reserved_yocto": "1000000000000000000000000",
+        "capacity_left_yocto": "0",
+        "capacity_left_near": "0.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319327608-4",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 1000,
+        "rate_percent": "10.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "100000000000000000000000",
+          "premium_near": "0.1000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319334021-5",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319340816-6",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 100,
+        "rate_percent": "1.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000000",
+          "premium_yocto": "10000000000000000000000000",
+          "premium_near": "10.0000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1000.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "100000000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "100000000000000000000000000000",
+        "capacity_left_near": "100000.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794319370961-7",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "500000000000000000000000",
+          "premium_yocto": "25000000000000000000000",
+          "premium_near": "0.0250"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "500000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "0.5000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "500000000000000000000000",
+        "capacity_left_yocto": "9500000000000000000000000",
+        "capacity_left_near": "9.5000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794337387611-3",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "1000000000000000000000000",
+        "reserved_yocto": "1000000000000000000000000",
+        "capacity_left_yocto": "0",
+        "capacity_left_near": "0.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794337399290-4",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 1000,
+        "rate_percent": "10.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "100000000000000000000000",
+          "premium_near": "0.1000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794337405987-5",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000",
+          "premium_yocto": "50000000000000000000000",
+          "premium_near": "0.0500"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "10000000000000000000000000",
+        "capacity_left_near": "10.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794337413162-6",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 100,
+        "rate_percent": "1.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "1000000000000000000000000000",
+          "premium_yocto": "10000000000000000000000000",
+          "premium_near": "10.0000"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "1000000000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "1000.0000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "100000000000000000000000000000",
+        "reserved_yocto": "0",
+        "capacity_left_yocto": "100000000000000000000000000000",
+        "capacity_left_near": "100000.0000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "p-1794337442850-7",
+      "named": false,
+      "sellable": false,
+      "kind": "demo-fixture",
+      "status": "not-offered",
+      "metric": {
+        "name": "rainfall",
+        "unit": "mm",
+        "city": "lagos"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 1,
+        "threshold_mm": "0.1",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos rainfall is at or above 0.1 mm on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "500000000000000000000000",
+          "premium_yocto": "25000000000000000000000",
+          "premium_near": "0.0250"
+        }
+      },
+      "payout": {
+        "min_yocto": "50000000000000000000000",
+        "max_yocto": "500000000000000000000000",
+        "min_near": "0.0500",
+        "max_near": "0.5000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "10000000000000000000000000",
+        "reserved_yocto": "500000000000000000000000",
+        "capacity_left_yocto": "9500000000000000000000000",
+        "capacity_left_near": "9.5000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.attestor-overcover.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 60,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    }
+  ],
+  "offerings": [
+    "rain-lagos"
+  ],
+  "observation_count": 16
+}

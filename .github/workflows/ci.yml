@@ -40,6 +40,9 @@ jobs:
       - name: Agent limits, API and u128-precision tests
         run: npm run test:agent
 
+      - name: Product feed + agent-evaluation tests
+        run: npm run test:agent-eval
+
       - name: Build the contract to wasm
         run: |
           # The wasm embeds the absolute cargo registry path, so a byte-identical

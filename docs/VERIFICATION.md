@@ -74,7 +74,8 @@ npm run test:console    # 87 regression + live-RPC tests (page regressions + end
 npm run test:agent      # 45 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
 npm run test:agent-eval # 32 product-feed schema/premium + agent boundary + independent-client integration
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
-npm run verify:sandbox  # 21/21 on a local neard node (v2 branch: NEAR_SANDBOX_BIN=... node tests/sandbox-lifecycle.mjs)
+# v2 lifecycle on a local neard node (branch feat/decentralized-insurance-lifecycle only):
+#   NEAR_SANDBOX_BIN=/path/to/near-sandbox npm run verify:sandbox   # 21/21
 ```
 
 `test:onchain` sends real attacks to the deployed contract and asserts each is **refused with the

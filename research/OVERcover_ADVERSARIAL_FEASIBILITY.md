@@ -7,7 +7,7 @@ underwriter / dishonest oracle operator / opportunistic claimant, to break Overc
 model and technical assumptions **before** writing the Rust contract.
 
 **How the attacks were run.** Every attack is executable, not narrative. I built a pure reference
-model of the mutual's accounting rules (`research/model/mutual.mjs`, BigInt yoctoNEAR) and an
+model of the mutual's accounting rules (`sim/engine.mjs`, BigInt yoctoNEAR) and an
 attack suite (`research/model/attacks.mjs`) that reproduces each attack and records the result.
 Run it yourself:
 
@@ -16,9 +16,9 @@ cd overcover
 node research/model/attacks.mjs     # exits non-zero if any attack is EXPLOITABLE
 ```
 
-Current result: **31 attacks, 0 exploitable, 31 defended.**
+Current result: **31 attacks, 0 exploitable, 60 defended.**
 
-The model is the executable SPEC for the Rust contract: every rule enforced in `mutual.mjs` is
+The model is the executable SPEC for the Rust contract: every rule enforced in `sim/engine.mjs` is
 intended to be enforced on-chain, and the Rust unit tests mirror this suite (Mission 5).
 
 ---

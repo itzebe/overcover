@@ -15,7 +15,7 @@ on-chain/local artefact. Statuses: `FIXED` · `NOT FIXED` · `BLOCKED`.
   wallet module (`ui/wallet.js` / `ui/index.html`), and the service boundary.
 - Reproduce the **exact deployed bytecode** on a local `neard` sandbox (neard 2.14, real JSON-RPC,
   real gas, real signatures) and attack it.
-- Run the pure-model adversarial suite (31 attacks) and the Rust unit tests.
+- Run the pure-model adversarial suite (60 attacks) and the Rust unit tests.
 - Enumerate the 17 live adversarial tests and state, for each, why it is or is not runnable here.
 - Static scans: secret scan over tracked files, dependency audit, "no owner-only method reachable
   from the UI" scan.
@@ -30,7 +30,7 @@ from RPC and re-hashed locally.
 
 ### SEC-1 — CRITICAL — `migrate()` is unauthenticated: any account can overwrite all state
 
-**Where:** `contract/src/lib.rs`, `pub fn migrate` (deployed v1 **and** v2 on PR #9).
+**Where:** `contract/src/lib.rs`, `pub fn migrate` (the deployed **v1** module; fixed in the v2 source on PR #9).
 
 **What.** `migrate` is declared `#[init(ignore_state)]`. A NEAR `init` method runs **before any
 state is read**, so it cannot consult the stored `owner`. As written it accepts `owner`, `attestor`,
@@ -91,12 +91,18 @@ SAFE  migrate() was refused or had no effect
 ```
 
 Rust regression tests: `migrate_by_a_third_party_is_refused`,
-`migrate_by_the_contract_itself_is_allowed` (`cargo test` → 36 passed).
+`migrate_by_the_contract_itself_is_allowed`, plus the SEC-1 block `sec1_a_third_party_cannot_migrate`,
+`sec1_a_refused_migrate_leaves_state_untouched`, `sec1_repeated_third_party_migrate_is_still_refused`,
+`sec1_the_contract_account_itself_may_migrate` (`cargo test` → 40 passed).
 
-**Status: FIXED in source (v2).** The fix is on branch `feat/decentralized-insurance-lifecycle`
-(PR #9). **The live v1 contract remains vulnerable** because patching it requires redeploying the
-wasm, which needs the operator key this environment does not hold (see §4). This is the single most
-important reason the v2 deploy must happen before the submission is presented as hardened.
+Independent proof: `npm run verify:migration` (6/6) — the deployed module is byte-identical to the v1
+source (`1f30ccf1…`, rebuilt from `18ec7f08`), v1's `migrate()` has the vulnerable shape
+(`#[init(ignore_state)]`, no guard), v2's carries the guard, and the guard tests pass.
+
+**Status: FIXED in source (v2); merged into `main` via PR #9, NOT YET DEPLOYED.** The live v1 contract
+remains vulnerable because patching it requires redeploying the wasm, which needs the operator key
+this environment does not hold (see §4). This is the single most important reason the v2 deploy must
+happen before the submission is presented as hardened.
 
 ---
 
@@ -183,7 +189,7 @@ clear need.
 
 | Threat | Control | Evidence |
 | --- | --- | --- |
-| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 31-attack model (31 defended); Rust tests; live `check_invariant` true |
+| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 60-attack model (60 defended); Rust tests; live `check_invariant` true |
 | Withdraw capital backing live policies | `withdraw` refuses unless `capital − amount ≥ reserved` | model A5; live `reconcile` true |
 | Buyer re-prices or underpays | Product owns threshold + premium; deposit must equal `quote` | model A4; Rust tests |
 | Forged / replayed / cross-contract observation | ed25519 signature binds city, date, value, time, nonce **and contract id** | Rust tests; live demo |
@@ -248,7 +254,7 @@ The 17 cases it covers, and where each is independently defended today:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Reference adversarial model | `npm run test:model` | 31 attacks, 31 defended, 0 exploitable |
+| Reference adversarial model | `npm run test:model` | 60 attacks, 60 defended, 0 exploitable |
 | Contract unit tests | `npm run test:contract` | 21 passed (v1) / 36 passed (v2, PR #9) |
 | Console + wallet journey | `npm run test:console` | 87 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 51 passed |

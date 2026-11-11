@@ -93,7 +93,7 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
                        Open-Meteo (keyless, free)
                               │  current + hourly cross-check
                               ▼
-   attestor key ──▶ driver/oracle.js ──▶ ed25519 sign ──▶ report_observation(city, date, value, sig)
+   operator key ──▶ driver/operator.js ──▶ ed25519 sign ──▶ report_observation(city, date, value, sig)
                               │                                     │
                               ▼                                     ▼
    business ── buy_cover ──▶ ┌─────────────────────────────────────────────┐
@@ -108,13 +108,17 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
   with a challenge window; beneficiary payouts; per-product and pool capacity caps; provider
   shares; a `reconcile` view for the solvency identity. Full surface in
   [`docs/CONTRACT.md`](docs/CONTRACT.md).
-- **Oracle** (`driver/oracle.js`): reads Open-Meteo *current* precipitation and cross-checks it
-  against the *hourly* series; refuses to sign if the two disagree by more than 0.5 mm.
+- **Oracle operator** (`driver/operator.js`): one independent operator node — reads a public index
+  for a metric/city/date and signs the canonical reading with its own ed25519 key. The contract
+  finalises an observation only when a quorum of distinct operators agree within tolerance.
+- **Metric adapters** (`driver/adapters.js`): turn a `(metric, city, date)` into a tenths-scaled
+  reading from a keyless source (Open-Meteo); adding a risk category is a new adapter, not a
+  contract change.
 - **Attestor** (`driver/attestor.js`): signs the exact message the contract verifies.
 - **Driver** (`driver/`): identity graph, deploy with a clean-state reset, high-level actions, and
   the full-cycle demo.
-- **Reference model** (`research/model/`): an executable BigInt model of the accounting rules and a
-  31-attack suite that runs *before* the contract.
+- **Reference model** (`research/model/`, `sim/`): an executable BigInt model of the accounting rules
+  plus the full-lifecycle and adversarial simulation (`npm run simulate:full`, `sim/evidence.json`).
 
 ## The console
 
@@ -196,15 +200,16 @@ explorer links.
 
 ```bash
 npm ci --ignore-scripts
-npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
-npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 87 regression + live-RPC tests          (browser console + end-to-end wallet journey)
+npm run test:model      # 60 attacks, 60 defended, 0 exploitable  (reference model)
+npm run test:contract   # 40 Rust unit tests                      (contract logic)
+npm run test:console    # 90 regression + live-RPC tests          (browser console + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
 npm run test:agent-eval # 32 product-feed schema/premium + agent-eval boundary + independent-client integration tests
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run products:feed   # regenerate ui/products.json from the live contract
 npm run verify:proof    # one-command independent proof of the headline claims (bytecode,
                         #   solvency, all 18 demo txs, the agent's buys, settled outcomes)
+npm run verify:migration # SEC-1 proof: the deployed v1 migrate() takeover, and the v2 guard
 npm run verify:agent    # the agent's spend-authorization engine vs the live product definition
 npm run verify:connectivity  # the public console works with no local agent (needs a Chromium)
 npm run verify:live     # the LIVE production URL at 320–1440 px (needs a Chromium)

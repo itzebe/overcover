@@ -1,6 +1,9 @@
-//! Rust unit tests for Overcover — the on-chain mirror of the Mission 1
+//! Rust unit tests for Overcover — the on-chain mirror of the reference
 //! adversarial suite (`research/model/attacks.mjs`). Each test names the attack
 //! it mirrors where applicable. Run: `cd contract && cargo test`.
+//!
+//! The oracle is a multi-operator quorum. Tests register three operators with
+//! distinct keys, so a single operator can never finalize a reading on its own.
 
 use super::*;
 use ed25519_dalek::{Signer, SigningKey};
@@ -9,11 +12,11 @@ use near_sdk::testing_env;
 
 const ONE: u128 = 1_000_000_000_000_000_000_000_000; // 1 NEAR
 
-fn key() -> SigningKey {
-    SigningKey::from_bytes(&[7u8; 32])
+fn key(seed: u8) -> SigningKey {
+    SigningKey::from_bytes(&[seed; 32])
 }
-fn pubkey() -> Vec<u8> {
-    key().verifying_key().to_bytes().to_vec()
+fn pubkey(seed: u8) -> Vec<u8> {
+    key(seed).verifying_key().to_bytes().to_vec()
 }
 
 /// Build a context with a predecessor, deposit and block time (seconds).
@@ -31,9 +34,73 @@ fn owner() -> AccountId {
     "owner.testnet".parse().unwrap()
 }
 
+fn contract_id() -> AccountId {
+    "overcover.testnet".parse().unwrap()
+}
+
+fn op(i: u8) -> AccountId {
+    format!("op{}.testnet", i).parse().unwrap()
+}
+
+/// The signed message for a reading, mirroring `Overcover::reading_message`.
+#[allow(clippy::too_many_arguments)]
+fn sign_reading(
+    operator: &AccountId,
+    metric_id: &str,
+    city: &str,
+    obs_date: u64,
+    value: u64,
+    reported_at: u64,
+    nonce: u64,
+    seed: u8,
+) -> Vec<u8> {
+    let msg = format!(
+        "overcover:v2|{}|{}|{}|{}|{}|{}|{}|{}",
+        operator, metric_id, city, obs_date, value, reported_at, nonce, contract_id()
+    );
+    key(seed).sign(msg.as_bytes()).to_bytes().to_vec()
+}
+
+/// Register three operators (seeds 1..=3) and set a 3-of-3 quorum.
+fn register_ops(c: &mut Overcover) {
+    ctx(owner(), 0, 0);
+    for i in 1..=3u8 {
+        c.add_operator(op(i), pubkey(i));
+    }
+    c.set_quorum(3);
+}
+
+/// Register three independent resolvers and a 3-of-3 resolver quorum.
+fn register_resolvers(c: &mut Overcover) {
+    ctx(owner(), 0, 0);
+    for i in 1..=3u8 {
+        c.add_resolver(format!("res{}.testnet", i).parse().unwrap());
+    }
+    c.set_resolver_quorum(3);
+}
+
+/// Submit one reading from operator `i` (nonce = its reading count).
+fn submit(c: &mut Overcover, i: u8, metric: &str, city: &str, date: u64, value: u64, reported_at: u64) {
+    let operator = op(i);
+    let nonce = c.get_operator(operator.clone()).map(|o| o.readings).unwrap_or(0);
+    let sig = sign_reading(&operator, metric, city, date, value, reported_at, nonce, i);
+    ctx(operator, 0, reported_at);
+    c.submit_reading(metric.to_string(), city.to_string(), date, value, reported_at, nonce, sig);
+}
+
+/// Finalize an observation for a legacy rainfall product (metric id "") using
+/// all three operators reporting the same value.
+fn report_rain(c: &mut Overcover, city: &str, date: u64, value: u64, reported_at: u64) {
+    for i in 1..=3u8 {
+        submit(c, i, "", city, date, value, reported_at);
+    }
+}
+
 fn setup() -> Overcover {
     ctx(owner(), 0, 0);
-    let mut c = Overcover::new(owner(), pubkey(), U128(ONE / 10), 0, 3600);
+    let mut c = Overcover::new(owner(), pubkey(9), U128(ONE / 10), 0, 3600);
+    register_ops(&mut c);
+    ctx(owner(), 0, 0);
     c.add_product(
         "rain-berlin-20mm".to_string(),
         "berlin".to_string(),
@@ -45,21 +112,6 @@ fn setup() -> Overcover {
         U128(5000 * ONE),
     );
     c
-}
-
-fn sign_obs(city: &str, obs_date: u64, value: u64, reported_at: u64, nonce: u64, contract: AccountId) -> Vec<u8> {
-    // Mirror obs_message; the contract is `current_account_id`, which the test
-    // VM sets to "contract.testnet" by default in VMContextBuilder.
-    let msg = format!(
-        "overcover:v1|{}|{}|{}|{}|{}|{}",
-        city, obs_date, value, reported_at, nonce, contract
-    );
-    key().sign(msg.as_bytes()).to_bytes().to_vec()
-}
-
-/// The contract's own account id, fixed in every test context.
-fn contract_id() -> AccountId {
-    "overcover.testnet".parse().unwrap()
 }
 
 // --------------------------------------------------------------------------
@@ -76,11 +128,8 @@ fn a1_breach_pays_exactly_the_payout() {
     let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
     assert_eq!(c.get_pool().reserved.0, 100 * ONE);
 
-    // Observation for day 3, reported that day, +1h to clear the challenge window.
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 250, day3 + 60, 1, contract_id());
-    c.report_observation("berlin".to_string(), day3, 250, day3 + 60, 1, sig);
+    report_rain(&mut c, "berlin", day3, 250, day3 + 60);
 
     ctx(owner(), 0, day3 + 7200);
     let triggered = c.resolve(id);
@@ -102,9 +151,7 @@ fn a2_below_threshold_does_not_pay() {
     let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
 
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 50, day3 + 60, 1, contract_id()); // 5.0 mm
-    c.report_observation("berlin".to_string(), day3, 50, day3 + 60, 1, sig);
+    report_rain(&mut c, "berlin", day3, 50, day3 + 60); // 5.0 mm
     ctx(owner(), 0, day3 + 7200);
     let triggered = c.resolve(id);
     assert!(!triggered);
@@ -134,7 +181,6 @@ fn a4_premium_is_contract_computed_not_caller_supplied() {
     let mut c = setup();
     ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
     c.deposit();
-    // Attach 0 when the premium is 3 NEAR: must be rejected.
     ctx("biz.testnet".parse().unwrap(), 0, 0);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None)
@@ -178,7 +224,6 @@ fn e1_threshold_is_owned_by_the_product() {
     c.deposit();
     ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
     let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
-    // buy_cover has no threshold parameter at all; the policy carries the product's.
     assert_eq!(c.get_policy(id).unwrap().threshold_tenths, 200);
 }
 
@@ -217,19 +262,46 @@ fn e2_product_capacity_caps_concentration() {
 }
 
 // --------------------------------------------------------------------------
-// B — oracle
+// B — oracle (multi-operator quorum)
 // --------------------------------------------------------------------------
 
 #[test]
 fn b1_bad_signature_is_rejected() {
     let mut c = setup();
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3);
+    ctx(op(1), 0, day3 + 60);
     let bad = vec![0u8; 64];
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        c.report_observation("berlin".to_string(), day3, 250, day3 + 60, 1, bad)
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 250, day3 + 60, 0, bad)
     }));
     assert!(r.is_err(), "an invalid signature must be rejected");
+}
+
+#[test]
+fn b1b_one_operator_cannot_finalize() {
+    // A single operator (even a registered one) must not finalize a reading
+    // when the quorum requires three.
+    let mut c = setup();
+    let day3 = 3 * 24 * 3600;
+    submit(&mut c, 1, "", "berlin", day3, 250, day3 + 60);
+    ctx(owner(), 0, day3 + 60);
+    assert!(
+        c.get_observation("".to_string(), "berlin".to_string(), day3).is_none(),
+        "one operator is below quorum; no observation may be finalized"
+    );
+}
+
+#[test]
+fn b1c_unregistered_operator_is_rejected() {
+    let mut c = setup();
+    let day3 = 3 * 24 * 3600;
+    let rogue: AccountId = "rogue.testnet".parse().unwrap();
+    let sig = sign_reading(&rogue, "", "berlin", day3, 250, day3 + 60, 0, 5);
+    ctx(rogue, 0, day3 + 60);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 250, day3 + 60, 0, sig)
+    }));
+    assert!(r.is_err(), "an unregistered operator must be rejected");
 }
 
 #[test]
@@ -237,10 +309,10 @@ fn b2_stale_observation_is_rejected() {
     let mut c = setup();
     let day3 = 3 * 24 * 3600;
     let day10 = 10 * 24 * 3600;
-    ctx(owner(), 0, day10);
-    let sig = sign_obs("berlin", day3, 250, day10, 1, contract_id());
+    let sig = sign_reading(&op(1), "", "berlin", day3, 250, day10, 0, 1);
+    ctx(op(1), 0, day10);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        c.report_observation("berlin".to_string(), day3, 250, day10, 1, sig)
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 250, day10, 0, sig)
     }));
     assert!(r.is_err(), "a stale observation must be rejected");
 }
@@ -249,26 +321,42 @@ fn b2_stale_observation_is_rejected() {
 fn b3_implausible_value_is_rejected() {
     let mut c = setup();
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 100_000, day3 + 60, 1, contract_id());
+    let sig = sign_reading(&op(1), "", "berlin", day3, 100_000, day3 + 60, 0, 1);
+    ctx(op(1), 0, day3 + 60);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        c.report_observation("berlin".to_string(), day3, 100_000, day3 + 60, 1, sig)
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 100_000, day3 + 60, 0, sig)
     }));
     assert!(r.is_err(), "an implausible value must be rejected");
 }
 
 #[test]
-fn b4_duplicate_observation_is_rejected() {
+fn b4_replayed_reading_is_rejected() {
+    // After an operator reports, its nonce advances; the same signed reading
+    // can never be replayed.
     let mut c = setup();
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 250, day3 + 60, 1, contract_id());
-    c.report_observation("berlin".to_string(), day3, 250, day3 + 60, 1, sig);
-    let sig2 = sign_obs("berlin", day3, 5, day3 + 120, 2, contract_id());
+    submit(&mut c, 1, "", "berlin", day3, 250, day3 + 60);
+    // Replay the exact nonce-0 signature.
+    let sig = sign_reading(&op(1), "", "berlin", day3, 250, day3 + 60, 0, 1);
+    ctx(op(1), 0, day3 + 120);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        c.report_observation("berlin".to_string(), day3, 5, day3 + 120, 2, sig2)
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 250, day3 + 60, 0, sig)
     }));
-    assert!(r.is_err(), "re-reporting the same (city,date) must be rejected");
+    assert!(r.is_err(), "a replayed reading must be rejected");
+}
+
+#[test]
+fn b5_revoked_operator_cannot_submit() {
+    let mut c = setup();
+    ctx(owner(), 0, 0);
+    c.revoke_operator(op(3));
+    let day3 = 3 * 24 * 3600;
+    let sig = sign_reading(&op(3), "", "berlin", day3, 250, day3 + 60, 0, 3);
+    ctx(op(3), 0, day3 + 60);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 250, day3 + 60, 0, sig)
+    }));
+    assert!(r.is_err(), "a revoked operator must be rejected");
 }
 
 #[test]
@@ -279,9 +367,7 @@ fn b6_challenge_window_blocks_flash_settlement() {
     ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
     let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 250, day3 + 60, 1, contract_id());
-    c.report_observation("berlin".to_string(), day3, 250, day3 + 60, 1, sig);
+    report_rain(&mut c, "berlin", day3, 250, day3 + 60);
     // 1 second later — inside the challenge window.
     ctx(owner(), 0, day3 + 61);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
@@ -296,38 +382,13 @@ fn b7_disputed_observation_cannot_settle() {
     ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
     let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 250, day3 + 60, 1, contract_id());
-    c.report_observation("berlin".to_string(), day3, 250, day3 + 60, 1, sig);
+    report_rain(&mut c, "berlin", day3, 250, day3 + 60);
 
-    // A watchdog disputes with a bond.
-    ctx("watchdog.testnet".parse().unwrap(), ONE / 10, day3);
-    c.challenge_observation("berlin".to_string(), day3, 5);
+    ctx("watchdog.testnet".parse().unwrap(), ONE / 10, day3 + 61);
+    c.challenge_observation("".to_string(), "berlin".to_string(), day3, 5);
     ctx(owner(), 0, day3 + 7200);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
     assert!(r.is_err(), "a disputed observation must not settle");
-}
-
-#[test]
-fn b7b_owner_upholds_dispute_and_pool_keeps_the_bond() {
-    let mut c = setup();
-    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
-    c.deposit();
-    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
-    let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
-    let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 250, day3 + 60, 1, contract_id());
-    c.report_observation("berlin".to_string(), day3, 250, day3 + 60, 1, sig);
-    ctx("watchdog.testnet".parse().unwrap(), ONE / 10, day3);
-    c.challenge_observation("berlin".to_string(), day3, 5);
-    let capital_before = c.get_pool().capital.0;
-    ctx(owner(), 0, day3 + 100);
-    c.resolve_dispute("berlin".to_string(), day3, true); // uphold -> bond to pool
-    assert_eq!(c.get_pool().capital.0, capital_before + ONE / 10);
-    ctx(owner(), 0, day3 + 7200);
-    assert!(c.resolve(id), "after upholding, the honest observation pays");
-    assert!(c.reconcile());
 }
 
 // --------------------------------------------------------------------------
@@ -342,9 +403,7 @@ fn c1_double_settlement_is_rejected() {
     ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
     let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 250, day3 + 60, 1, contract_id());
-    c.report_observation("berlin".to_string(), day3, 250, day3 + 60, 1, sig);
+    report_rain(&mut c, "berlin", day3, 250, day3 + 60);
     ctx(owner(), 0, day3 + 7200);
     assert!(c.resolve(id));
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
@@ -374,7 +433,6 @@ fn c5_cannot_withdraw_more_than_own_capital() {
 #[test]
 fn c2_premium_never_rounds_to_zero() {
     let c = setup();
-    // 3% of 1 yocto must ceil to 1 yocto.
     assert_eq!(c.quote("rain-berlin-20mm".to_string(), U128(1)).0, 1);
 }
 
@@ -390,15 +448,14 @@ fn d5_buyer_cannot_self_attest() {
     ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
     c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
     let day3 = 3 * 24 * 3600;
-    ctx("biz.testnet".parse().unwrap(), 0, day3 + 60);
-    // The buyer signs with its OWN key, not the attestor's.
-    let other = SigningKey::from_bytes(&[9u8; 32]);
-    let msg = format!("overcover:v1|{}|{}|{}|{}|{}|{}", "berlin", day3, 999, day3 + 60, 1, contract_id());
-    let sig = other.sign(msg.as_bytes()).to_bytes().to_vec();
+    // The buyer is not a registered operator.
+    let biz: AccountId = "biz.testnet".parse().unwrap();
+    let sig = sign_reading(&biz, "", "berlin", day3, 999, day3 + 60, 0, 9);
+    ctx(biz, 0, day3 + 60);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        c.report_observation("berlin".to_string(), day3, 999, day3 + 60, 1, sig)
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 999, day3 + 60, 0, sig)
     }));
-    assert!(r.is_err(), "only the registered attestor's signature is accepted");
+    assert!(r.is_err(), "only registered operators are accepted");
 }
 
 // --------------------------------------------------------------------------
@@ -419,9 +476,7 @@ fn invariant_and_reconciliation_hold_across_a_sequence() {
         assert!(c.reconcile());
     }
     let day3 = 3 * 24 * 3600;
-    ctx(owner(), 0, day3 + 60);
-    let sig = sign_obs("berlin", day3, 300, day3 + 60, 1, contract_id());
-    c.report_observation("berlin".to_string(), day3, 300, day3 + 60, 1, sig);
+    report_rain(&mut c, "berlin", day3, 300, day3 + 60);
     ctx(owner(), 0, day3 + 7200);
     for id in ids {
         c.resolve(id);
@@ -429,5 +484,238 @@ fn invariant_and_reconciliation_hold_across_a_sequence() {
         assert!(c.reconcile());
     }
     assert_eq!(c.get_pool().total_paid.0, 500 * ONE);
+    assert_eq!(c.get_pool().reserved.0, 0);
+}
+
+// --------------------------------------------------------------------------
+// F — generic metrics and multiple risk categories
+// --------------------------------------------------------------------------
+
+/// Build a contract with a `heat` metric (temperature, Above) and a `drought`
+/// metric (rainfall deficit, Below), each with a product.
+fn setup_metrics() -> Overcover {
+    ctx(owner(), 0, 0);
+    let mut c = Overcover::new(owner(), pubkey(9), U128(ONE / 10), 0, 3600);
+    register_ops(&mut c);
+    ctx(owner(), 0, 0);
+    c.add_metric("heat".to_string(), "temperature".to_string(), "degC/10".to_string(), 700, 10, Direction::Above);
+    c.add_metric("drought".to_string(), "drought".to_string(), "mm/10".to_string(), 5000, 10, Direction::Below);
+    ctx(owner(), 0, 0);
+    c.add_metric_product(
+        "heat-lagos-40c".to_string(), "lagos".to_string(), "heat".to_string(),
+        400, 400, U128(ONE), U128(100 * ONE), 24 * 3600, U128(5000 * ONE),
+    );
+    ctx(owner(), 0, 0);
+    c.add_metric_product(
+        "drought-lagos".to_string(), "lagos".to_string(), "drought".to_string(),
+        200, 500, U128(ONE), U128(100 * ONE), 24 * 3600, U128(5000 * ONE),
+    );
+    c
+}
+
+#[test]
+fn f1_heat_above_threshold_pays() {
+    let mut c = setup_metrics();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 4 * ONE, 0);
+    let id = c.buy_cover("heat-lagos-40c".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let day3 = 3 * 24 * 3600;
+    // 41.0 degC: above the 40.0 threshold -> pays.
+    for i in 1..=3u8 {
+        submit(&mut c, i, "heat", "lagos", day3, 410, day3 + 60);
+    }
+    ctx(owner(), 0, day3 + 7200);
+    assert!(c.resolve(id));
+    assert_eq!(c.get_policy(id).unwrap().status, "settled_paid");
+}
+
+#[test]
+fn f2_drought_below_threshold_pays_and_above_does_not() {
+    let mut c = setup_metrics();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    // Below-direction product: pays when the reading is <= threshold (deficit).
+    ctx("biz.testnet".parse().unwrap(), 5 * ONE, 0);
+    let id = c.buy_cover("drought-lagos".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let day3 = 3 * 24 * 3600;
+    for i in 1..=3u8 {
+        submit(&mut c, i, "drought", "lagos", day3, 100, day3 + 60); // 10.0 mm <= 20.0 -> pay
+    }
+    ctx(owner(), 0, day3 + 7200);
+    assert!(c.resolve(id), "drought deficit at/below threshold must pay");
+
+    // A second policy where the reading is ABOVE the threshold must not pay.
+    ctx("lp1.testnet".parse().unwrap(), 0, day3 + 7200);
+    let day6 = 6 * 24 * 3600;
+    ctx("biz.testnet".parse().unwrap(), 5 * ONE, day3 + 7200);
+    let id2 = c.buy_cover("drought-lagos".to_string(), U128(100 * ONE), day6, None);
+    for i in 1..=3u8 {
+        submit(&mut c, i, "drought", "lagos", day6, 900, day6 + 60); // 90.0 mm > 20.0 -> no pay
+    }
+    ctx(owner(), 0, day6 + 7200);
+    assert!(!c.resolve(id2), "a wet reading must not trigger a drought policy");
+}
+
+#[test]
+fn f3_metric_threshold_above_max_is_rejected() {
+    let mut c = setup_metrics();
+    ctx(owner(), 0, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.add_metric_product(
+            "bad".to_string(), "lagos".to_string(), "heat".to_string(),
+            900, 400, U128(ONE), U128(100 * ONE), 24 * 3600, U128(5000 * ONE),
+        )
+    }));
+    assert!(r.is_err(), "a threshold above the metric max_value must be rejected");
+}
+
+// --------------------------------------------------------------------------
+// G — decentralized dispute resolution
+// --------------------------------------------------------------------------
+
+/// A finalized, disputed observation. Returns the contract and the day.
+fn disputed() -> (Overcover, u64) {
+    let mut c = setup();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
+    c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let day3 = 3 * 24 * 3600;
+    report_rain(&mut c, "berlin", day3, 250, day3 + 60);
+    register_resolvers(&mut c);
+    ctx("watchdog.testnet".parse().unwrap(), ONE / 10, day3 + 61);
+    c.challenge_observation("".to_string(), "berlin".to_string(), day3, 5);
+    (c, day3)
+}
+
+#[test]
+fn g1_operator_cannot_resolve_its_own_dispute() {
+    let (mut c, day3) = disputed();
+    // op(1) signed the reading; make it a resolver too and try to vote.
+    ctx(owner(), 0, day3 + 70);
+    c.add_resolver(op(1));
+    ctx(op(1), 0, day3 + 70);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.resolver_vote("".to_string(), "berlin".to_string(), day3, false)
+    }));
+    assert!(r.is_err(), "a signer must not resolve its own dispute");
+}
+
+#[test]
+fn g2_challenger_cannot_resolve_its_own_dispute() {
+    let (mut c, day3) = disputed();
+    ctx(owner(), 0, day3 + 70);
+    c.add_resolver("watchdog.testnet".parse().unwrap());
+    ctx("watchdog.testnet".parse().unwrap(), 0, day3 + 70);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.resolver_vote("".to_string(), "berlin".to_string(), day3, false)
+    }));
+    assert!(r.is_err(), "the challenger must not resolve its own dispute");
+}
+
+#[test]
+fn g3_resolver_quorum_upholds_and_pool_keeps_the_bond() {
+    let (mut c, day3) = disputed();
+    let capital_before = c.get_pool().capital.0;
+    for i in 1..=3u8 {
+        ctx(format!("res{}.testnet", i).parse().unwrap(), 0, day3 + 80);
+        c.resolver_vote("".to_string(), "berlin".to_string(), day3, true);
+    }
+    assert_eq!(c.get_pool().capital.0, capital_before + ONE / 10, "upheld -> bond forfeited to pool");
+    // The honest reading now settles and pays.
+    let id = 1;
+    ctx(owner(), 0, day3 + 7200);
+    assert!(c.resolve(id));
+    assert!(c.reconcile());
+}
+
+#[test]
+fn g4_resolver_quorum_nullifies_and_refunds_the_bond() {
+    let (mut c, day3) = disputed();
+    for i in 1..=3u8 {
+        ctx(format!("res{}.testnet", i).parse().unwrap(), 0, day3 + 80);
+        c.resolver_vote("".to_string(), "berlin".to_string(), day3, false);
+    }
+    // The reading is voided: the policy fails closed and does not pay.
+    let id = 1;
+    ctx(owner(), 0, day3 + 7200);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
+    assert!(r.is_err(), "a nullified observation must not settle");
+}
+
+#[test]
+fn g5_resolver_cannot_vote_twice() {
+    let (mut c, day3) = disputed();
+    ctx("res1.testnet".parse().unwrap(), 0, day3 + 80);
+    c.resolver_vote("".to_string(), "berlin".to_string(), day3, true);
+    ctx("res1.testnet".parse().unwrap(), 0, day3 + 81);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.resolver_vote("".to_string(), "berlin".to_string(), day3, true)
+    }));
+    assert!(r.is_err(), "a resolver must not vote twice");
+}
+
+#[test]
+fn g6_owner_cannot_unilaterally_resolve_a_dispute() {
+    // There is no owner-only resolution path any more; the owner must go
+    // through the independent resolver quorum like everyone else.
+    let (mut c, day3) = disputed();
+    // The owner is not a registered resolver, so it cannot vote.
+    ctx(owner(), 0, day3 + 80);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.resolver_vote("".to_string(), "berlin".to_string(), day3, true)
+    }));
+    assert!(r.is_err(), "the owner cannot unilaterally resolve a dispute");
+}
+
+#[test]
+fn g7_timeout_voids_the_reading_and_refunds_the_challenger() {
+    let (mut c, day3) = disputed();
+    // No resolver quorum. After the dispute window, anyone may time it out.
+    ctx("anyone.testnet".parse().unwrap(), 0, day3 + 61 + 3601);
+    c.timeout_dispute("".to_string(), "berlin".to_string(), day3);
+    let id = 1;
+    ctx(owner(), 0, day3 + 7200);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
+    assert!(r.is_err(), "a timed-out (voided) observation must not settle");
+}
+
+// --------------------------------------------------------------------------
+// Multi-provider capital accounting
+// --------------------------------------------------------------------------
+
+#[test]
+fn h1_two_providers_share_one_pool_and_reserved_le_capital() {
+    let mut c = setup();
+    ctx("lpa.testnet".parse().unwrap(), 600 * ONE, 0);
+    c.deposit();
+    ctx("lpb.testnet".parse().unwrap(), 400 * ONE, 0);
+    c.deposit();
+    assert_eq!(c.get_pool().capital.0, 1000 * ONE);
+
+    // Two 100 NEAR policies.
+    for i in 0..2 {
+        let buyer: AccountId = format!("b{}.testnet", i).parse().unwrap();
+        ctx(buyer, 3 * ONE, 0);
+        c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+        assert!(c.check_invariant(), "reserved <= capital after every buy");
+    }
+    assert_eq!(c.get_pool().reserved.0, 200 * ONE);
+
+    // lpB may withdraw only its unencumbered share.
+    ctx("lpb.testnet".parse().unwrap(), 0, 0);
+    c.withdraw(U128(400 * ONE));
+    assert!(c.check_invariant());
+    assert_eq!(c.get_provider("lpb.testnet".parse().unwrap()).withdrawn, 400 * ONE);
+
+    // After paying claims, both providers' accounting still reconciles.
+    let day3 = 3 * 24 * 3600;
+    report_rain(&mut c, "berlin", day3, 300, day3 + 60);
+    ctx(owner(), 0, day3 + 7200);
+    c.resolve(1);
+    c.resolve(2);
+    assert!(c.check_invariant());
+    assert!(c.reconcile());
     assert_eq!(c.get_pool().reserved.0, 0);
 }

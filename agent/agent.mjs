@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { connect, KeyPair, keyStores, utils, transactions, providers } from "near-api-js";
-import { normalizeLimits, evaluate, fundsShortfall } from "./limits.mjs";
+import { normalizeLimits, evaluate, fundsShortfall, createSerializer } from "./limits.mjs";
 import { parseBigIntJson } from "./json.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -91,6 +91,11 @@ export async function createAgent(opts) {
   // centralise this (the API layer documents that it does not).
   const history = [];
 
+  // All buys pass through one serializer so the check-then-act limits (which
+  // read `history`) cannot be bypassed by two overlapping requests. `decide`
+  // stays outside it (read-only).
+  const serializeBuy = createSerializer();
+
   function appendAudit(entry) {
     try {
       fs.mkdirSync(path.dirname(auditPath), { recursive: true });
@@ -147,8 +152,14 @@ export async function createAgent(opts) {
   /**
    * Buy cover. Returns { hash, premiumYocto, explorer } on success, or throws an
    * AgentError with code "denied" (limits) or "chain" (contract refused).
+   * Serialized: concurrent calls run one after another so the limits cannot be
+   * bypassed by overlap.
    */
-  async function buy({ productId, payoutYocto, obsDateSec, beneficiary, idempotencyKey }) {
+  async function buy(args) {
+    return serializeBuy(() => doBuy(args));
+  }
+
+  async function doBuy({ productId, payoutYocto, obsDateSec, beneficiary, idempotencyKey }) {
     const started = clock();
     const decision = await decide({ productId, payoutYocto, obsDateSec });
     if (!decision.allow) {

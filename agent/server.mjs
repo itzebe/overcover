@@ -177,11 +177,33 @@ async function main() {
         if (typeof body.productId !== "string") throw Object.assign(new Error("productId must be a string"), { status: 400 });
         const idem = body.idempotencyKey ?? req.headers["idempotency-key"];
         if (idem !== undefined && (typeof idem !== "string" || idem.length > 200)) throw Object.assign(new Error("idempotencyKey must be a string <= 200 chars"), { status: 400 });
-        if (idem && idempotency.has(idem)) return send(res, 200, { ...idempotency.get(idem), idempotentReplay: true }, cors);
 
-        const result = await agent.buy({ productId: body.productId, payoutYocto: payout, obsDateSec, beneficiary: body.beneficiary ?? null, idempotencyKey: idem ?? null });
-        if (idem) idempotency.set(idem, result);
-        return send(res, 200, result, cors);
+        // Idempotency under concurrency: reserve the key BEFORE the first await,
+        // storing a promise. Two requests that arrive together with the same key
+        // therefore share one execution — the second awaits the first's result
+        // instead of starting a second buy. Without this reservation, both
+        // requests pass the "have we seen this key?" check and both execute.
+        const entry = idem ? idempotency.get(idem) : undefined;
+        if (entry) {
+          const settled = await entry.promise;
+          return send(res, 200, { ...settled, idempotentReplay: true }, cors);
+        }
+        let resolveIt, rejectIt;
+        if (idem) {
+          const promise = new Promise((res, rej) => { resolveIt = res; rejectIt = rej; });
+          promise.catch(() => {}); // a failure is delivered to the first caller directly
+          idempotency.set(idem, { promise });
+        }
+
+        try {
+          const result = await agent.buy({ productId: body.productId, payoutYocto: payout, obsDateSec, beneficiary: body.beneficiary ?? null, idempotencyKey: idem ?? null });
+          if (idem) resolveIt(result);
+          return send(res, 200, result, cors);
+        } catch (e) {
+          // Do not cache a failure: a later retry with the same key may succeed.
+          if (idem) { idempotency.delete(idem); rejectIt(e); }
+          throw e;
+        }
       }
 
       if (route === "POST /api/v1/agent/control") {

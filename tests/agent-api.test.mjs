@@ -164,3 +164,21 @@ test("a different idempotency key is a fresh evaluation", async () => {
   await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(`idem-b-${Date.now()}`) });
   assert.equal(countKind("dry_run"), before + 2, "distinct keys must each be evaluated");
 });
+
+test("concurrent buys with the same idempotency key execute exactly once", async () => {
+  // The check-then-act pattern is unsafe under concurrency: two requests that
+  // arrive together both see "key unknown" and both execute. The server must
+  // reserve the key before the first await. The audit log is the proof — a
+  // single dry_run entry means a single execution.
+  const key = `idem-concurrent-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const before = countKind("dry_run");
+  const fire = () => fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(key) });
+  const [r1, r2] = await Promise.all([fire(), fire()]);
+  assert.equal(r1.status, 200);
+  assert.equal(r2.status, 200);
+  const [a, b] = await Promise.all([r1.json(), r2.json()]);
+  assert.equal(countKind("dry_run"), before + 1, "two concurrent identical keys must execute once, not twice");
+  const replays = [a, b].filter((x) => x.idempotentReplay);
+  assert.equal(replays.length, 1, "exactly one of the two concurrent responses is a replay");
+  assert.equal(replays[0].premiumYocto, (a.idempotentReplay ? b : a).premiumYocto, "the replay returns the original premium");
+});

@@ -76,6 +76,28 @@ const DAY_MS = 24 * 3600 * 1000;
  *  for. 0.05 NEAR is far above the real cost of a `buy_cover` call. */
 export const GAS_BUFFER_YOCTO = "50000000000000000000000";
 
+/**
+ * Serialize async critical sections: each task runs only after the previous one
+ * has settled, in submission order. The spending limits are check-then-act
+ * (read history, decide, then record), so two buys that overlap would both read
+ * the same pre-buy history and both pass — letting the daily budget or policy
+ * count be exceeded by concurrency. Passing every buy through one serializer
+ * makes each buy see the effects of the previous one.
+ *
+ * A rejection never breaks the chain: the next task still runs.
+ */
+export function createSerializer() {
+  let tail = Promise.resolve();
+  return function run(fn) {
+    const result = tail.then(fn, fn);
+    tail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  };
+}
+
 /** Return a human-readable reason if `balanceYocto` cannot cover `premiumYocto`
  *  plus `bufferYocto`, or null if it can. Pure: no network, so it is asserted
  *  directly in the tests. */

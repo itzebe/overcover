@@ -1,7 +1,7 @@
 // Tests for the agent spending policy. Pure logic, no network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeLimits, evaluate, premiumSpentWithin, policiesWithin, DEFAULT_LIMITS, fundsShortfall } from "../agent/limits.mjs";
+import { normalizeLimits, evaluate, premiumSpentWithin, policiesWithin, DEFAULT_LIMITS, fundsShortfall, createSerializer } from "../agent/limits.mjs";
 
 const NEAR = 10n ** 24n;
 const product = {
@@ -176,4 +176,53 @@ test("fundsShortfall: covering the premium but not the gas buffer is refused", (
 test("fundsShortfall: an unknown balance is refused, never treated as unlimited", () => {
   assert.match(fundsShortfall(null, "1"), /unknown/);
   assert.match(fundsShortfall(undefined, "1"), /unknown/);
+});
+
+
+// Serializer: the limits are check-then-act (read `history`, decide, then
+// record). Two overlapping buys would both read the same pre-buy history and
+// both pass, exceeding the daily budget. The serializer must run them one at a
+// time, in submission order, and must not break on a rejection.
+test("createSerializer runs overlapping tasks one at a time, in order", async () => {
+  const run = createSerializer();
+  const order = [];
+  const task = (id) => run(async () => {
+    order.push(`start-${id}`);
+    await new Promise((r) => setTimeout(r, 10));
+    order.push(`end-${id}`);
+    return id;
+  });
+  const results = await Promise.all([task(1), task(2), task(3)]);
+  assert.deepEqual(results, [1, 2, 3], "results come back in submission order");
+  assert.deepEqual(order, ["start-1", "end-1", "start-2", "end-2", "start-3", "end-3"], "no two tasks overlap");
+});
+
+test("createSerializer does not break the chain when a task rejects", async () => {
+  const run = createSerializer();
+  const a = run(async () => { throw new Error("boom"); });
+  const b = run(async () => "ok");
+  await assert.rejects(() => a, /boom/);
+  assert.equal(await b, "ok", "a rejected task must not stop the next one");
+});
+
+// The race the serializer closes, shown with the pure engine. Two buys are
+// checked against the SAME pre-buy history before either records a spend, so
+// both pass — and together they breach the daily budget. This is the bug the
+// serializer prevents; the test documents it so the guard cannot be removed
+// silently.
+test("without serialization, two overlapping checks both pass and breach the budget", () => {
+  const ctx = baseCtx({ limits: { dailyPremiumBudget: (NEAR / 10n).toString(), dailyPolicyLimit: 10 } });
+  const p = proposal({ premiumYocto: (NEAR / 10n).toString() }); // exactly the whole budget
+  const a = evaluate(p, product, ctx); // reads empty history
+  const b = evaluate(p, product, ctx); // reads the SAME empty history
+  assert.equal(a.allow, true);
+  assert.equal(b.allow, true, "both pass because neither has recorded its spend yet");
+  // Recording both would put spend at 2x the budget — the breach the serializer
+  // makes impossible by running the second check only after the first records.
+  const bothSpent = premiumSpentWithin(
+    [{ kind: "buy", atMs: ctx.nowMs, premiumYocto: p.premiumYocto }, { kind: "buy", atMs: ctx.nowMs, premiumYocto: p.premiumYocto }],
+    ctx.nowMs,
+    24 * 3600 * 1000,
+  );
+  assert.ok(bothSpent > BigInt(ctx.limits.dailyPremiumBudget), "the two together exceed the budget");
 });

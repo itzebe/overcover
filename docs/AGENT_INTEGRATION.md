@@ -111,7 +111,12 @@ const res = await c.buy({ productId: "rain-lagos", payoutYocto: "100000000000000
 A refused `buy` throws `AgentClientError` with `status: 403`, `code: "denied"` and
 the `reasons` array — **and no transaction was sent**. Reuse the same
 `idempotencyKey` and the service returns the original result instead of buying
-again.
+again. This holds even when two requests with the same key arrive at the same
+instant: the service reserves the key before it does any work, so the second
+request waits for the first and replays its result (`tests/agent-api.test.mjs`,
+"concurrent buys with the same idempotency key execute exactly once"). Buys are
+also serialized inside the agent, so overlapping requests with *different* keys
+cannot both pass the same spending check and jointly exceed a daily limit.
 
 ## 5. HTTP API
 

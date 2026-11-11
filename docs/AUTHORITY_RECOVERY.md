@@ -1,7 +1,8 @@
 # Authority recovery and the controlled v3 deployment
 
 **As of:** 2026-11-11 · **Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
-**Repository HEAD:** `48b216c6d581c3a0350b5c8c5c694fadf4bc83b4`
+**Repository HEAD:** the tip of `main` — production auto-deploys on every `main` push, so the
+deployed commit equals `main` (confirm with `GET /v6/deployments?…&target=production`).
 
 This document records what was investigated about control of the legacy contract account, what the
 evidence shows, and the exact path that closes finding **SEC-1** on a fresh, operator-controlled

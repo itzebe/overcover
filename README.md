@@ -199,7 +199,7 @@ npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
 npm run test:console    # 71 regression + live-RPC tests          (browser console)
-npm run test:agent      # 34 limits + API + u128-precision tests  (autonomous agent)
+npm run test:agent      # 36 limits + API + u128-precision + idempotency tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run verify:proof    # one-command independent proof of the headline claims (bytecode,
                         #   solvency, all 18 demo txs, the agent's buys, settled outcomes)
@@ -318,5 +318,7 @@ is read-only and runs the same policy engine in the browser.
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Security model, threat model, residual risk |
 | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | How to reproduce every claim, with exact commands |
 | [`docs/DEMO.md`](docs/DEMO.md) | 60-second judging script and the recorded demo |
+| [`docs/JUDGE_DEMO.md`](docs/JUDGE_DEMO.md) | 2–3 minute judge demonstration, checklist and backup plan |
+| [`docs/FINAL_RELEASE_READINESS.md`](docs/FINAL_RELEASE_READINESS.md) | Fixed / not-fixed register with evidence and honest gaps |
 | [`docs/FAQ.md`](docs/FAQ.md) | Honest answers to the obvious hard questions |
 | [`AGENTS.md`](AGENTS.md) | Orientation for agents and new contributors |

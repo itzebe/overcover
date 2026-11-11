@@ -152,20 +152,30 @@ from `JSON.parse` as `999999999999999983222784`). The over-limit case (a 5 NEAR 
 
 ### Human wallet purchase (independent account)
 
-The same `buy_cover` transaction the console builds — signed by a wallet, not by a service key —
-settles on the live contract. To demonstrate the human path end to end without depending on a
-browser extension in this environment, an independent testnet account bought cover through the
-**exact** arguments the page constructs (`buildBuyArgs`: `product_id`, `payout`, `obs_date`,
-`beneficiary`), attaching the contract's own quoted premium.
+The console's human path is: connect a NEAR wallet (HERE or Meteor), read a live `quote`, build the
+exact `buy_cover` call, and let the wallet sign it. Two layers are verified:
+
+- **The transaction shape is proven on-chain.** An independent testnet account signed the **exact**
+  arguments the page constructs (`buildBuyArgs`: `product_id`, `payout`, `obs_date`, `beneficiary`),
+  attaching the contract's own quoted premium. Policy 15 reads back with `buyer =
+  human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet`, `product = rain-lagos`, `payout = 1 NEAR`,
+  `premium = 0.05 NEAR`, `status = active`.
 
 | Step | Transaction |
 | --- | --- |
-| human buy_cover (rain-lagos, 1 NEAR payout) → policy 15 | https://testnet.nearblocks.io/txns/87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i |
+| buy_cover (rain-lagos, 1 NEAR payout) → policy 15 | https://testnet.nearblocks.io/txns/87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i |
 
-Policy 15 reads back from the contract as `buyer = human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet`,
-`product = rain-lagos`, `payout = 1 NEAR`, `premium = 0.05 NEAR`, `status = active`. The console's
-success/failure classifier is unit-tested (`tests/console.test.js`): a rejected, failed or
-hashless wallet result is never presented as a purchase.
+- **The wallet-side flow is covered by tests, not a live extension.** The console's
+  success/failure classifier (`evaluateWalletOutcome`, lifted from the page) is unit-tested: a
+  rejected, failed or hashless wallet result is never presented as a purchase, and the
+  `buy_cover` arguments are asserted against the contract ABI. `npm run verify:connectivity`
+  additionally drives the real page in a browser with the wallet bundle loaded.
+
+**Honest limitation:** the transaction above was signed **programmatically** with the same
+arguments the page builds — it is **not** a recording of a HERE/Meteor extension approval, which
+requires an interactive browser with the extension installed. A live extension approval has not been
+captured in this environment. A judge can complete it in two minutes by following
+[`docs/JUDGE_DEMO.md`](docs/JUDGE_DEMO.md) §3 with any funded NEAR testnet account.
 
 
 ## 7. Verification results
@@ -175,12 +185,12 @@ hashless wallet result is never presented as a purchase.
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
 | Console regression + live RPC | `npm run test:console` | **71 passed, 0 failed** |
-| Agent limits + API + u128 precision | `npm run test:agent` | **34 passed, 0 failed** |
-| Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
+| Agent limits + API + u128 precision | `npm run test:agent` | **36 passed, 0 failed** |
+| Live adversarial tests | `npm run test:onchain` | **17 tests** — refused-with-the-expected-reason against the LIVE contract; needs a fresh `npm run deploy` and the gitignored operator identities (not run in the CI environment) |
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, public read-only + local dry-run round-trip OK, wallet picker opens in-viewport** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
 | Console accessibility (axe-core, WCAG 2.2 AA) | `npm run axe` | **0 violations at 320 / 360 / 390 / 768 / 1024 / 1280 / 1440 px (page and wallet dialog)** |
-| One-command independent proof | `npm run verify:proof` | **12/12 checks passed** — deployed bytecode == this source, pool solvent, all 18 demo txs real, the agent's buys real, settled outcomes match |
+| One-command independent proof | `npm run verify:proof` | **12/12 checks passed on a clean clone** — deployed bytecode == this source, pool solvent, all 18 demo txs real, the agent's buys real (each tied to its on-chain policy), settled outcomes match |
 | Agent authorization vs the live product | `npm run verify:agent` | **over-limit buy refused, in-limit buy permitted; the shipped `createAgent` path agrees** |
 | Public console needs no local agent | `npm run verify:connectivity` | **12/12 checks passed** — no localhost default, read-only verdict == shared engine on the live quote, invalid bodies rejected, limits enforced, no owner-only method reachable, buy_cover the only signing path |
 | Live production URL | `npm run verify:live` | **5 widths (320–1440 px), 0 console errors, 0 horizontal overflow** |

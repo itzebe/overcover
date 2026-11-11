@@ -82,7 +82,7 @@ does not, and the residual risk a reviewer should weigh.
 - 21 Rust unit tests (`npm run test:contract`).
 - 17 adversarial tests against the **live** contract (`npm run test:onchain`): each attack is refused
   with the expected reason.
-- The console: 66 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
+- The console: 71 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
   violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog.
 
 ## Reporting

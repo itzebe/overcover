@@ -39,6 +39,12 @@ jobs:
       - name: Build the contract to wasm
         run: cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
 
+      - name: Independent proof (deployed bytecode == this source, pool solvent, on-chain evidence)
+        run: npm run verify:proof
+
+      - name: Agent spend-authorization vs the live contract
+        run: npm run verify:agent
+
       - name: Fail if a secret is tracked
         run: |
           if git ls-files | grep -E '(^|/)(identities|state)\.json$|(^|/)keys/'; then

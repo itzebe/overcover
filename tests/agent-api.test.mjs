@@ -8,6 +8,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { KeyPair } from "near-api-js";
@@ -119,4 +120,47 @@ test("decide on an unknown product returns allow:false with a reason", async () 
   const j = await r.json();
   assert.equal(j.allow, false);
   assert.match(j.reasons.join(" "), /no such product/);
+});
+
+// Idempotency: a retried buy with the same key returns the original result and
+// must NOT execute a second time. The audit log is the proof: a replayed request
+// must not append a second dry_run entry.
+const AUDIT = path.join(root, "agent", "audit.test.log.jsonl");
+function countKind(kind) {
+  try {
+    return fs.readFileSync(AUDIT, "utf8").trim().split("\n")
+      .map((l) => JSON.parse(l)).filter((e) => e.kind === kind).length;
+  } catch { return 0; }
+}
+const buyBody = (idempotencyKey) => JSON.stringify({
+  productId: "rain-lagos",
+  payoutYocto: "100000000000000000000000",
+  obsDateSec: Math.floor(Date.now() / 1000) + 7200,
+  idempotencyKey,
+});
+
+test("a replayed idempotency key returns the original result without re-executing", async () => {
+  const key = `idem-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const before = countKind("dry_run");
+  const r1 = await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(key) });
+  assert.equal(r1.status, 200);
+  const first = await r1.json();
+  assert.equal(first.dryRun, true, "the dry-run agent must not send a transaction");
+  assert.ok(!first.idempotentReplay, "the first call is not a replay");
+  const afterFirst = countKind("dry_run");
+  assert.equal(afterFirst, before + 1, "the first buy must be evaluated once");
+
+  const r2 = await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(key) });
+  assert.equal(r2.status, 200);
+  const second = await r2.json();
+  assert.equal(second.idempotentReplay, true, "the retry must be flagged as a replay");
+  assert.equal(second.premiumYocto, first.premiumYocto, "the replay must return the original premium");
+  assert.equal(countKind("dry_run"), afterFirst, "a replayed key must not execute again");
+});
+
+test("a different idempotency key is a fresh evaluation", async () => {
+  const before = countKind("dry_run");
+  await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(`idem-a-${Date.now()}`) });
+  await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(`idem-b-${Date.now()}`) });
+  assert.equal(countKind("dry_run"), before + 2, "distinct keys must each be evaluated");
 });

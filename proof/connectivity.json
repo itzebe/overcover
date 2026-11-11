@@ -1,12 +1,12 @@
 {
   "url": "https://overcover.vercel.app/",
-  "at": "2026-11-11T01:19:54.101Z",
-  "passed": 7,
-  "total": 10,
+  "at": "2026-11-11T07:41:17.883Z",
+  "passed": 12,
+  "total": 12,
   "results": [
     {
       "name": "1  no localhost default in the shipped page",
-      "ok": false,
+      "ok": true,
       "detail": "the agent URL field must be empty and the page must not hardcode a local agent URL"
     },
     {
@@ -26,7 +26,7 @@
     },
     {
       "name": "11 a visitor cannot buy without a wallet authorization",
-      "ok": false,
+      "ok": true,
       "detail": "the only write path is the user's wallet, and agent Buy is hidden in public mode"
     },
     {
@@ -50,9 +50,19 @@
       "detail": "console errors=0; local URL field hidden=true"
     },
     {
-      "name": "2  the public page loads with no local agent reachable",
-      "ok": false,
-      "detail": "browser error: page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#a-decide')\u001b[22m\n\u001b[2m    - locator resolved to <button disabled class=\"btn\" id=\"a-decide\" type=\"button\">Ask the agent to decide</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not enabled\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+      "name": "3  public read-only evaluation works with no signing service",
+      "ok": true,
+      "detail": "verdict rendered, mode labelled read-only"
+    },
+    {
+      "name": "4  the read-only verdict is derived from the live contract quote",
+      "ok": true,
+      "detail": "browser ALLOW == shared engine ALLOW for rain-lagos; page shows premium 0.050000 NEAR"
+    },
+    {
+      "name": "6  an unreachable service yields a safe, human message",
+      "ok": true,
+      "detail": "Could not reach your agent service at http://127.0.0.1:1: the service did not respond (is "
     }
   ]
 }

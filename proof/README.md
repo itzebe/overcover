@@ -8,15 +8,17 @@ committed artefacts; none of them writes on-chain.
 | --- | --- |
 | `npm run verify:proof` | The deployed module is exactly this source; the pool is solvent and reconciles; all 18 `demo-log.json` transactions are real and successful; the agent's purchases are real `buy_cover` calls; the settled policies paid what the console says. Exits non-zero on any mismatch. |
 | `npm run verify:agent` | The agent's spend-authorization engine refuses an over-limit buy and permits an in-limit one, against the **live** product definition. When a local agent key exists, the shipped `createAgent`/`decide` path is run too and must agree. |
+| `npm run verify:connectivity` | The public console works with **no local agent**: it boots the real agent service in dry-run, drives the real page in a browser with all localhost requests blocked, and checks the security boundary (no localhost default, read-only verdict == shared engine on the live quote, invalid bodies rejected, limits enforced, no owner-only method, `buy_cover` the only signing path). Set `LIVE_URL` to run it against production. |
 | `npm run verify:live` | The **live production URL** (`https://overcover.vercel.app/`) loads at 320/390/768/1280/1440 px with zero console errors and zero horizontal overflow. Screenshots land in `proof/shots/`. |
 
 Evidence written by the scripts:
 
 - `proof/verification.json` — the full result of `verify:proof`.
 - `proof/agent-policy-evidence.json` — the blocked and permitted decisions plus the real on-chain agent purchases.
+- `proof/connectivity.json` — the 12 connectivity + boundary checks and the URL they ran against.
 - `proof/shots/live-*.png` — production screenshots per width.
 
-## The shared live town is read-only here
+## The shared live contract is read-only here
 
 Every command above is a **read**. Nothing in this directory calls `reset`, `seed`, `deposit`,
 `add_product`, `buy_cover`, `report_observation`, `challenge_observation`, `resolve`,

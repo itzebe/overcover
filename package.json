@@ -19,6 +19,7 @@
     "axe": "node tests/axe.mjs",
     "verify:proof": "node proof/verify.mjs",
     "verify:agent": "node proof/agent-policy.mjs",
+    "verify:connectivity": "node proof/connectivity.mjs",
     "verify:live": "node proof/live-check.mjs"
   },
   "dependencies": {

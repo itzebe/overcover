@@ -61,7 +61,9 @@ Two actors can drive that flow. A **person** connects their own NEAR wallet and 
 never claims a policy was bought until the wallet confirms it. An **autonomous agent** runs the same
 contract from software: a hard, pre-set spending-limits engine gates every buy (a denial never
 reaches the network), so the agent can act on its own without ever exceeding the authority a human
-granted it.
+granted it. The public console evaluates a purchase with that **same engine, read-only in the
+browser** — no key, nothing signed — so a visitor can see the agent's decision without running
+anything; buying through the agent needs a local service the operator runs.
 
 ## 3. Why this fits the tracks
 
@@ -172,14 +174,15 @@ hashless wallet result is never presented as a purchase.
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **66 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **71 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **34 passed, 0 failed** |
 | Live adversarial tests | `npm run test:onchain` | **17 passed, 0 failed** |
-| Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, wallet picker opens in-viewport, dry-run agent round-trip OK** |
+| Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, public read-only + local dry-run round-trip OK, wallet picker opens in-viewport** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
 | Console accessibility (axe-core, WCAG 2.2 AA) | `npm run axe` | **0 violations at 320 / 360 / 390 / 768 / 1024 / 1280 / 1440 px (page and wallet dialog)** |
 | One-command independent proof | `npm run verify:proof` | **12/12 checks passed** — deployed bytecode == this source, pool solvent, all 18 demo txs real, the agent's buys real, settled outcomes match |
 | Agent authorization vs the live product | `npm run verify:agent` | **over-limit buy refused, in-limit buy permitted; the shipped `createAgent` path agrees** |
+| Public console needs no local agent | `npm run verify:connectivity` | **12/12 checks passed** — no localhost default, read-only verdict == shared engine on the live quote, invalid bodies rejected, limits enforced, no owner-only method reachable, buy_cover the only signing path |
 | Live production URL | `npm run verify:live` | **5 widths (320–1440 px), 0 console errors, 0 horizontal overflow** |
 
 Track ids for the submission form: `business` (primary), `swarms`, `defi`.
@@ -202,6 +205,8 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
 - The demo pins the reported reading to the value the threshold was derived from, so the outcome
   is deterministic; the reading itself is a genuine Open-Meteo observation.
 - The **autonomous agent** is operated by the user, not hosted by Overcover, and ships in dry-run:
-  a public endpoint that signed with a funded key would let any visitor spend that balance. Its
-  rate limits and single-flight locks are **per-instance**, not a global distributed lock.
+  a public endpoint that signed with a funded key would let any visitor spend that balance. The
+  public console is therefore read-only (it evaluates with the same engine in the browser and signs
+  nothing). Its rate limits and single-flight locks are **per-instance**, not a global distributed
+  lock.
 - Testnet only; unaudited; not for real funds.

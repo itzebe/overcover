@@ -101,6 +101,11 @@ It runs on localhost by default and is not hosted by Overcover: a public endpoin
 that signed with a funded key would let any visitor spend that balance. The console
 states this rather than implying a hosted agent.
 
+The public console is **read-only** and needs no local service: it loads the same
+policy engine (`agent/limits.mjs`, bundled to `ui/vendor/policy.js`) into the page
+and evaluates a purchase in the browser against the live contract quote, with no
+key and nothing signed. Only a local service the operator runs can send a purchase.
+
 ## Security model
 
 - No private key, seed phrase or signing secret ever reaches the browser page or the

@@ -201,7 +201,7 @@ explorer links.
 ```bash
 npm ci --ignore-scripts
 npm run test:model      # 60 attacks, 60 defended, 0 exploitable  (reference model)
-npm run test:contract   # 40 Rust unit tests                      (contract logic)
+npm run test:contract   # 41 Rust unit tests                      (contract logic)
 npm run test:console    # 90 regression + live-RPC tests          (browser console + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
 npm run test:agent-eval # 32 product-feed schema/premium + agent-eval boundary + independent-client integration tests
@@ -212,6 +212,7 @@ npm run verify:proof    # one-command independent proof of the headline claims (
                         #   solvency, all 18 demo txs, the agent's buys, settled outcomes)
 npm run verify:migration # SEC-1 proof: the deployed v1 migrate() takeover, and the v2 guard
 npm run verify:upgrade  # SEC-1 guard on the COMPILED wasm on a real local neard node (needs neard)
+npm run verify:upgrade-preservation  # the in-place upgrade PRESERVES state (real v1 bytecode; needs neard)
 npm run verify:testnet-deploy  # a real, isolated v2 deploy to NEAR testnet (needs the faucet)
 npm run verify:agent    # the agent's spend-authorization engine vs the live product definition
 npm run verify:connectivity  # the public console works with no local agent (needs a Chromium)

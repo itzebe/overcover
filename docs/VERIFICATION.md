@@ -69,13 +69,14 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 ```bash
 npm ci --ignore-scripts
 npm run test:model      # 60 attacks, 60 defended, 0 exploitable  (reference model)
-npm run test:contract   # 40 Rust unit tests
+npm run test:contract   # 41 Rust unit tests
 npm run test:console    # 87 regression + live-RPC tests (page regressions + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
 npm run test:agent-eval # 32 product-feed schema/premium + agent boundary + independent-client integration
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 # v2 lifecycle on a local neard node (branch feat/decentralized-insurance-lifecycle only):
 #   NEAR_SANDBOX_BIN=/path/to/near-sandbox npm run verify:sandbox   # 21/21
+#   NEAR_SANDBOX_BIN=/path/to/near-sandbox npm run verify:upgrade-preservation  # in-place upgrade preserves state
 ```
 
 `test:onchain` sends real attacks to the deployed contract and asserts each is **refused with the

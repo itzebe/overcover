@@ -397,6 +397,9 @@
   .btn-s:hover { border-color: var(--ink2); }
   .links { display: grid; gap: 9px; }
   .links a { font-size: 13.5px; }
+  /* A link inside a sentence must be distinguishable without relying on colour
+     (WCAG 1.4.1 / axe link-in-text-block), so it is always underlined. */
+  .proof .val a { text-decoration: underline; text-underline-offset: 2px; }
 
   /* ---------------- footer ---------------- */
   footer { margin-top: var(--s6); background: var(--field); color: var(--on-field-2); }
@@ -976,6 +979,8 @@
         <p class="lbl" style="margin-top:16px">Reproduce these figures</p>
         <code class="cmd" id="cmd" tabindex="0" role="region" aria-label="Reproduce these figures">…</code>
         <div class="copy-row"><button class="btn-s" id="copy" type="button">Copy command</button><span class="copied" id="copied" role="status"></span></div>
+        <p class="lbl" style="margin-top:16px">Machine-readable catalogue (for agents)</p>
+        <p class="val"><a href="/products.json">products.json</a> · <a href="/products.schema.json">schema</a> — every product, the trigger rule, the premium formula and the exact <code>buy_cover</code> call shape, generated from this contract, not written by hand.</p>
       </div>
     </div>
     <div class="proof" style="margin-top:12px">

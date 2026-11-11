@@ -443,6 +443,22 @@ test("product cards read as coverage, with the trigger and honest limitations", 
   assert.ok(/only pay on that one reading/.test(SCRIPT), "a ceiling-pinned trigger must be disclosed as such");
 });
 
+test("the page publishes a machine-readable catalogue for agents, derived from the contract", () => {
+  // A link inside a sentence must be distinguishable without colour, or it fails
+  // WCAG 1.4.1 (axe link-in-text-block). Assert the underline rule exists.
+  assert.ok(/\.proof \.val a \{ text-decoration: underline/.test(HTML),
+    "links inside a text block must be underlined, not colour-only");
+  assert.ok(/Machine-readable catalogue/.test(HTML), "the page must point agents at the feed");
+  assert.ok(/href="\/products\.json"/.test(HTML) && /href="\/products\.schema\.json"/.test(HTML),
+    "the page must link the feed and its schema");
+  // The feed and schema are served from ui/ (the Vercel output dir), so they must
+  // exist as shipped artifacts or the links are dead.
+  const feed = JSON.parse(fs.readFileSync(path.join(root, "ui", "products.json"), "utf8"));
+  assert.ok(Array.isArray(feed.offerings) && feed.offerings.length >= 1, "the feed must list a real offering");
+  const schema = JSON.parse(fs.readFileSync(path.join(root, "ui", "products.schema.json"), "utf8"));
+  assert.equal(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
+});
+
 test("the quote is real, read-only, and never fakes a purchase", () => {
   assert.ok(SCRIPT.includes('view("quote"'), "the quote must be confirmed by the contract");
   assert.ok(/read-only quote/i.test(HTML), "the quote must say it is read-only");

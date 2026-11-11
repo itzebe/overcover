@@ -56,7 +56,7 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 41 Rust unit tests pass; 60-attack reference model `60 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
+| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 62 Rust unit tests pass; 66-attack reference model `66 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
 | Product discovery | FIXED AND VERIFIED | `list_products` view; console offers only *sellable* products (named, payable, active) and groups everything else as clearly-labelled fixtures. | Live `list_products` returns 22 products (2 named: `rain-lagos`, `rain-bergen-dry`; 20 demo-generated). `rain-bergen-dry` pins its trigger at the contract's plausible ceiling (500.0 mm), so it can only pay on that single reading — a broken definition shown as a fixture, not offered as cover; `rain-lagos` renders as a coverage card. `tests/console.test.js`; live probe. |
 | Premium calculation | FIXED AND VERIFIED | `quote(product_id, payout) = ceil(payout × premium_bp / 10_000)`, computed in the contract. | `quote` read live (`0.0500 NEAR` for 1 NEAR at 500 bp); console re-reads the contract's quote before buying (`tests/console.test.js`). |
 | Payout calculation | FIXED AND VERIFIED | Payout is the amount reserved at purchase; `resolve` pays iff `value_tenths ≥ threshold_tenths`. | Policy 3 settled `settled_paid` (1 NEAR paid); policy 4 `settled_no_pay` (0). `verify:proof` asserts both. The console's hero and cards state the **≥** direction, derived from `threshold_tenths`. |
@@ -141,10 +141,22 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Production configuration | FIXED AND VERIFIED | `vercel.json`, root-dir output `ui`, no build step; `ui/vendor/*` bundles are tracked. | Deployed HTML hash == local; a clean clone runs with no build step. |
 
 **Contract version.** The deployed contract is **v1** (`contract.attestor-overcover.testnet`, code hash
-`36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, wasm sha256 `1f30ccf1…`). The console reads v1 and
-renders v1 semantics; it is also compatible with the v2 contract in PR #9 via a version gate
-(`CONTRACT_V2`). **v2 is implemented and proven in a local sandbox but not deployed** (see the honest
-list below).
+`36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, wasm sha256 `1f30ccf1…`, 344857 bytes). The console
+reads v1 and renders v1 semantics; it is also compatible with the **v2/v3** contract via a version
+gate (`CONTRACT_V2`, keyed on `list_metrics` + `config.resolver_quorum`). The repository source is now
+**contract v3** (`contract/VERSION` = 3), which the state-preserving `migrate` upgrades v1 to in place.
+**v3 is implemented and proven in a local sandbox and against the exact live v1 bytecode but not
+deployed to the live address** (see the honest list below).
+
+What v3 adds over the deployed v1 (all in `contract/src/lib.rs`):
+- a **domain-separated, length-prefixed observation message** (`overcover:v3:observation|…`, binds the
+  contract id, expiry and an evidence reference) so a signature cannot be replayed as a different
+  reading, for a different contract, or after expiry;
+- a **multi-operator oracle quorum** with per-operator keys and monotonic nonces;
+- a **per-policy challenge window** and a **per-dispute frozen resolver threshold**, so an owner can
+  never shorten a challenge or move the decision bar mid-flight;
+- **owner-excluded resolvers** (the owner may not be a resolver nor vote on a dispute);
+- a **capped reading validity** (≤ 7 days) and an evidence-size cap.
 
 ## 6. Hackathon readiness
 
@@ -375,6 +387,36 @@ Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SE
     (state preserved **and** the migrated policy still settles) + Rust
     `tests::migrate_preserves_legacy_state`. Files: `contract/src/lib.rs`, `contract/src/tests.rs`.
 
+## Defects fixed in this mission (2026-11-11, v3 — decentralise the trust boundary)
+
+29. **CRITICAL — the off-chain observation message omitted the `city` field, so no operator reading
+    could ever verify on-chain.** The v3 contract signs
+    `overcover:v3:observation|<contract_id>|<operator>|<metric>|<city>|<date>|<value>|<reported_at>|<expiry>|<nonce>|<u32be len><evidence>`,
+    but both off-chain builders — `driver/attestor.js` `readingMessageV3` and the reference model
+    `sim/engine.mjs` `readingMessage` — left `city` out of the head. Every `submit_reading` therefore
+    failed with `invalid operator signature`. Root cause: the field list was transcribed by hand and
+    `city` was dropped; the reference model could not catch it because it signed **and verified with
+    its own copy** of the message, so its tests stayed green. Found by driving the compiled wasm on a
+    real `neard` node (`npm run verify:sandbox`), which surfaced the signature failure the unit tests
+    could not. Fix: both builders now emit the contract's exact byte layout. Regressions: two
+    byte-exact layout pins, one per end — `tests/v3-message.test.mjs` (JS driver **and** sim builder vs
+    a frozen hex literal, plus a "every signed field changes the bytes" guard and an evidence-length
+    ambiguity guard) and `contract/src/tests.rs::reading_message_matches_the_pinned_v3_layout` (the
+    Rust contract vs the same hex). Both were verified to fail on the pre-fix code and pass after.
+    Files: `driver/attestor.js`, `sim/engine.mjs`, `driver/actions.js`, `driver/operator.js`,
+    `driver/adapters.js`, `tests/sandbox-lifecycle.mjs`, `tests/v3-message.test.mjs`,
+    `contract/src/tests.rs`, `package.json` (`test:sim` now runs the new test).
+30. **The state-preservation proof did not know about the new `Policy.challenge_window_sec` field.**
+    `proof/upgrade-state-preservation.mjs` compared the migrated policy against the legacy one and
+    flagged the *intended* new field as a difference, reporting "state NOT preserved". Root cause: the
+    proof's `stripV2` only knew the v2 fields. Fix: `stripNew` now also ignores `challenge_window_sec`
+    and asserts it takes the contract-wide value that was live at migration time. `npm run
+    verify:upgrade-preservation` returns **state PRESERVED, migrated policy settled** again.
+31. **Docs carried the previous generation's counts and version.** `README.md`, `SUBMISSION.md`,
+    `docs/VERIFICATION.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/SECURITY_PRE_AUDIT.md`
+    and `AGENTS.md` still said "60 attacks / 41 Rust / 21 Rust / 31 attacks" and described the source
+    as v2. Corrected to the measured values (model 66, contract 62) and `contract/VERSION` = 3.
+
 ## Blockchain evidence (real testnet)
 
 **Isolated v2 deployment — `npm run verify:testnet-deploy` (9/9), 2026-11-11.** A throwaway
@@ -422,12 +464,12 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
   contract, tied to source by the wasm sha256 (`1f30ccf1…`, rebuilt locally and matched). In a
   container where the faucet is available, `proof/testnet-v2-deploy.mjs` performs a real, isolated v2
   deployment (see §"Blockchain evidence").
-- **The v2 contract (with the SEC-1 fix) is merged but not deployed to the live address.** The v2 build
-  (multi-operator oracle quorum + resolver dispute resolution, generic metric model, hardened
-  `migrate`) is implemented and proven end-to-end in a **local sandbox** (`npm run verify:sandbox` =
-  21/21), on a **real, isolated testnet deployment** (`proof/testnet-v2-deploy.mjs`), and the in-place
-  `migrate` is proven **state-preserving** against the exact live v1 bytecode
-  (`npm run verify:upgrade-preservation`). It is **not** on the live address
+- **The v3 contract (with the SEC-1 fix) is merged but not deployed to the live address.** The v3 build
+  (domain-separated length-prefixed observation message, multi-operator oracle quorum, per-policy
+  challenge window, frozen per-dispute resolver threshold, owner-excluded resolvers, generic metric
+  model, hardened `migrate`) is implemented and proven end-to-end in a **local sandbox**
+  (`npm run verify:sandbox` = 21/21), and the in-place `migrate` is proven **state-preserving** against
+  the exact live v1 bytecode (`npm run verify:upgrade-preservation`). It is **not** on the live address
   `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the contract's full-access
   key, which this environment does not hold. The public console therefore reads the live **v1**
   contract; its v2 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1 vulnerability

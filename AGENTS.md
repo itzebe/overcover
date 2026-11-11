@@ -18,7 +18,7 @@ for NEAR Hackathon 2026 (tracks: Business · Swarms · DeFi) and is deployed to 
 | `contract/` | The Rust smart contract (`near-sdk` 5). The product's core. |
 | `driver/` | Node scripts: identity graph, deploy, oracle, actions, the full-cycle demo. |
 | `ui/` | `index.html` — the entire console. One static file, no build step, no dependencies. |
-| `research/model/`, `sim/` | Executable BigInt model of the accounting rules + a 60-attack suite and the full-lifecycle simulation. |
+| `research/model/`, `sim/` | Executable BigInt model of the accounting rules + a 66-attack suite and the full-lifecycle simulation. |
 | `tests/` | `console.test.js` (page regressions + live RPC), `adversarial.test.js` (attacks on the live contract). |
 | `docs/` | Architecture, contract interface, security, verification, demo, FAQ. |
 | `demo-log.json` | 18 real testnet transaction hashes from the recorded demo. |
@@ -27,8 +27,8 @@ for NEAR Hackathon 2026 (tracks: Business · Swarms · DeFi) and is deployed to 
 
 ```bash
 npm ci --ignore-scripts       # install (near-api-js only)
-npm run test:model            # reference model: 31 attacks, 0 exploitable
-npm run test:contract         # cargo test — 21 Rust unit tests
+npm run test:model            # reference model: 66 attacks, 0 exploitable
+npm run test:contract         # cargo test — 62 Rust unit tests
 npm run test:console          # node --test — page regressions + one live RPC read
 npm run test:onchain          # 17 adversarial tests against the LIVE contract (needs fresh deploy)
 npm test                      # model + contract + console

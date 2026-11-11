@@ -182,14 +182,14 @@ captured in this environment. A judge can complete it in two minutes by followin
 
 | Suite | Command | Result |
 | --- | --- | --- |
-| Reference model attacks | `npm run test:model` | **60 attacks, 0 exploitable, 60 defended** |
-| Contract unit tests | `npm run test:contract` | **40 passed, 0 failed** (includes 4 SEC-1 migrate-authorization regressions) |
+| Reference model attacks | `npm run test:model` | **66 attacks, 0 exploitable, 66 defended** |
+| Contract unit tests | `npm run test:contract` | **62 passed, 0 failed** (includes 4 SEC-1 migrate-authorization regressions and the v3 reading-message layout pin) |
 | Console regression + live RPC | `npm run test:console` | **90 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **51 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
 | Product feed + agent evaluation | `npm run test:agent-eval` | **32 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
 | Deploy fail-closed regression | `npm run test:deploy` | **3 passed, 0 failed** — both deploy paths refuse a stale (guard-less) wasm |
 | SEC-1 guard on the compiled wasm | `npm run verify:upgrade` | **8/8 passed** — real local `neard` node: third-party `migrate()` refused, state untouched, self-call with no legacy state fails closed |
-| In-place upgrade preserves state | `npm run verify:upgrade-preservation` | **PASS** — runs the exact deployed v1 bytecode on a real `neard` node, deploys v2 over it, self-calls `migrate()`: capital, reserved, products and policies survive and the migrated policy still settles |
+| In-place upgrade preserves state | `npm run verify:upgrade-preservation` | **PASS** — runs the exact deployed v1 bytecode on a real `neard` node, deploys v3 over it, self-calls `migrate()`: capital, reserved, products and policies survive and the migrated policy still settles |
 | Real isolated v2 deploy on testnet | `npm run verify:testnet-deploy` | **9/9 passed** — deploys the compiled wasm to NEAR testnet, buys one real policy, and shows a third-party `migrate()` refused on the live chain |
 | Live adversarial tests | `npm run test:onchain` | **17 tests** — refused-with-the-expected-reason against the LIVE contract; needs a fresh `npm run deploy` and the gitignored operator identities (not run in the CI environment) |
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, public read-only + local dry-run round-trip OK, wallet picker opens in-viewport** |

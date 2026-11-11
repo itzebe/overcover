@@ -64,6 +64,10 @@ const PLAN = process.argv.includes("--plan");
 const SANDBOX = process.argv.includes("--sandbox");
 const REQUIRE = process.env.REQUIRE_TESTNET === "1" || (SANDBOX && process.env.REQUIRE_SANDBOX === "1");
 const ts = Date.now().toString(36);
+// A hard wall-clock cap: the harness must never hang a CI runner. If it is hit
+// the process fails loudly, and (in sandbox mode) the node is killed below.
+const HARD_TIMEOUT_MS = Number(process.env.OVERCOVER_PROOF_TIMEOUT_MS ?? (SANDBOX ? 300000 : 480000));
+const SEND_RETRIES = Number(process.env.OVERCOVER_SEND_RETRIES ?? 6);
 
 const SANDBOX_HOME = process.env.NEAR_SANDBOX_HOME || path.join("/tmp", "overcover-v3-deploy-" + process.pid);
 // A unique port per process: a leftover node from a previous run would otherwise
@@ -223,7 +227,7 @@ async function main() {
 
   async function send(id, fn) {
     let last;
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < SEND_RETRIES; i++) {
       try { const a = await near.account(id); return await fn(a); }
       catch (e) {
         last = e;
@@ -446,4 +450,16 @@ async function main() {
   if (passed !== results.length) process.exitCode = 1;
 }
 
-main().catch((e) => { console.error("FATAL", e?.message || e); process.exitCode = 1; });
+// A hard wall-clock cap so the harness can never hang a CI runner: whichever of
+// the proof or the deadline settles first wins. On timeout (or any failure) the
+// process exits explicitly, which fires the sandbox `process.on("exit")` hook
+// that kills the stray neard node.
+const withDeadline = (p) => Promise.race([
+  p,
+  new Promise((_, rej) => { const t = setTimeout(() => rej(new Error(`proof exceeded ${HARD_TIMEOUT_MS} ms`)), HARD_TIMEOUT_MS); t.unref?.(); }),
+]);
+
+withDeadline(main()).then(
+  () => process.exit(process.exitCode || 0),
+  (e) => { console.error("FATAL", e?.message || e); process.exit(1); },
+);

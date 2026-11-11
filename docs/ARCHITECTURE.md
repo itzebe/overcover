@@ -54,6 +54,13 @@ It holds **no wallet, no key, and no server**. It is read-only, and it says so o
 distinguishes four states honestly — loading, live, stale, failed — and never presents a failed
 read as live. Published to GitHub Pages by `.github/workflows/pages.yml`.
 
+Its **agent panel** has a public, read-only mode and an opt-in local mode. The public mode loads the
+same spending-policy engine the agent service runs (`agent/limits.mjs`, bundled to
+`ui/vendor/policy.js` by `npm run build:wallet`) and evaluates a purchase in the browser against the
+live contract quote — no key, nothing signed. The page never defaults to `localhost` and never
+contacts a local service unless the visitor chooses local mode, so the public site has no dependency
+on the operator's machine.
+
 ### 4. Reference model — `research/model/`
 
 An executable BigInt model of the accounting rules with a **31-attack suite** that runs before the

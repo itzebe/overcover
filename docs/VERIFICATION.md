@@ -70,7 +70,7 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests
-npm run test:console    # 66 regression + live-RPC tests
+npm run test:console    # 71 regression + live-RPC tests
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 ```
 
@@ -96,6 +96,20 @@ blocked at the network layer).
 `research/model/` is an executable BigInt model of the accounting rules and a 31-attack suite that
 runs **before** the contract. `npm run test:model` prints `31 attacks, 31 defended, 0 exploitable`.
 It is the reason the invariant and the reconciliation identity were trusted enough to implement.
+
+## 7. The public console needs no local agent
+
+`npm run verify:connectivity` boots the **real** agent service in dry-run with a throwaway key,
+serves the **real** `ui/` files, drives a real Chromium, and blocks every request to the operator's
+localhost. It reports **12/12** checks: the page ships no localhost default; the public page loads
+with no local agent reachable and no console errors; the read-only evaluation works and its verdict
+equals the shared engine's verdict on the live contract quote (and the premium it shows is the
+contract's own premium); an unreachable service yields a safe, human message (never `Failed to
+fetch`); invalid and oversized bodies are rejected (`413` / `400`); the spending limits are enforced
+with reasons before any network call; no public path can call an owner-only method; `buy_cover` is
+the only signing capability; a visitor cannot buy without a wallet authorization; and local
+development still works. Run it against production with
+`LIVE_URL=https://overcover.vercel.app/ npm run verify:connectivity`.
 
 ## What is not verified
 

@@ -49,8 +49,12 @@ does not, and the residual risk a reviewer should weigh.
   social account inside its own app and never exposes a key to this page. No email
   address is ever turned into a key by this site, and no fake MPC is implemented.
 - **No funded anonymous signer.** The site is read-only plus a user-signed `buy_cover`;
-  it holds no balance and no operator key. The autonomous agent runs on localhost by
-  default, is dry-run by default, and is not hosted publicly.
+  it holds no balance and no operator key. The public agent panel is **read-only**: it evaluates a
+  purchase in the browser with the same spending-limits engine the agent service runs
+  (`agent/limits.mjs`, bundled to `ui/vendor/policy.js`), using the engine's default limits and the
+  live contract quote, and it signs nothing. The autonomous agent service itself runs on localhost by
+  default, is dry-run by default, and is not hosted publicly; only a service the operator runs can
+  send a purchase.
 
 ## Trust boundary and honest residual risk
 

@@ -1,0 +1,58 @@
+{
+  "url": "https://overcover.vercel.app/",
+  "at": "2026-11-11T01:19:54.101Z",
+  "passed": 7,
+  "total": 10,
+  "results": [
+    {
+      "name": "1  no localhost default in the shipped page",
+      "ok": false,
+      "detail": "the agent URL field must be empty and the page must not hardcode a local agent URL"
+    },
+    {
+      "name": "7  no private key in shipped assets or tracked files",
+      "ok": true,
+      "detail": "no ed25519 secret and no keys/ file is shipped or tracked"
+    },
+    {
+      "name": "8  no public path can call an owner-only method",
+      "ok": true,
+      "detail": "the page, wallet module and agent service never name an owner-only method"
+    },
+    {
+      "name": "10 buy_cover is the only signing capability",
+      "ok": true,
+      "detail": "the wallet scope is buy_cover alone and the agent's only function call is buy_cover"
+    },
+    {
+      "name": "11 a visitor cannot buy without a wallet authorization",
+      "ok": false,
+      "detail": "the only write path is the user's wallet, and agent Buy is hidden in public mode"
+    },
+    {
+      "name": "12 local development still works",
+      "ok": true,
+      "detail": "the local agent service boots and answers /api/v1/health"
+    },
+    {
+      "name": "5  invalid and oversized requests are rejected",
+      "ok": true,
+      "detail": "oversized=413 malformed=400 unknown-field=400"
+    },
+    {
+      "name": "9  the agent's spending limits are enforced",
+      "ok": true,
+      "detail": "status=403 reasons=premium 50000000000000000000000000000 exceeds maxPremiumPerPolicy 100000000000000000000000; payout 1000000000000000000000000000000 exceeds maxPayoutPerPolicy 1000000000000000000000000"
+    },
+    {
+      "name": "2  the public page loads with no local agent reachable",
+      "ok": true,
+      "detail": "console errors=0; local URL field hidden=true"
+    },
+    {
+      "name": "2  the public page loads with no local agent reachable",
+      "ok": false,
+      "detail": "browser error: page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#a-decide')\u001b[22m\n\u001b[2m    - locator resolved to <button disabled class=\"btn\" id=\"a-decide\" type=\"button\">Ask the agent to decide</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not enabled\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    }
+  ]
+}

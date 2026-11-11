@@ -181,14 +181,28 @@ async function main() {
 
     if (w === 1280) {
       try {
-      // Real round-trip against the dry-run agent service.
-      await page.fill("#a-url", `http://127.0.0.1:${AGENT_PORT}`);
-      // Pick the canonical product the agent is allowed to buy.
+      // 1) PUBLIC mode: read-only evaluation with no local service involved.
+      //    This is the production path — it must work with nothing running.
+      const urlHidden = await page.locator("#a-url-wrap").isHidden();
+      check(urlHidden, "[agent] the local URL field must be hidden in public mode by default");
       await page.waitForFunction(() => {
         const s = document.querySelector("#a-product");
         return s && [...s.options].some((o) => o.value === "rain-lagos");
       }, null, { timeout: 15000 });
       await page.selectOption("#a-product", "rain-lagos");
+      await page.click("#a-decide");
+      await page.waitForFunction(() => /Policy verdict/.test(document.querySelector("#a-status").textContent), null, { timeout: 15000 });
+      const pubStatus = await page.textContent("#a-status");
+      check(!/Failed to fetch/i.test(pubStatus), `[agent] public evaluation surfaced a raw fetch error: ${pubStatus}`);
+      const pubState = await page.textContent("#a-state");
+      check(/ALLOW|DENY/.test(pubState), "[agent] public evaluation rendered no verdict badge");
+      check(/read-only/i.test(pubState), "[agent] public evaluation did not label itself read-only");
+      await page.screenshot({ path: path.join(SHOTS, "agent-public-1280.png"), fullPage: false });
+
+      // 2) LOCAL mode: the real round-trip against a dry-run agent service.
+      await page.click('.mode-switch .btn-s[data-mode="local"]');
+      check(await page.locator("#a-url-wrap").isVisible(), "[agent] the local URL field must appear in local mode");
+      await page.fill("#a-url", `http://127.0.0.1:${AGENT_PORT}`);
       await page.click("#a-connect");
       await page.waitForFunction(() => /Connected to agent/.test(document.querySelector("#a-status").textContent), null, { timeout: 15000 });
       await page.waitForFunction(() => /ui-qa-agent\.testnet/.test(document.querySelector("#a-state").textContent), null, { timeout: 15000 });

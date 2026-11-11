@@ -64,9 +64,11 @@ it says how the settlement works.
 6. **Can the pool pay what it has promised?** is the live pool with an insurance framing, then
    **Policies written** and **Observations & disputes** — including a **nullified** reading that was
    successfully challenged on-chain.
-7. **An autonomous agent can buy cover too** runs the same contract driven by software: connect a
-   local agent service (see [`agent/README.md`](agent/README.md)), watch it decide against hard
-   spending limits, and let it buy within those limits — supervised or autonomous.
+7. **An autonomous agent can buy cover too** runs the same contract driven by software. The public
+   panel evaluates a purchase with the agent's own **spending-policy engine**, read-only in your
+   browser (no key, nothing signed); connect a local agent service you run yourself (see
+   [`agent/README.md`](agent/README.md)) to watch it decide against hard spending limits and buy
+   within them.
 8. **How this differs from a traditional claim** states the honest comparison and the required
    disclosures; **Check it for yourself** lets you reproduce every figure.
 
@@ -162,6 +164,16 @@ lives in the operator's environment and is never in the browser or this reposito
 **dry-run by default** — it decides and reports, but sends nothing. A denied decision never reaches
 the network, so no funds move on a refusal. See [`agent/README.md`](agent/README.md).
 
+The console's agent panel has two modes and **needs no local service for the default**:
+
+- **Public (read-only)** — the default. The page loads the **same** policy engine the service runs
+  (`agent/limits.mjs`, bundled to `ui/vendor/policy.js` by `npm run build:wallet`) and evaluates a
+  purchase in the browser against the live contract quote, with no key and nothing signed. It shows
+  the limits it judged against, so the verdict is auditable. This is what a public visitor gets.
+- **Local service** — opt-in. Enter the URL of an agent service you run yourself, and the console
+  watches it decide and buy within limits. The page never defaults to `localhost` and never calls
+  it unless you choose this mode.
+
 ## Run it
 
 ```bash
@@ -186,27 +198,31 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 66 regression + live-RPC tests          (browser console)
+npm run test:console    # 71 regression + live-RPC tests          (browser console)
 npm run test:agent      # 34 limits + API + u128-precision tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run verify:proof    # one-command independent proof of the headline claims (bytecode,
                         #   solvency, all 18 demo txs, the agent's buys, settled outcomes)
 npm run verify:agent    # the agent's spend-authorization engine vs the live product definition
+npm run verify:connectivity  # the public console works with no local agent (needs a Chromium)
 npm run verify:live     # the LIVE production URL at 320–1440 px (needs a Chromium)
 ```
 
 `npm run verify:proof` and `npm run verify:agent` read only the public RPC and the committed
 artefacts; they need no key and write nothing on-chain. `npm run verify:live` loads
 `https://overcover.vercel.app/` (override with `LIVE_URL=…`) at five widths, fails on any console
-error or horizontal overflow, and screenshots each width into `proof/shots/`.
+error or horizontal overflow, and screenshots each width into `proof/shots/`. `npm run
+verify:connectivity` boots the real agent service in dry-run and drives the real page in a browser,
+asserting the public console needs no local service while the security boundary holds (no localhost
+default, no owner-only method reachable, limits enforced, invalid bodies rejected).
 
 `npm run test:agent` covers the spending-limits policy engine (a denied buy never touches the
 network) and the agent HTTP API (strict field validation, `413` on oversized bodies, idempotent
-retries). `npm run ui:qa` is an optional Playwright check of the console at 320–1440 px, including a
-live dry-run agent round-trip and the wallet dialog's open/close paths (Close button, Escape,
-backdrop) and focus restoration; it needs a Chromium and is not part of `npm test`. `npm run axe`
-runs axe-core (WCAG 2.2 AA) over the page and the wallet dialog at 320–1440 px and expects zero
-violations.
+retries). `npm run ui:qa` is an optional Playwright check of the console at 320–1440 px, exercising
+the public read-only evaluation and a live dry-run agent round-trip in local mode, plus the wallet
+dialog's open/close paths (Close button, Escape, backdrop) and focus restoration; it needs a
+Chromium and is not part of `npm test`. `npm run axe` runs axe-core (WCAG 2.2 AA) over the page and
+the wallet dialog at 320–1440 px and expects zero violations.
 
 `npm run test:onchain` sends real attacks to the deployed contract and asserts each is **refused
 with the expected reason** — capacity, premium, lead time, signature, replay, staleness, bond,
@@ -253,7 +269,8 @@ Full detail, including the trust boundary and residual risks, in [`docs/SECURITY
   demo-generated test rows. The console groups the latter so the real cover stays legible.
 - The **autonomous agent** ships in dry-run and is run by the operator, not hosted by Overcover: a
   public endpoint that signed with a funded key would let any visitor spend that balance. The
-  console's agent panel therefore expects a service you start yourself.
+  console's public agent panel is therefore **read-only** (it evaluates with the same policy engine
+  in the browser and signs nothing); buying through the agent requires a service you run yourself.
 - **Rate limits and single-flight locks in the agent service are per-instance**, not global across
   processes. They reduce accidental double-spends; they are not a distributed lock.
 - Testnet only. No audit. Not for real funds.
@@ -288,7 +305,8 @@ The console is a single static file with no build step, published two ways:
 
 Reads go straight from the browser to public NEAR testnet RPC endpoints — there is no backend and
 no secret in the bundle. The agent service is not deployed publicly; run it locally (see
-[`agent/README.md`](agent/README.md)).
+[`agent/README.md`](agent/README.md)). The public console does not need it: the default agent mode
+is read-only and runs the same policy engine in the browser.
 
 ## Documentation
 

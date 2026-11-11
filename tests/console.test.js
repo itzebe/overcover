@@ -638,3 +638,56 @@ test("the public UI can only ever sign buy_cover, never an owner-only method", (
   assert.match(bundle, /methodNames:\["buy_cover"\]/, "the built bundle must carry the buy_cover scope");
 });
 
+// ---- production connectivity: the site must never depend on the operator's localhost. ----
+
+test("the public site ships no hardcoded local agent URL", () => {
+  // The original defect: the console defaulted to http://127.0.0.1:8787 and
+  // fetched it on connect, so a public visitor saw "Failed to fetch".
+  assert.doesNotMatch(HTML, /value="http:\/\/127\.0\.0\.1:8787"/, "the agent URL field must not default to localhost");
+  assert.doesNotMatch(HTML, /https?:\/\/127\.0\.0\.1:8787/, "the page must not hardcode a localhost agent URL");
+  const urlInput = HTML.match(/<input id="a-url"[^>]*>/);
+  assert.ok(urlInput, "the agent URL field must exist");
+  assert.match(urlInput[0], /value=""/, "the agent URL field must start empty");
+});
+
+test("the console defaults to public read-only mode, not a local service", () => {
+  assert.match(HTML, /data-mode="readonly"[^>]*aria-pressed="true"/, "public read-only must be the default mode");
+  assert.match(SCRIPT, /setAgentMode\("readonly"\)/, "the console must initialise in read-only mode");
+  // The local URL field, Connect, Buy and Kill controls are hidden until the
+  // visitor opts into local mode.
+  assert.match(HTML, /id="a-url-wrap"[^>]*hidden/, "the local URL field must start hidden");
+  assert.match(HTML, /id="a-connect"[^>]*hidden/, "Connect must start hidden");
+  assert.match(HTML, /id="a-buy"[^>]*hidden/, "agent Buy must start hidden");
+  assert.match(HTML, /id="a-kill"[^>]*hidden/, "Emergency stop must start hidden");
+});
+
+test("the public evaluation uses the shipped policy engine, not the local service", () => {
+  // The read-only path must call the bundled engine (window.OvercoverPolicy) on
+  // the live contract quote, and must NOT POST to the local agent API.
+  const fn = extractFunction(SCRIPT, "agentEvaluatePublic");
+  assert.match(fn, /OvercoverPolicy/, "public evaluation must use the bundled policy engine");
+  assert.match(fn, /view\("quote"/, "public evaluation must read the live contract quote");
+  assert.doesNotMatch(fn, /agentReq\(/, "public evaluation must not call the local agent service");
+  assert.match(HTML, /<script src="vendor\/policy\.js"><\/script>/, "the policy bundle must be loaded by the page");
+});
+
+test("a network failure is shown as a helpful message, never a raw fetch error", () => {
+  assert.match(SCRIPT, /function friendlyNetError\(/, "the console must translate network errors");
+  assert.match(SCRIPT, /failed to fetch\|networkerror\|load failed\|network request failed/i, "friendlyNetError must match the raw fetch error");
+  // The local-service failure message must be actionable, not the raw error.
+  assert.match(SCRIPT, /Could not reach your agent service[\s\S]{0,80}friendlyNetError/, "the connect failure must use the friendly message");
+});
+
+test("the shipped policy bundle is the shared engine and holds no secret", () => {
+  const policy = fs.readFileSync(path.join(root, "ui", "vendor", "policy.js"), "utf8");
+  // It must be the real engine (its refusal strings are present), so the public
+  // verdict is the same logic the agent service runs — not a re-implementation.
+  for (const needle of ["maxPremiumPerPolicy", "maxPayoutPerPolicy", "dailyPremiumBudget", "dailyPolicyLimit"]) {
+    assert.ok(policy.includes(needle), `the policy bundle must contain the engine's ${needle} check`);
+  }
+  // It must never carry a key, a signer, or a network call.
+  assert.doesNotMatch(policy, /ed25519/i, "the policy bundle must not mention a key type");
+  assert.doesNotMatch(policy, /secretKey|privateKey|seedPhrase/i, "the policy bundle must not carry key material");
+  assert.doesNotMatch(policy, /fetch\(|XMLHttpRequest/, "the policy bundle must not make network calls");
+});
+

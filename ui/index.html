@@ -66,6 +66,7 @@
   .skip { position: absolute; left: -9999px; top: 0; background: var(--ink); color: #fff; padding: 10px 14px; z-index: 40; font-weight: 600; }
   .skip:focus { left: 12px; top: 12px; }
   .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  [hidden] { display: none !important; }
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
   main { padding-bottom: 0; }
   main > section { min-width: 0; }
@@ -764,38 +765,38 @@
   <section class="wrap band" id="agent" aria-labelledby="agent-h">
     <div class="sect-head">
       <h2 id="agent-h">An autonomous agent can buy cover too</h2>
-      <p class="sect-note">The same contract, driven by software instead of a person. The agent has its own account and its own key; a human sets hard spending limits in advance. Connect a local agent service to watch it decide, or run it in dry-run so it never spends.</p>
+      <p class="sect-note">The same contract, driven by software instead of a person. The agent has its own account and its own key; a human sets hard spending limits in advance. This console evaluates a purchase with the agent's own spending-policy engine, read-only in your browser — or connect a local agent service you run yourself to watch it act.</p>
     </div>
 
     <div class="agent" id="agent-panel">
       <div class="agent-head">
         <div>
           <h3>Agent console</h3>
-          <p class="buy-sub">This console talks to an agent service you run yourself (see <code>agent/README.md</code>). It never holds a key. Two modes: <b>supervised</b> (decide, show the verdict, buy only on your press) and <b>autonomous</b> (it buys within limits on its own).</p>
+          <p class="buy-sub">Public mode evaluates a purchase with the same <b>spending-policy engine</b> the agent service runs — read-only, in your browser, with no key and nothing signed. Local mode connects to an agent service you run yourself (see <code>agent/README.md</code>) to watch it decide and buy within limits.</p>
         </div>
         <span class="mode-switch" role="group" aria-label="Agent mode">
-          <button class="btn-s" type="button" data-mode="supervised" aria-pressed="true">Supervised</button>
-          <button class="btn-s" type="button" data-mode="autonomous" aria-pressed="false">Autonomous</button>
+          <button class="btn-s" type="button" data-mode="readonly" aria-pressed="true">Public (read-only)</button>
+          <button class="btn-s" type="button" data-mode="local" aria-pressed="false">Local service</button>
         </span>
       </div>
 
       <div class="agent-grid">
         <div class="qrow">
-          <label for="a-url">Agent service URL</label>
-          <input id="a-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" value="http://127.0.0.1:8787" />
-          <span class="sub">Runs on your machine; bound to localhost by default.</span>
-        </div>
-        <div class="qrow">
           <label for="a-product">Product for the agent</label>
           <select id="a-product"></select>
+        </div>
+        <div class="qrow" id="a-url-wrap" hidden>
+          <label for="a-url">Local agent service URL</label>
+          <input id="a-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="your local agent URL" value="" />
+          <span class="sub">A service you run on your own machine (see <code>agent/README.md</code>). Not used by the public site.</span>
         </div>
       </div>
 
       <div class="agent-actions">
-        <button id="a-connect" class="btn" type="button">Connect to agent</button>
-        <button id="a-decide" class="btn" type="button" disabled>Ask the agent to decide</button>
-        <button id="a-buy" class="btn" type="button" disabled>Agent buys this cover</button>
-        <button id="a-kill" class="btn" type="button" disabled>Emergency stop</button>
+        <button id="a-connect" class="btn" type="button" hidden>Connect to agent</button>
+        <button id="a-decide" class="btn" type="button">Evaluate with agent policy</button>
+        <button id="a-buy" class="btn" type="button" hidden>Agent buys this cover</button>
+        <button id="a-kill" class="btn" type="button" hidden>Emergency stop</button>
         <span class="buy-status" id="a-status" role="status" aria-live="polite"></span>
       </div>
 
@@ -805,7 +806,8 @@
       <div class="buy-note" id="a-note">
         <b>What the agent can do.</b> It can read the contract and call <code>buy_cover</code>. It cannot call any
         owner-only method, and every purchase is checked against the spending limits before anything is sent.
-        If a limit refuses the purchase, no transaction is created and no funds move.
+        If a limit refuses the purchase, no transaction is created and no funds move. Public mode holds no key
+        and signs nothing; only a local service you run can send a purchase.
       </div>
     </div>
   </section>
@@ -1030,6 +1032,7 @@
 
 
 <script src="vendor/wallet-bundle.js"></script>
+<script src="vendor/policy.js"></script>
 <script>
 (function () {
   "use strict";
@@ -1686,12 +1689,23 @@
 
   // ---------------------------------------------------------------- agent console
 
-  // The console talks to an agent service the user runs themselves. It holds no
-  // key and signs nothing here: the service does, under the limits the user set.
-  var agentUI = { url: "", mode: "supervised", connected: false, status: null };
+  // Public mode evaluates a purchase with the agent's own spending-policy engine
+  // (agent/limits.mjs, bundled to ui/vendor/policy.js) — read-only, in the
+  // browser, with no key and nothing signed. Local mode talks to an agent service
+  // the user runs themselves; that service holds the key and signs, under the
+  // limits the user set. The public site never points at localhost by default.
+  var agentUI = { url: "", mode: "readonly", connected: false, status: null };
 
   function agentUrl() {
     return (el("a-url").value || "").trim().replace(/\/$/, "");
+  }
+
+  // Turn a fetch-level failure into something a person can act on, never the raw
+  // "Failed to fetch".
+  function friendlyNetError(e) {
+    var m = e && e.message ? String(e.message) : "";
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(m)) return "the service did not respond (is it running?)";
+    return m || "unknown error";
   }
 
   function agentReq(path, body) {
@@ -1794,19 +1808,78 @@
   }
 
   function agentConnect() {
-    setAgentStatus("Connecting to " + agentUrl() + "…", false);
+    var url = agentUrl();
+    if (!url) { setAgentStatus("Enter your local agent service URL first.", true); return; }
+    setAgentStatus("Connecting to " + url + "…", false);
     agentReq("/api/v1/health").then(function (h) {
       agentUI.connected = true;
-      agentUI.url = agentUrl();
-      el("a-decide").disabled = false;
+      agentUI.url = url;
       el("a-buy").disabled = false;
       el("a-kill").disabled = false;
       setAgentStatus("Connected to agent " + h.accountId + " (" + (h.dryRun ? "dry run" : "live") + ").", false, true);
       return refreshAgent();
     }).catch(function (e) {
       agentUI.connected = false;
-      setAgentStatus("Could not reach an agent service at " + agentUrl() + ". " + (e && e.message ? e.message : ""), true);
+      el("a-buy").disabled = true;
+      el("a-kill").disabled = true;
+      setAgentStatus("Could not reach your agent service at " + url + ": " + friendlyNetError(e) + ". Make sure it is running, then connect again.", true);
     });
+  }
+
+  // The public, read-only evaluation: the SAME policy engine the agent service
+  // runs, on the live contract quote, with the engine's default limits. No key,
+  // no network write, nothing signed.
+  function agentEvaluatePublic(pid, payout, obs) {
+    var P = window.OvercoverPolicy;
+    if (!P || typeof P.evaluate !== "function") return Promise.reject(new Error("policy engine did not load"));
+    var product = quoteState.products.filter(function (x) { return x.id === pid; })[0];
+    if (!product) return Promise.reject(new Error("no such product: " + pid));
+    return view("quote", { product_id: pid, payout: String(payout) }).then(function (q) {
+      var premiumYocto = String(Array.isArray(q) ? q[0] : q);
+      var nowSec = Math.floor(Date.now() / 1000);
+      var verdict = P.evaluate(
+        { productId: pid, city: product.city, payoutYocto: String(payout), premiumYocto: premiumYocto, obsDateSec: obs, nowSec: nowSec },
+        product,
+        { limits: P.DEFAULT_LIMITS, history: [], nowMs: nowSec * 1000 }
+      );
+      return { allow: verdict.allow, reasons: verdict.reasons, premiumYocto: premiumYocto };
+    });
+  }
+
+  function renderAgentVerdict(d, payout, isPublic) {
+    var box = el("a-state");
+    box.hidden = false;
+    var badge = d.allow ? '<span class="badge allow">ALLOW</span>' : '<span class="badge deny">DENY</span>';
+    var detail = d.allow
+      ? "The agent may buy this cover: premium " + fmt(d.premiumYocto, 6) + " NEAR, payout " + fmt(payout, 2) + " NEAR."
+      : "The agent refuses this cover:<ul>" + d.reasons.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
+    var v = document.createElement("div");
+    v.className = "verdict";
+    v.innerHTML = badge + "<div>" + detail + "</div>";
+    box.innerHTML = "";
+    box.appendChild(v);
+    if (isPublic) renderPublicLimits();
+    else renderAgentState(agentUI.status || {});
+  }
+
+  // Show the limits the public verdict was judged against, so the result is
+  // auditable and never looks like a fabricated number.
+  function renderPublicLimits() {
+    var box = el("a-state");
+    box.hidden = false;
+    var L = (window.OvercoverPolicy && window.OvercoverPolicy.DEFAULT_LIMITS) || {};
+    var body =
+      row("Engine", "agent/limits.mjs — same as the service") +
+      row("Mode", "public, read-only") +
+      row("Signs / sends", "nothing") +
+      row("Max premium / policy", esc(fmt(L.maxPremiumPerPolicy, 4) + " NEAR")) +
+      row("Max payout / policy", esc(fmt(L.maxPayoutPerPolicy, 4) + " NEAR")) +
+      row("Daily premium budget", esc(fmt(L.dailyPremiumBudget, 4) + " NEAR")) +
+      row("Daily policy limit", esc(String(L.dailyPolicyLimit))) +
+      row("Cooldown", esc(String(L.cooldownSec) + "s"));
+    var keep = box.querySelector(".verdict");
+    box.innerHTML = body;
+    if (keep) box.appendChild(keep);
   }
 
   function agentDecide() {
@@ -1814,28 +1887,31 @@
     var payout = agentPayout(pid);
     var obs = agentObsDate(pid);
     if (!payout) { setAgentStatus("Choose an agent product.", true); return; }
+
+    if (agentUI.mode !== "local") {
+      setAgentStatus("Evaluating with the agent's spending-policy engine…", false);
+      agentEvaluatePublic(pid, payout, obs).then(function (d) {
+        renderAgentVerdict(d, payout, true);
+        setAgentStatus(d.allow ? "Policy verdict: allow." : "Policy verdict: deny.", !d.allow, d.allow);
+      }).catch(function (e) {
+        setAgentStatus("Evaluation failed: " + friendlyNetError(e), true);
+      });
+      return;
+    }
+
+    if (!agentUI.connected) { setAgentStatus("Connect to your local agent service first.", true); return; }
     setAgentStatus("Asking the agent to decide…", false);
     agentReq("/api/v1/agent/decide", { productId: pid, payoutYocto: payout, obsDateSec: obs }).then(function (d) {
-      var box = el("a-state");
-      box.hidden = false;
-      var badge = d.allow ? '<span class="badge allow">ALLOW</span>' : '<span class="badge deny">DENY</span>';
-      var detail = d.allow
-        ? "The agent may buy this cover: premium " + fmt(d.premiumYocto, 6) + " NEAR, payout " + fmt(payout, 2) + " NEAR."
-        : "The agent refuses this cover:" + "<ul>" + d.reasons.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
-      var v = document.createElement("div");
-      v.className = "verdict";
-      v.innerHTML = badge + "<div>" + detail + "</div>";
-      box.innerHTML = "";
-      box.appendChild(v);
-      renderAgentState(agentUI.status || {});
+      renderAgentVerdict(d, payout, false);
       setAgentStatus(d.allow ? "Policy verdict: allow." : "Policy verdict: deny.", !d.allow, d.allow);
-      if (agentUI.mode === "autonomous" && d.allow) agentBuy();
     }).catch(function (e) {
-      setAgentStatus("Decision failed: " + (e && e.message ? e.message : e), true);
+      setAgentStatus("Decision failed: " + friendlyNetError(e), true);
     });
   }
 
   function agentBuy() {
+    if (agentUI.mode !== "local") { setAgentStatus("Public mode is read-only. Switch to Local service to buy.", true); return; }
+    if (!agentUI.connected) { setAgentStatus("Connect to your local agent service first.", true); return; }
     var pid = el("a-product").value;
     var payout = agentPayout(pid);
     var obs = agentObsDate(pid);
@@ -1856,24 +1932,41 @@
       return refreshAgent();
     }).catch(function (e) {
       var reasons = (e.reasons && e.reasons.length) ? " " + e.reasons.join("; ") : "";
-      setAgentStatus("Agent did not buy: " + (e && e.message ? e.message : e) + reasons, true);
+      setAgentStatus("Agent did not buy: " + friendlyNetError(e) + reasons, true);
     });
   }
 
   function agentKill() {
+    if (agentUI.mode !== "local" || !agentUI.connected) { setAgentStatus("Connect to your local agent service first.", true); return; }
     agentReq("/api/v1/agent/control", { enabled: false }).then(function (r) {
       setAgentStatus("Emergency stop engaged. The agent is disabled (enabled=" + r.enabled + ").", false, true);
       return refreshAgent();
     }).catch(function (e) {
-      setAgentStatus("Emergency stop failed: " + (e && e.message ? e.message : e), true);
+      setAgentStatus("Emergency stop failed: " + friendlyNetError(e), true);
     });
   }
 
   function setAgentMode(mode) {
     agentUI.mode = mode;
+    var isLocal = mode === "local";
     var btns = document.querySelectorAll(".mode-switch .btn-s");
     for (var i = 0; i < btns.length; i++) btns[i].setAttribute("aria-pressed", btns[i].getAttribute("data-mode") === mode ? "true" : "false");
-    setAgentStatus(mode === "autonomous" ? "Autonomous: the agent will buy within limits when the policy allows." : "Supervised: the agent decides, and you press Buy.", false);
+    el("a-url-wrap").hidden = !isLocal;
+    el("a-connect").hidden = !isLocal;
+    el("a-buy").hidden = !isLocal;
+    el("a-kill").hidden = !isLocal;
+    el("a-buy").disabled = true;
+    el("a-kill").disabled = true;
+    var decide = el("a-decide");
+    decide.textContent = isLocal ? "Ask the agent to decide" : "Evaluate with agent policy";
+    decide.disabled = false;
+    if (!isLocal) { agentUI.connected = false; agentUI.url = ""; }
+    var st = el("a-state"); st.hidden = true; st.innerHTML = "";
+    el("a-log").hidden = true;
+    el("a-note").innerHTML = isLocal
+      ? '<b>Local service.</b> Connect an agent service you run yourself (see <code>agent/README.md</code>). It holds the key and can call only <code>buy_cover</code>, under the limits you set. It cannot call any owner-only method, and a limit refusal moves no funds.'
+      : '<b>Public mode is read-only.</b> It evaluates a purchase with the agent\'s own spending-policy engine, using the engine\'s default limits and the live contract quote. It holds no key, calls no owner-only method, and signs nothing. A purchase can only be sent by a local agent service you run, or by your own wallet above.';
+    setAgentStatus(isLocal ? "Local mode: connect your agent service." : "Public mode: read-only evaluation with the agent policy engine.", false);
   }
 
   el("a-connect").addEventListener("click", agentConnect);
@@ -1886,6 +1979,7 @@
       btns[i].addEventListener("click", function () { setAgentMode(this.getAttribute("data-mode")); });
     }
   })();
+  setAgentMode("readonly");
 
   // ---------------------------------------------------------------- quote
 

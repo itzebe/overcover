@@ -45,9 +45,12 @@ License: MIT
   the repository. Signing happens inside the user's wallet.
 - The site never calls an owner-only method: deposit, reset, add_shock,
   owner_withdraw, set_lifeline_enabled and seed_merchant are not exposed publicly.
-- The autonomous agent service runs on localhost by default, is dry-run by default,
-  and is not deployed publicly; the site states this rather than implying a hosted
-  agent.
+- The public agent console is read-only: it evaluates a purchase with the same
+  spending-limits policy engine the agent service runs (`agent/limits.mjs`, bundled
+  to `ui/vendor/policy.js`), using the engine's default limits and the live contract
+  quote. It holds no key and signs nothing. The agent service itself runs on
+  localhost by default, is dry-run by default, and is not hosted publicly; the site
+  states this rather than implying a hosted agent.
 
 ## Known limitations
 

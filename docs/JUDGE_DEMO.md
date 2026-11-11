@@ -43,6 +43,11 @@ Open **https://overcover.vercel.app/**. Do not narrate the technology; narrate t
 *Why it is credible:* every number is a `get_pool` / `list_products` read from
 `contract.attestor-overcover.testnet`. Refresh it; it changes when the chain changes.
 
+Optional, if a judge asks how software finds the cover: open
+**https://overcover.vercel.app/products.json** — *"the whole catalogue, generated from the contract,
+with the trigger rule, the premium formula and the exact `buy_cover` call shape. Any agent can read
+it; nothing here is hand-written."*
+
 ## 2. How a claim settles (15 s) — LIVE
 
 Walk **From buying cover to getting paid**: cover is defined before purchase; the payout is

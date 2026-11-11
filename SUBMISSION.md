@@ -184,8 +184,9 @@ captured in this environment. A judge can complete it in two minutes by followin
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
 | Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **77 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **78 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **36 passed, 0 failed** |
+| Product feed + agent evaluation | `npm run test:agent-eval` | **22 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
 | Live adversarial tests | `npm run test:onchain` | **17 tests** — refused-with-the-expected-reason against the LIVE contract; needs a fresh `npm run deploy` and the gitignored operator identities (not run in the CI environment) |
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, public read-only + local dry-run round-trip OK, wallet picker opens in-viewport** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |

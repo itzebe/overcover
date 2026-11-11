@@ -68,8 +68,8 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 
 ```bash
 npm ci --ignore-scripts
-npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
-npm run test:contract   # 21 Rust unit tests
+npm run test:model      # 60 attacks, 60 defended, 0 exploitable  (reference model)
+npm run test:contract   # 40 Rust unit tests
 npm run test:console    # 87 regression + live-RPC tests (page regressions + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
 npm run test:agent-eval # 32 product-feed schema/premium + agent boundary + independent-client integration
@@ -113,8 +113,8 @@ blocked at the network layer).
 
 ## 6. The product rules hold
 
-`research/model/` is an executable BigInt model of the accounting rules and a 31-attack suite that
-runs **before** the contract. `npm run test:model` prints `31 attacks, 31 defended, 0 exploitable`.
+`research/model/` is an executable BigInt model of the accounting rules and a 60-attack suite that
+runs **before** the contract. `npm run test:model` prints `60 attacks, 60 defended, 0 exploitable`.
 It is the reason the invariant and the reconciliation identity were trusted enough to implement.
 
 ## 7. The public console needs no local agent
@@ -141,7 +141,7 @@ development still works. Run it against production with
   gitignored operator identities (`keys/identities.json`, `keys/state.json`) and a fresh deploy, so
   they cannot run without a funded operator key. The suite exists and fails cleanly with an
   actionable message; it is **not** part of `npm test`. The same attacks are executed against the
-  reference model (`npm run test:model`, 31 attacks, 0 exploitable), which is the offline gate that
+  reference model (`npm run test:model`, 60 attacks, 0 exploitable), which is the offline gate that
   runs everywhere. The list of attacks covered: economics (capacity, premium injection, reserve vs
   withdraw, correlated claims, lead time, early resolve), oracle (wrong signer, stale, out-of-range,
   overwrite, future date, early resolve, bonded dispute both ways), mechanics (double resolve,

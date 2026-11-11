@@ -182,9 +182,9 @@ captured in this environment. A judge can complete it in two minutes by followin
 
 | Suite | Command | Result |
 | --- | --- | --- |
-| Reference model attacks | `npm run test:model` | **31 attacks, 0 exploitable, 31 defended** |
-| Contract unit tests | `npm run test:contract` | **21 passed, 0 failed** |
-| Console regression + live RPC | `npm run test:console` | **87 passed, 0 failed** |
+| Reference model attacks | `npm run test:model` | **60 attacks, 0 exploitable, 60 defended** |
+| Contract unit tests | `npm run test:contract` | **40 passed, 0 failed** (includes 4 SEC-1 migrate-authorization regressions) |
+| Console regression + live RPC | `npm run test:console` | **90 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **51 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
 | Product feed + agent evaluation | `npm run test:agent-eval` | **32 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
 | Live adversarial tests | `npm run test:onchain` | **17 tests** — refused-with-the-expected-reason against the LIVE contract; needs a fresh `npm run deploy` and the gitignored operator identities (not run in the CI environment) |
@@ -225,6 +225,8 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
   `#[init(ignore_state)]` (it runs before state is read, so it cannot check the stored owner). An
   internal security pre-audit reproduced a full state takeover against the exact deployed bytecode
   and **fixed it in the v2 source** (`ensure!(predecessor == current_account_id)`), verified by the
-  attack being refused and by Rust regression tests. The fix ships with the v2 deploy (PR #9); until
-  that deploy happens the **live testnet contract remains vulnerable**. Full detail:
-  `docs/SECURITY_PRE_AUDIT.md`.
+  attack being refused and by Rust regression tests (`sec1_*`). `npm run verify:migration` proves it
+  end to end: the deployed module is byte-identical to the v1 source (sha256 `1f30ccf1…`), v1's
+  `migrate()` has the vulnerable shape, v2's has the guard, and the guard tests pass. The fix is
+  integrated and merge-ready (PR #9); until the v2 deploy happens the **live testnet contract remains
+  vulnerable**. Full detail: `docs/SECURITY_PRE_AUDIT.md`.

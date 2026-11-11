@@ -219,7 +219,7 @@
   tbody tr:hover { background: #fbfaf6; }
   .sub { color: var(--muted); }
   .tag { font-size: 11px; font-family: var(--sans); font-weight: 650; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); white-space: nowrap; display: inline-block; }
-  .tag.active, .tag.signed, .tag.available { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
+  .tag.active, .tag.signed, .tag.available, .tag.quorum { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
   .tag.settled_paid { color: var(--accent); border-color: #e0bfa2; background: var(--accent-w); }
   .tag.settled_no_pay { color: var(--muted); }
   .tag.challenged, .tag.nullified { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
@@ -639,7 +639,7 @@
           <span class="meta"><span class="chip actor">policyholder</span><span class="chip">buy_cover</span></span>
         </div>
       </li>
-      <li>
+      <li id="step-04">
         <div class="node"><span class="num">04</span></div>
         <div class="body">
           <p class="t">The risk is observed</p>
@@ -655,7 +655,7 @@
           <span class="meta"><span class="chip actor">anyone</span><span class="chip">challenge_observation</span></span>
         </div>
       </li>
-      <li>
+      <li id="step-06">
         <div class="node"><span class="num">06</span></div>
         <div class="body">
           <p class="t">A dispute is resolved</p>
@@ -902,7 +902,7 @@
   <section class="wrap band" aria-labelledby="obs-h">
     <div class="sect-head">
       <h2 id="obs-h">Observations &amp; disputes</h2>
-      <p class="sect-note">Signed index readings. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected and can never settle a policy.</p>
+      <p class="sect-note" id="obs-note">Signed index readings. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected and can never settle a policy.</p>
     </div>
     <div class="panel" id="observations">
       <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -940,15 +940,15 @@
     <div class="controls">
       <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">1</span>Defined conditions</p><p class="cd">The city, index, trigger, premium and payout bounds are published before purchase and cannot change afterwards. There is no re-pricing after the fact.</p></div>
       <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">2</span>Reserved payout</p><p class="cd">The moment a policy is bought, its payout is reserved. The contract refuses any transaction that would leave the pool promising more than it holds.</p></div>
-      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">3</span>Bonded, challengeable reading</p><p class="cd">The attestor's reading is signed and verified on-chain, and anyone may dispute it with a bond. A disputed reading cannot settle a policy.</p></div>
+      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">3</span>Bonded, challengeable reading</p><p class="cd" id="ctrl-oracle">The attestor's reading is signed and verified on-chain, and anyone may dispute it with a bond. A disputed reading cannot settle a policy.</p></div>
     </div>
 
     <div class="disclose">
       <h3>What you should know before trusting this</h3>
       <ul>
         <li><b>Testnet only, unaudited.</b> This runs on NEAR testnet with test funds. The contract has not been professionally audited and is not for real money.</li>
-        <li><b>Single trusted attestor.</b> The index reading is currently signed by one key, not a decentralised oracle. It can be challenged, but the challenge is not yet trustless.</li>
-        <li><b>The owner resolves disputes.</b> Step 06 is a human decision by the contract owner. The owner has no power to move pool capital, but it does decide disputes.</li>
+        <li id="disc-oracle"><b>Single trusted attestor.</b> The index reading is currently signed by one key, not a decentralised oracle. It can be challenged, but the challenge is not yet trustless.</li>
+        <li id="disc-resolvers"><b>The owner resolves disputes.</b> Step 06 is a human decision by the contract owner. The owner has no power to move pool capital, but it does decide disputes.</li>
         <li><b>60-second challenge window.</b> The live demonstration uses a 60-second window; a production deployment would use a longer one.</li>
         <li><b>Parametric, not indemnity.</b> A payout follows the reading meeting the trigger. It does not compensate an assessed loss, and a loss that does not meet the trigger is not covered.</li>
       </ul>
@@ -968,7 +968,7 @@
         <div class="copy-row"><button class="btn-s" id="copy-cid" type="button">Copy account id</button><span class="copied" id="copied-cid" role="status"></span></div>
         <p class="lbl" style="margin-top:16px">Deployed code hash</p>
         <p class="val" id="codehash">—</p>
-        <p class="lbl" style="margin-top:16px">Attestor · dispute bond · challenge window</p>
+        <p class="lbl" style="margin-top:16px" id="oracle-label">Attestor · dispute bond · challenge window</p>
         <p class="val" id="attestor">—</p>
       </div>
       <div>
@@ -1074,6 +1074,20 @@
   var fmt = function (y, d) { var v = near(y); return isFinite(v) ? v.toFixed(d === undefined ? 4 : d) : "—"; };
   var pct = function (a, b) { var n = near(a), d = near(b); return d > 0 ? (n / d) * 100 : 0; };
   var mm = function (t) { return (Number(t) / 10).toFixed(1) + " mm"; };
+  // Metric-aware value formatting. The metric carries the unit and the trigger
+  // direction, so nothing here assumes rainfall — but when the contract is the
+  // legacy single-index build (no metric metadata), the defaults below reproduce
+  // exactly the rainfall semantics those products use.
+  var METRIC = {};
+  var OPERATORS = [];
+  var CONTRACT_V2 = false;
+  var unitName = function (metricId) {
+    var m = METRIC[metricId];
+    return String((m && m.unit) || "mm/10").replace(/\/\s*10$/, "");
+  };
+  var fmtVal = function (tenths, metricId) {
+    return (Number(tenths) / 10).toFixed(1) + " " + unitName(metricId);
+  };
   var utc = function (s) { return new Date(Number(s) * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC"; };
   var hhmm = function (ms) { return new Date(ms).toISOString().slice(11, 19) + " UTC"; };
   var shortAcct = function (a) { a = String(a || ""); return a.length > 26 ? a.slice(0, 12) + "…" + a.slice(-9) : a; };
@@ -1222,11 +1236,20 @@
 
   // ---------------------------------------------------------------- insurance wording
 
-  // The contract pays iff the validated reading is >= the product threshold, so the
-  // coverage statement is derived from that rule rather than written by hand.
+  // The contract pays iff the validated reading meets the trigger, where the
+  // direction comes from the metric (Above: value >= threshold; Below: value <=
+  // threshold). The coverage statement is derived from that rule, not hand-written,
+  // so it is correct for every risk category, not just rainfall.
   function coveredText(p) {
-    return "Pays if " + cap(p.city) + " rainfall reaches " + mm(p.threshold_tenths) +
-      " or more on the observation date.";
+    var m = METRIC[p.metric_id] || {};
+    var dir = m.direction || "Above";
+    var unit = unitName(p.metric_id);
+    var cat = m.category;
+    var risk = cat ? (cat + " (" + unit + ")") : ("rainfall (" + unit + ")");
+    var verb = dir === "Below" ? "falls to" : "reaches";
+    var suffix = dir === "Below" ? "or less" : "or more";
+    return "Pays if " + cap(p.city) + " " + risk + " " + verb + " " + fmtVal(p.threshold_tenths, p.metric_id) +
+      " " + suffix + " on the observation date.";
   }
 
   // The contract's own plausibility bound is 500.0 mm (MAX_RAINFALL_TENTHS):
@@ -1252,6 +1275,11 @@
 
   function term(k, v) { return '<div><p class="k">' + esc(k) + '</p><p class="v">' + v + "</p></div>"; }
 
+  function metricLabel(metricId) {
+    var m = METRIC[metricId];
+    return m && m.category ? m.category : "rainfall";
+  }
+
   function productCard(p) {
     var util = pct(p.reserved, p.max_total_coverage);
     var left = capacityLeft(p);
@@ -1260,12 +1288,12 @@
       : '<span class="tag available">available</span>';
     return '<article class="card prod">' +
       '<div class="head"><div class="top"><div>' +
-        "<h3>" + esc(cap(p.city)) + " rainfall</h3>" +
+        "<h3>" + esc(cap(p.city)) + " " + esc(metricLabel(p.metric_id)) + "</h3>" +
         '<p class="city">' + esc(p.id) + " · " + esc(cap(p.city)) + "</p>" +
       "</div>" + status + "</div>" +
       '<p class="covered">' + esc(coveredText(p)) + "</p></div>" +
       '<div class="terms">' +
-        term("Trigger", mm(p.threshold_tenths)) +
+        term("Trigger", fmtVal(p.threshold_tenths, p.metric_id)) +
         term("Premium", (p.premium_bp / 100).toFixed(2) + "%") +
         term("Max payout", fmt(p.max_payout, 2) + " <small>NEAR</small>") +
         term("Min payout", fmt(p.min_payout, 2) + " <small>NEAR</small>") +
@@ -1291,14 +1319,15 @@
         (triggerAtCeiling(p) ? ' <span class="tag nullified" title="Trigger sits at the contract\'s maximum plausible rainfall (500.0 mm), so this product can only pay on that one reading">ceiling trigger</span>' : "") +
       "</td>" +
       '<td class="sub">' + esc(p.city) + "</td>" +
-      '<td class="num">' + mm(p.threshold_tenths) + "</td>" +
+      '<td class="sub">' + esc(metricLabel(p.metric_id)) + "</td>" +
+      '<td class="num">' + fmtVal(p.threshold_tenths, p.metric_id) + "</td>" +
       '<td class="num">' + (p.premium_bp / 100).toFixed(2) + "%</td>" +
       '<td class="num">' + fmt(p.max_payout, 2) + "</td>" +
       '<td class="num"><span class="meter"><span class="track"><span class="m-fill" style="width:' + Math.min(100, util).toFixed(1) + '%"></span></span><span class="pct">' + fmt(p.reserved, 2) + " / " + fmt(p.max_total_coverage, 0) + "</span></span></td>" +
       "</tr>";
   }
 
-  var PROD_HEAD = '<thead><tr><th>Product</th><th>Index</th><th class="num">Trigger</th><th class="num">Premium</th><th class="num">Max payout</th><th class="num">Reserved / capacity</th></tr></thead>';
+  var PROD_HEAD = '<thead><tr><th>Product</th><th>Index</th><th>Metric</th><th class="num">Trigger</th><th class="num">Premium</th><th class="num">Max payout</th><th class="num">Reserved / capacity</th></tr></thead>';
 
   function renderProducts(list) {
     if (!list.length) {
@@ -1363,22 +1392,60 @@
 
   function renderObservations(list) {
     if (!list.length) {
-      return '<div class="empty"><span class="e-t">No observations yet</span>An attestor reports a signed (city, date, value); the contract verifies the signature, freshness and replay nonce before accepting it.</div>';
+      return '<div class="empty"><span class="e-t">No observations yet</span>Operators each submit a signed reading of a (metric, city, date); the contract verifies each signature and replay nonce' +
+        (CONTRACT_V2 ? ", and finalises the value only when a quorum of distinct operators agree." : ".") + "</div>";
     }
     var rows = list.slice().sort(function (a, b) { return b.reported_at - a.reported_at; }).map(function (o) {
-      var state = o.nullified ? "nullified" : o.disputed ? "challenged" : "signed";
-      return "<tr>" +
-        '<td class="sub">' + esc(o.city) + "</td>" +
-        '<td class="num">' + mm(o.value_tenths) + "</td>" +
-        '<td class="num sub">' + utc(o.obs_date) + "</td>" +
+      var state = o.nullified ? "nullified" : o.disputed ? "challenged" : (CONTRACT_V2 ? "quorum" : "signed");
+      var cells = "";
+      if (CONTRACT_V2) cells += '<td class="sub">' + esc(metricLabel(o.metric_id)) + "</td>";
+      cells += '<td class="sub">' + esc(o.city) + "</td>" +
+        '<td class="num">' + fmtVal(o.value_tenths, o.metric_id) + "</td>";
+      if (CONTRACT_V2) cells += '<td class="num sub">' + esc(String(o.quorum || "—")) + " of " + esc(String(OPERATORS.length || o.quorum || "—")) + "</td>";
+      cells += '<td class="num sub">' + utc(o.obs_date) + "</td>" +
         '<td class="num sub">' + utc(o.reported_at) + "</td>" +
-        '<td><span class="tag ' + state + '">' + state + "</span></td>" +
-        "</tr>";
+        '<td><span class="tag ' + state + '">' + state + "</span></td>";
+      return "<tr>" + cells + "</tr>";
     }).join("");
-    return '<div class="scroll" tabindex="0" role="region" aria-label="Signed index observations"><table><caption>Signed index observations</caption><thead><tr>' +
-      '<th>Index</th><th class="num">Value</th><th class="num">Observed</th>' +
-      '<th class="num">Reported</th><th>State</th>' +
-      "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+    var head = (CONTRACT_V2 ? "<th>Metric</th>" : "") + "<th>Index</th><th class=\"num\">Value</th>" +
+      (CONTRACT_V2 ? '<th class="num">Quorum</th>' : "") +
+      '<th class="num">Observed</th><th class="num">Reported</th><th>State</th>';
+    var label = CONTRACT_V2 ? "Quorum-finalised index observations" : "Signed index observations";
+    return '<div class="scroll" tabindex="0" role="region" aria-label="' + label + '"><table><caption>' + label + "</caption><thead><tr>" +
+      head + "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+  }
+
+  // When the contract is the v2 build (it exposes list_metrics), the oracle and
+  // dispute narrative is upgraded in place. Until then the page keeps the text
+  // that matches the contract actually deployed, so it never over-claims.
+  function applyContractVersion(cfg, metrics) {
+    var isV2 = Array.isArray(metrics) && metrics.length > 0 && cfg && typeof cfg.resolver_quorum === "number";
+    CONTRACT_V2 = isV2;
+    document.documentElement.setAttribute("data-contract", isV2 ? "v2" : "v1");
+    var lbl = el("oracle-label");
+    if (lbl) lbl.textContent = isV2
+      ? "Oracle quorum · resolvers · dispute bond · challenge window"
+      : "Attestor · dispute bond · challenge window";
+    if (!isV2) return;
+    var step4 = el("step-04"), step6 = el("step-06");
+    if (step4) {
+      step4.querySelector(".t").textContent = "The risk is observed by a quorum";
+      step4.querySelector(".d").textContent = "Independent operators each read a public index and sign the reading with their own key. The contract accepts a reading only if the signature verifies, the caller is a registered operator and the nonce is current. No single operator — and not the protocol owner — can set the value alone: an observation finalises only when a quorum of distinct operators agree.";
+      step4.querySelector(".meta").innerHTML = '<span class="chip actor">operators</span><span class="chip">submit_reading</span>';
+    }
+    if (step6) {
+      step6.querySelector(".t").textContent = "An independent quorum resolves the dispute";
+      step6.querySelector(".d").textContent = "A quorum of independent resolvers — separate from the operators who signed, and unable to vote twice — decides. Upholding the reading forfeits the challenger's bond into the pool; nullifying it voids the reading and returns the bond. The contract owner cannot resolve a dispute alone.";
+      step6.querySelector(".meta").innerHTML = '<span class="chip actor">resolvers</span><span class="chip">resolver_vote</span>';
+    }
+    var co = el("ctrl-oracle");
+    if (co) co.textContent = "Independent operators each sign the reading with their own key, and the contract finalises it only at quorum. Anyone may dispute a finalised reading with a bond, and an independent resolver quorum decides — not the operator, not the challenger, not the owner.";
+    var dOracle = el("disc-oracle");
+    if (dOracle) dOracle.innerHTML = "<b>Multi-operator oracle, quorum-finalised.</b> A reading is accepted only when a quorum of independent operators sign the same value within tolerance. No single operator, and not the owner, can set the index alone. The operators currently read one shared free upstream (Open-Meteo), so independent signing does not by itself make the data independent.";
+    var dRes = el("disc-resolvers");
+    if (dRes) dRes.innerHTML = "<b>Independent resolvers decide disputes.</b> Step 06 is decided by a quorum of resolvers who did not sign the reading and cannot vote twice. The owner cannot resolve a dispute alone, and has no power to move pool capital.";
+    var obsNote = el("obs-note");
+    if (obsNote) obsNote.innerHTML = "Readings finalised by a quorum of independent operators. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected by the resolver quorum and can never settle a policy.";
   }
 
   function setInvariant(prefix, ok) {
@@ -2071,7 +2138,9 @@
     }
     if (sel.options.length !== canonical.length) {
       sel.innerHTML = canonical.map(function (p) {
-        return '<option value="' + esc(p.id) + '">' + esc(cap(p.city)) + " rainfall — pays at " + mm(p.threshold_tenths) + " or more</option>";
+        var cmp = (METRIC[p.metric_id] || {}).direction === "Below" ? "or less" : "or more";
+        return '<option value="' + esc(p.id) + '">' + esc(cap(p.city)) + " " + esc(metricLabel(p.metric_id)) +
+          " — pays at " + fmtVal(p.threshold_tenths, p.metric_id) + " " + cmp + "</option>";
       }).join("");
     }
     var id = sel.value || canonical[0].id;
@@ -2096,8 +2165,8 @@
     el("q-capacity").textContent = fmt(after, 2) + " NEAR";
 
     el("q-terms").innerHTML =
-      '<div><span>Covered event</span><span>' + esc(cap(p.city)) + " rainfall ≥ " + mm(p.threshold_tenths) + "</span></div>" +
-      "<div><span>Observation date</span><span>chosen at purchase, in the future</span></div>" +
+      '<div><span>Covered event</span><span>' + esc(coveredText(p)) + "</span></div>" +
+      "<div><span>Observation date</span><span>chosen at purchase, ≥ " + esc(String(p.min_lead_sec)) + "s ahead</span></div>" +
       "<div><span>Product capacity</span><span>" + fmt(p.max_total_coverage, 2) + " NEAR · " + fmt(left, 2) + " left</span></div>" +
       "<div><span>Limitations</span><span>parametric, not indemnity; single city and date</span></div>";
 
@@ -2134,7 +2203,10 @@
     fcid.href = EXPLORER + "/account/" + encodeURIComponent(CONTRACT);
     el("codehash").textContent = acct && acct.code_hash ? acct.code_hash : "—";
     el("attestor").textContent = cfg
-      ? cfg.attestor + "  ·  bond " + fmt(cfg.challenge_bond, 2) + " NEAR  ·  window " + cfg.challenge_window_sec + "s"
+      ? (CONTRACT_V2
+          ? OPERATORS.length + " operators · quorum " + cfg.quorum + " · resolvers " + cfg.resolver_quorum +
+            " · bond " + fmt(cfg.challenge_bond, 2) + " NEAR · window " + cfg.challenge_window_sec + "s"
+          : (cfg.attestor || "—") + "  ·  bond " + fmt(cfg.challenge_bond, 2) + " NEAR  ·  window " + cfg.challenge_window_sec + "s")
       : "—";
     el("src-list").textContent = RPC.join(", ");
     el("eq").textContent = "capital " + fmt(pool.capital, 4) + "  =  deposits " + fmt(pool.total_deposited, 4) +
@@ -2160,9 +2232,18 @@
       view("get_pool"), view("list_products"), view("list_policies"),
       view("list_observations"), view("get_config"), view("reconcile"),
       view("check_invariant"), accountState(),
+      // v2 reads are optional so the page still renders against an older contract
+      // that lacks them, rather than failing the whole read.
+      view("list_metrics").catch(function () { return []; }),
+      view("list_operators").catch(function () { return []; }),
     ]).then(function (r) {
       var pool = r[0], products = r[1], policies = r[2], obs = r[3], cfg = r[4];
       var reconciled = r[5] === true, invariant = r[6] === true, acct = r[7];
+      var metrics = r[8], operators = r[9];
+      METRIC = {};
+      (metrics || []).forEach(function (m) { METRIC[m.id] = m; });
+      OPERATORS = operators || [];
+      applyContractVersion(cfg, metrics);
 
       clearError();
       state.haveData = true; state.lastOk = hhmm(Date.now());

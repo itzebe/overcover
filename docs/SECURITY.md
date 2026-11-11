@@ -91,8 +91,8 @@ auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 
 ## What has been verified
 
-- A 31-attack reference model (`npm run test:model`): **31 attacks, 31 defended, 0 exploitable.**
-- 21 Rust unit tests (`npm run test:contract`).
+- A 60-attack reference model (`npm run test:model`): **60 attacks, 60 defended, 0 exploitable.**
+- 40 Rust unit tests (`npm run test:contract`).
 - 17 adversarial tests against the **live** contract (`npm run test:onchain`): each attack is refused
   with the expected reason. These need the gitignored operator key files and do not run in CI; see
   `docs/SECURITY_PRE_AUDIT.md` §4.

@@ -409,10 +409,17 @@ test("the page describes a parametric mechanism honestly, without over-claiming"
   assert.ok(/no adjuster, no queue/.test(HTML), "the parametric advantage must be stated");
   assert.ok(/parametric, not indemnity|not on an assessed loss|does not compensate an assessed loss/i.test(HTML),
     "the parametric limitation must be disclosed");
-  // The attestor and the owner are named actors, not hidden.
-  assert.ok(/attestor/i.test(HTML), "the attestor must be named");
-  assert.ok(/owner resolves disputes|owner decides|owner · resolve_dispute/i.test(HTML),
-    "the human dispute step must be disclosed, not hidden");
+  // The oracle operators and the resolver quorum are named actors. The page
+  // renders the text that matches the deployed contract: the legacy single
+  // attestor in the markup, upgraded to the quorum narrative by script when the
+  // v2 contract (list_metrics) is detected. Both must exist.
+  assert.ok(/attestor/i.test(HTML), "the legacy attestor must be named in the markup");
+  assert.ok(/operators?/i.test(SCRIPT), "the v2 oracle operators must be named in the script");
+  assert.ok(/resolvers?\b/i.test(SCRIPT), "the v2 independent resolver quorum must be named in the script");
+  assert.ok(/owner decides|owner resolves disputes|owner · resolve_dispute/i.test(HTML),
+    "the legacy dispute step must be disclosed, not hidden");
+  assert.ok(/owner cannot resolve a dispute alone/.test(SCRIPT),
+    "the limit on the owner's power under v2 must be disclosed");
   assert.ok(!/\bno human involvement\b|\bfully automated\b|\bautomatically approved\b/i.test(HTML),
     "must not claim automation beyond the implementation");
 });
@@ -424,13 +431,21 @@ test("the insurance journey names the real actor for each step", () => {
   for (const actor of ["you", "policyholder", "attestor", "anyone", "owner"]) {
     assert.ok(new RegExp(`chip actor">${actor}<`).test(j), `journey must name the actor "${actor}"`);
   }
+  // The v2 actors replace the legacy ones at runtime, so they live in the script.
+  for (const actor of ["operators", "resolvers"]) {
+    assert.ok(new RegExp(`chip actor">${actor}<`).test(SCRIPT), `v2 journey must name the actor "${actor}"`);
+  }
 });
 
 test("product cards read as coverage, with the trigger and honest limitations", () => {
   assert.ok(SCRIPT.includes("function productCard("), "products must render as coverage cards");
   assert.ok(SCRIPT.includes("coveredText(p)"), "each card must state the covered event");
-  assert.ok(/Pays if " \+ cap\(p\.city\) \+ " rainfall reaches/.test(SCRIPT),
-    "the covered event must be derived from the real threshold");
+  // The covered event must be derived from the metric direction and the real
+  // threshold, so it is correct for every risk category, not just rainfall.
+  assert.ok(/Pays if " \+ cap\(p\.city\) \+ " " \+ risk/.test(SCRIPT),
+    "the covered event must be derived from the real metric and threshold");
+  assert.ok(/dir === "Below" \? "falls to" : "reaches"/.test(SCRIPT),
+    "the trigger direction must come from the metric, not be assumed");
   assert.ok(SCRIPT.includes("Capacity left"), "remaining capacity must be shown");
   assert.ok(/not on an assessed loss/.test(SCRIPT), "cards must state the parametric limitation");
   assert.ok(SCRIPT.includes('details class="legacy"'), "demo rows must stay foldable and honestly labelled");
@@ -486,6 +501,10 @@ test("the disclosures required by the mission are present verbatim in spirit", (
     /Parametric, not indemnity/i,
   ]) {
     assert.ok(need.test(d), `disclosure missing: ${need}`);
+  }
+  // The v2 disclosures replace these at runtime; they must exist in the script.
+  for (const need of [/Multi-operator oracle, quorum-finalised/, /Independent resolvers decide disputes/]) {
+    assert.ok(need.test(SCRIPT), `v2 disclosure missing from script: ${need}`);
   }
 });
 
@@ -788,3 +807,44 @@ test("the shipped policy bundle is the shared engine and holds no secret", () =>
   assert.doesNotMatch(policy, /fetch\(|XMLHttpRequest/, "the policy bundle must not make network calls");
 });
 
+
+// ---------------------------------------------------------------------------
+// Observations table: the legacy (v1) contract stores observations WITHOUT a
+// metric_id or a quorum field. Rendering those fields blindly printed the
+// literal string "undefined" in the live table (observed against the deployed
+// v1 contract). The table must degrade to the legacy columns instead, and only
+// show the metric/quorum columns when the contract actually exposes them.
+const obsSrc = extractFunction(SCRIPT, "renderObservations");
+const renderObservations = new Function(
+  "CONTRACT_V2, OPERATORS, metricLabel, fmtVal",
+  `var esc = function (s) { return String(s); };
+   var utc = function (s) { return "T" + s; };
+   ${obsSrc};
+   return renderObservations;`
+);
+
+test("a legacy observation renders without a metric or quorum column", () => {
+  const rows = [{ city: "lagos", value_tenths: 1, obs_date: 1, reported_at: 2, disputed: false, nullified: false }];
+  const html = renderObservations(false, [], (m) => "m:" + m, (v) => "v:" + v)(rows);
+  assert.doesNotMatch(html, /undefined/, "a legacy observation must never render 'undefined'");
+  assert.match(html, /<th>Index<\/th>/, "the legacy table keeps the Index column");
+  assert.doesNotMatch(html, /Quorum/, "the legacy table must not claim a quorum column");
+  assert.match(html, /class="tag signed"/, "a legacy reading is shown as signed");
+});
+
+test("a v2 observation renders the metric and quorum columns", () => {
+  const rows = [{ metric_id: "heat", city: "lagos", value_tenths: 450, quorum: 2, obs_date: 1, reported_at: 2 }];
+  const html = renderObservations(true, [{ account: "a" }, { account: "b" }, { account: "c" }], (m) => "m:" + m, (v) => "v:" + v)(rows);
+  assert.doesNotMatch(html, /undefined/, "a v2 observation must never render 'undefined'");
+  assert.match(html, /<th>Metric<\/th>/, "the v2 table shows the metric column");
+  assert.match(html, /Quorum/, "the v2 table shows the quorum column");
+  assert.match(html, /2 of 3/, "the quorum reads as reached-of-registered");
+  assert.match(html, /class="tag quorum"/, "a v2 finalized reading is shown as quorum");
+});
+
+test("a missing quorum value degrades to a dash, never 'undefined'", () => {
+  const rows = [{ metric_id: "heat", city: "lagos", value_tenths: 450, obs_date: 1, reported_at: 2 }];
+  const html = renderObservations(true, [], (m) => m, (v) => v)(rows);
+  assert.doesNotMatch(html, /undefined/);
+  assert.match(html, /—/, "an absent quorum renders as an em dash");
+});

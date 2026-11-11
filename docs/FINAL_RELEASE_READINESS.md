@@ -53,7 +53,7 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 21 Rust unit tests pass; 31-attack reference model `31 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
+| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 40 Rust unit tests pass; 60-attack reference model `60 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
 | Product discovery | FIXED AND VERIFIED | `list_products` view; console offers only *sellable* products (named, payable, active) and groups everything else as clearly-labelled fixtures. | Live `list_products` returns 22 products (2 named: `rain-lagos`, `rain-bergen-dry`; 20 demo-generated). `rain-bergen-dry` pins its trigger at the contract's plausible ceiling (500.0 mm), so it can only pay on that single reading — a broken definition shown as a fixture, not offered as cover; `rain-lagos` renders as a coverage card. `tests/console.test.js`; live probe. |
 | Premium calculation | FIXED AND VERIFIED | `quote(product_id, payout) = ceil(payout × premium_bp / 10_000)`, computed in the contract. | `quote` read live (`0.0500 NEAR` for 1 NEAR at 500 bp); console re-reads the contract's quote before buying (`tests/console.test.js`). |
 | Payout calculation | FIXED AND VERIFIED | Payout is the amount reserved at purchase; `resolve` pays iff `value_tenths ≥ threshold_tenths`. | Policy 3 settled `settled_paid` (1 NEAR paid); policy 4 `settled_no_pay` (0). `verify:proof` asserts both. The console's hero and cards state the **≥** direction, derived from `threshold_tenths`. |
@@ -255,6 +255,35 @@ upgrade for judge, investor and agent readiness:
 
 Console tests went 77 → 78.
 
+## Defects fixed in this mission (2026-11-11, v2 integration + SEC-1 closure)
+
+21. **SEC-1 (CRITICAL) — the deployed v1 `migrate()` could be called by anyone.** Root cause: v1
+    declares `#[init(ignore_state)]`, which runs *before* any state is read, so it cannot consult the
+    stored owner; any account could call `migrate(new_owner, …)`, overwrite owner + attestor, then
+    forge an observation and drain the pool. Fix: v2 restricts `migrate` to a **self-call**
+    (`predecessor == current_account_id`) and refuses any other caller. Evidence: the deployed module
+    is byte-identical to the v1 source (sha256 `1f30ccf1…`, rebuilt from `18ec7f08`), so the live
+    contract *is* the vulnerable build; `npm run verify:migration` proves the vulnerable shape of
+    v1's `migrate()` and the guard in v2's; `contract/src/tests.rs` adds 4 behavioural regressions
+    (`sec1_*`: third party refused, state untouched, repeated refused, self-call allowed). Status:
+    **FIXED IN SOURCE, NOT YET DEPLOYED** — the fix ships with the v2 deploy (needs the funded
+    operator key).
+22. **The v2 branch and `main` had diverged into an unresolvable conflict.** Root cause: the branch
+    was authored before PRs #11–#15 landed on `main`; a naive merge against the *stale remote branch
+    ref* silently dropped the SEC-1 guard. Fix: merged the **PR head** (`0176877a`, the only ref with
+    the guard), re-resolved the six conflicts, and pushed the merge back to the PR branch. Evidence:
+    `contract/src/lib.rs` now carries the guard; CI green on `9c4182d5`; PR #9 `MERGEABLE`.
+23. **The v2 console broke every human-purchase regression test.** Root cause: the v2 page sets
+    `data-contract` on `document.documentElement`, which the test DOM shim did not provide, so the
+    whole read failed and the catalogue never rendered. Fix: the shim gains `documentElement`.
+    Regression: `npm run test:console` restored to **90/90**.
+24. **Documentation referenced modules the v2 branch removed/renamed** (`driver/oracle.js`,
+    `research/model/mutual.mjs`) and carried stale counts (21 Rust tests, 31 attacks, 87 console).
+    Fix: updated `README.md`, `docs/ARCHITECTURE.md`, `docs/VERIFICATION.md`, `docs/SECURITY.md`,
+    `docs/SECURITY_PRE_AUDIT.md`, `SUBMISSION.md`, `AGENTS.md` to the shipped modules and the real
+    counts (contract 40, model 60, console 90, agent 51, agent-eval 32, sim 61).
+
+
 ## Defects fixed in this mission (2026-11-11, branch `mission/complete-before-acceptance`)
 
 17. **The agent's live buy path never checked the balance before signing.** Root cause: `agent.buy`
@@ -317,14 +346,16 @@ Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SE
 - **A fresh isolated contract deploy is not possible here** — it needs ~3.5–3.7 NEAR and the testnet
   faucet is rate-limited. Status: BLOCKED BY EXTERNAL SERVICE. The proof rests on the already-deployed
   contract, tied to source by the wasm sha256 (`1f30ccf1…`, rebuilt locally and matched).
-- **The v2 contract is not deployed.** The v2 build (multi-operator oracle quorum + resolver dispute
-  resolution, generic metric model) is implemented and proven end-to-end in a **local sandbox**
-  (`npm run verify:sandbox` = 21/21: buy → operator quorum → dispute → resolver quorum → settle, plus
-  refusals) on branch `feat/decentralized-insurance-lifecycle` (PR #9, draft). It is **not** on
-  testnet, because deploying it needs the funded operator key this environment does not hold. The
-  public console therefore reads the live **v1** contract; its v2 rendering path is present but gated
-  (`CONTRACT_V2`), and the v1 path is the one exercised. Status: IMPLEMENTED AND VERIFIED IN SANDBOX,
-  NOT DEPLOYED.
+- **The v2 contract (with the SEC-1 fix) is merged but not deployed.** The v2 build (multi-operator
+  oracle quorum + resolver dispute resolution, generic metric model, hardened `migrate`) is
+  implemented and proven end-to-end in a **local sandbox** (`npm run verify:sandbox` = 21/21: buy →
+  operator quorum → dispute → resolver quorum → settle, plus refusals). It is now integrated with
+  `main` in PR #9 (merge of the PR head `0176877a`; CI green on `9c4182d5`). It is **not** on testnet,
+  because deploying it needs the funded operator key this environment does not hold
+  (`docs/DEPLOY_RUNBOOK.md`). The public console therefore reads the live **v1** contract; its v2
+  rendering path is present but gated (`CONTRACT_V2`), and the v1 path is the one exercised. The
+  **SEC-1 vulnerability remains live on testnet** until this deploy happens. Status: IMPLEMENTED AND
+  VERIFIED IN SANDBOX, MERGED, NOT DEPLOYED — the single remaining BLOCKED BY HUMAN ACTION item.
 - **No professional audit; testnet only.** Not for real funds. An internal pre-audit
   (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
   not a substitute for a third-party audit.

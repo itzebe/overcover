@@ -140,11 +140,11 @@ export async function createAgent(opts) {
 
   /** Evaluate a proposal against the limits WITHOUT touching the network beyond
    *  reading the product. Used by the API for a "dry" decision and by tests. */
-  async function decide({ productId, payoutYocto, obsDateSec }) {
+  async function decide({ productId, payoutYocto, obsDateSec, idempotencyKey }) {
     const p = await product(productId);
     if (!p) return { allow: false, reasons: [`no such product: ${productId}`] };
     const premiumYocto = await quote(productId, payoutYocto);
-    const proposal = { productId, city: p.city, payoutYocto: String(payoutYocto), premiumYocto, obsDateSec, nowSec: Math.floor(clock() / 1000) };
+    const proposal = { productId, city: p.city, payoutYocto: String(payoutYocto), premiumYocto, obsDateSec, nowSec: Math.floor(clock() / 1000), idempotencyKey };
     const verdict = evaluate(proposal, p, { limits, history, nowMs: clock() });
     return { ...verdict, premiumYocto, product: p };
   }
@@ -161,7 +161,7 @@ export async function createAgent(opts) {
 
   async function doBuy({ productId, payoutYocto, obsDateSec, beneficiary, idempotencyKey }) {
     const started = clock();
-    const decision = await decide({ productId, payoutYocto, obsDateSec });
+    const decision = await decide({ productId, payoutYocto, obsDateSec, idempotencyKey });
     if (!decision.allow) {
       appendAudit({ at: new Date(started).toISOString(), kind: "denied", productId, payoutYocto: String(payoutYocto), reasons: decision.reasons });
       throw new AgentError("purchase denied by policy", { code: "denied", reasons: decision.reasons });

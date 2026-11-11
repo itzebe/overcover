@@ -80,6 +80,7 @@ function bootPage({ wallet }) {
     addEventListener(type, fn) { (docListeners[type] = docListeners[type] || []).push(fn); },
     dispatch(type, ev) { for (const fn of docListeners[type] || []) fn(ev || {}); },
     body: makeElement("body"),
+    documentElement: makeElement("html"),
     activeElement: null,
   };
 

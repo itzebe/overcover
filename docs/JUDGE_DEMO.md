@@ -10,6 +10,15 @@ transactions. Nothing is staged.
 > earlier because it needs a wallet extension or a funded operator account.
 > Never present a RECORDED item as if it just happened.
 
+> **Version note.** The live console and `contract.attestor-overcover.testnet` currently run the
+> **v1** product (single attestor, owner-resolved disputes). The branch
+> `feat/decentralized-insurance-lifecycle` upgrades this to a **v2** lifecycle (metric-agnostic
+> products, a multi-operator oracle quorum, independent dispute resolvers) and adds a local-node
+> end-to-end proof (`npm run verify:sandbox`, 21/21). The v2 contract is implemented and proven but
+> **not yet deployed to testnet** (the faucet is rate-limited; see `docs/DEPLOY_RUNBOOK.md`). The
+> demo below runs against whatever is deployed — currently v1. Where a check's numbers differ
+> between the two, both are given.
+
 ---
 
 ## The opening question (15 s)
@@ -189,10 +198,10 @@ These are deliberate, not accidents. If a judge asks, the answers are:
 - **The deployed contract is v1 and has one known issue.** An internal security pre-audit found that
   the **deployed v1** contract's `migrate()` is unauthenticated (`#[init(ignore_state)]` cannot check
   the stored owner), so any account could overwrite all state. It was reproduced against the exact
-  deployed bytecode and **fixed in the v2 source**, verified by the attack being refused and by Rust
-  regression tests. The fix ships with the v2 deploy, which needs the operator key. Do not claim the
-  live contract is hardened until that deploy happens — say this plainly and point to
-  `docs/SECURITY_PRE_AUDIT.md`.
+  deployed bytecode and **fixed in the v2 source**, verified by the attack being refused, by Rust
+  regression tests (`sec1_*`) and by `npm run verify:migration` (6/6). The fix is merged into `main`
+  (PR #9) and ships with the v2 deploy, which needs the operator key. Do not claim the live contract
+  is hardened until that deploy happens — say this plainly and point to `docs/SECURITY_PRE_AUDIT.md`.
 
 ## Backup procedure (if a wallet extension or testnet is unavailable)
 

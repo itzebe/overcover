@@ -6,7 +6,7 @@ Overcover is four small parts. There is no backend and no database.
                          Open-Meteo (keyless, free)
                                 │  current + hourly cross-check
                                 ▼
-     attestor key ──▶ driver/oracle.js ──▶ ed25519 sign ──▶ report_observation(...)
+     operator key ──▶ driver/operator.js ──▶ ed25519 sign ──▶ report_observation(...)
                                 │                                  │
                                 ▼                                  ▼
      business ── buy_cover ──▶ ┌──────────────────────────────────────────────┐
@@ -37,7 +37,8 @@ Operational scripts, not part of the product's runtime:
 | --- | --- |
 | `keys.js` | Creates the testnet identity graph (owner, attestor, providers, business, challenger) via faucet-funded subaccounts. |
 | `deploy.js` | Deploys the wasm and resets to a clean state (60 s challenge window for a live demo). |
-| `oracle.js` | Reads Open-Meteo precipitation and cross-checks the *current* reading against the *hourly* series; refuses to sign if they differ by more than 0.5 mm. |
+| `operator.js` | One independent oracle operator node: reads a public index for a metric/city/date and signs the canonical reading with its own ed25519 key. The contract finalises only when a quorum of distinct operators agree within tolerance. |
+| `adapters.js` | Turns a `(metric, city, date)` into a tenths-scaled reading from a keyless source (Open-Meteo). |
 | `attestor.js` | Signs the exact message the contract verifies. |
 | `actions.js` | High-level calls (`deposit`, `buyCover`, `report`, `challenge`, `resolve`, …). |
 | `demo.js` | Runs the full economic cycle and writes `demo-log.json`. |
@@ -63,9 +64,10 @@ on the operator's machine.
 
 ### 4. Reference model — `research/model/`
 
-An executable BigInt model of the accounting rules with a **31-attack suite** that runs before the
-contract. It is a design instrument: it proved the accounting identities and the solvency invariant
-before any Rust was written. Run it with `npm run test:model`.
+An executable BigInt model of the accounting rules (`sim/engine.mjs`) driven by a
+**60-attack suite** (`research/model/attacks.mjs`) that runs before the contract. It is a design
+instrument: it proved the accounting identities and the solvency invariant before any Rust was
+written. Run it with `npm run test:model`; the full lifecycle simulation is `npm run simulate:full`.
 
 ## Data flow — a full cycle
 
@@ -73,9 +75,10 @@ before any Rust was written. Run it with `npm run test:model`.
 2. **Providers** call `deposit` — capital enters the pool.
 3. **Business** calls `quote`, then `buy_cover` with exactly the quoted premium. The payout is
    reserved immediately; capacity and availability are enforced.
-4. **Oracle** reads a public index, cross-checks it, signs `(city, date, value, reported_at, nonce,
-   contract_id)`, and calls `report_observation`. The contract verifies the signature, freshness,
-   range and replay nonce.
+4. **Operators** each read a public index and sign `(city, date, value, reported_at, nonce,
+   contract_id)` with their own key, then call `report_observation`. The contract verifies each
+   signature, freshness, range and replay nonce, and finalises only once a **quorum** of distinct
+   operators agree within tolerance.
 5. **Challenger** (optionally) calls `challenge_observation` with a bond. The reading is frozen.
 6. **Owner** calls `resolve_dispute(uphold)`. Upheld → bond forfeited to the pool. Rejected →
    reading nullified, bond returned.

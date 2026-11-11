@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the SEC-1 proof can rebuild the deployed v1 source
+          # (commit 18ec7f08) and confirm byte-identity to the live module.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -55,6 +59,20 @@ jobs:
 
       - name: Independent proof (deployed bytecode == this source, pool solvent, on-chain evidence)
         run: npm run verify:proof
+
+      # SEC-1: proves the deployed v1 migrate() takeover and the v2 guard, by
+      # byte-identity of the deployed module to the v1 source, the vulnerable
+      # shape of v1's migrate(), the guard in v2's, and the Rust guard tests.
+      - name: SEC-1 migrate() authorization proof
+        run: npm run verify:migration
+
+      # Runs the COMPILED contract through a real neard node (not the in-process
+      # test VM): the full decentralized lifecycle plus the refusals. REQUIRE_SANDBOX
+      # makes a missing neard a failure rather than a silent skip.
+      - name: Contract end-to-end on a local NEAR node
+        env:
+          REQUIRE_SANDBOX: "1"
+        run: npm run verify:sandbox
 
       - name: Agent spend-authorization vs the live contract
         run: npm run verify:agent

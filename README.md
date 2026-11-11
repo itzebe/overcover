@@ -234,7 +234,7 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 
 | Claim | How to check |
 | --- | --- |
-| Deployed bytecode matches this source | `cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the module the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. |
+| Deployed bytecode matches this source | `cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` (the repo pins Rust **1.99.1** via `rust-toolchain.toml`, the toolchain that produced the deployment) then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the module the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. |
 | The pool is solvent right now | `get_pool` returns `reserved ≤ capital` and `solvent: true`; `reconcile` returns `true`. |
 | Every demo transaction is real | `demo-log.json` holds 18 hashes; each resolves via `tx` RPC and on `testnet.nearblocks.io`. |
 | The oracle is challengeable, both ways | The log includes `challenge` + `resolve_dispute:true` (report upheld, bond forfeited) **and** `resolve_dispute:false` (report nullified, bond returned). |

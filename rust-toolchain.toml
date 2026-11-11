@@ -1,0 +1,7 @@
+# The deployed contract wasm (sha256 1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e)
+# was produced with this toolchain. Pinning it makes the "deployed bytecode == this
+# source" proof reproducible: a different compiler emits different wasm bytes for
+# the same source.
+[toolchain]
+channel = "1.99.1"
+targets = ["wasm32-unknown-unknown"]

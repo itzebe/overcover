@@ -146,6 +146,12 @@ step: **BLOCKED BY HUMAN ACTION**.
    that a live extension approval is not captured, and how a judge completes it.
 6. **CI did not run the independent proof.** Added `verify:proof` and `verify:agent` to
    `.github/workflows/ci.yml`, so the "deployed bytecode == this source" claim is checked on every push.
+7. **The wasm build was not reproducible across toolchains.** Once CI ran `verify:proof`, it failed the
+   bytecode check: the `stable` Rust toolchain (newer than the one that produced the deployment)
+   emitted different wasm bytes for the same source (`4172cd8e…` vs the deployed `1f30ccf1…`). Fix:
+   pinned the toolchain to **1.99.1** in `.github/workflows/ci.yml` and added a `rust-toolchain.toml`
+   so a local build reproduces the deployed bytes exactly. Verified: a local 1.99.1 build reproduces
+   `1f30ccf1…`; CI now passes the check.
 
 ## Not fixed / not verified (honest list)
 

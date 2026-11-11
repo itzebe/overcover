@@ -70,7 +70,9 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests
-npm run test:console    # 77 regression + live-RPC tests
+npm run test:console    # 78 regression + live-RPC tests
+npm run test:agent      # 36 limits + API + u128 precision + idempotency tests
+npm run test:agent-eval # 22 product-feed schema/premium + agent boundary + live read
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 ```
 
@@ -78,6 +80,11 @@ npm run test:onchain    # 17 adversarial tests against the LIVE contract
 expected reason** — capacity, premium, lead time, signature, replay, staleness, bond, challenge
 window, ownership, provider share. It needs a fresh `npm run deploy` first, because it relies on a
 clean state and a 60 s challenge window.
+
+`test:agent-eval` validates the shipped `ui/products.json` against its schema offline (money as
+exact yoctoNEAR strings, one real offering, the premium rule `ceil(payout·bp/10000)`), exercises the
+agent's spending-policy boundary cases, and re-reads the live product from the contract. The feed is
+regenerated with `npm run products:feed` from the live contract, never hand-written.
 
 ## 5. The console is accessible and honest
 
@@ -117,3 +124,14 @@ development still works. Run it against production with
 - **No mainnet deployment.** Testnet only; not for real funds.
 - **Single attestor.** The oracle is not decentralised; the dispute path mitigates but does not
   remove that. See [`SECURITY.md`](SECURITY.md).
+- **`npm run test:onchain` is not run in this environment.** The 17 live adversarial tests need the
+  gitignored operator identities (`keys/identities.json`, `keys/state.json`) and a fresh deploy, so
+  they cannot run without a funded operator key. The suite exists and fails cleanly with an
+  actionable message; it is **not** part of `npm test`. The same attacks are executed against the
+  reference model (`npm run test:model`, 31 attacks, 0 exploitable), which is the offline gate that
+  runs everywhere. The list of attacks covered: economics (capacity, premium injection, reserve vs
+  withdraw, correlated claims, lead time, early resolve), oracle (wrong signer, stale, out-of-range,
+  overwrite, future date, early resolve, bonded dispute both ways), mechanics (double resolve,
+  rounding, min/max payout, provider auth, random-operation fuzz) and agents (city rotation, over-
+  withdrawal, re-registration, sybil providers, self-attestation).
+- **A live HERE/Meteor extension approval is not captured.** See [`JUDGE_DEMO.md`](JUDGE_DEMO.md) §3.

@@ -15,6 +15,7 @@ Reproduce the whole thing:
 ```bash
 npm ci --ignore-scripts
 npm run test:model && npm run test:contract && npm run test:console && npm run test:agent
+npm run test:agent-eval     # 22 — product-feed schema/premium + agent boundary (offline) + live read
 npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
 npm run verify:agent        # limits engine vs the live product
 npm run verify:connectivity # 12/12 — public console needs no local agent
@@ -22,6 +23,13 @@ npm run verify:live         # production URL at 5 widths
 npm run axe                 # 0 violations, page + dialog
 npm run ui:qa               # 7 viewports, real agent round-trip
 ```
+
+**Machine-readable catalogue.** `npm run products:feed` regenerates `ui/products.json` from the live
+contract (`scripts/products-feed.mjs`); `ui/products.schema.json` is its JSON Schema and
+`tests/products-feed.test.mjs` validates the shipped artifact offline. All money fields are exact
+decimal yoctoNEAR strings (never floats — a `JSON.parse` rounds values above 2^53). The page links
+both files from its verification section, and `tests/console.test.js` asserts the link, the underline
+rule (WCAG 1.4.1) and the shipped artifacts.
 
 ---
 
@@ -205,6 +213,31 @@ list below).
 were found and fixed on this branch. The website was reading live v1 contract state but described it
 incorrectly in four places and could construct a transaction the contract would refuse; those are the
 core of this change. Console tests went 71 → 77.
+
+**Follow-on mission (2026-11-11, branch `feat/protocol-upgrade-judge-investor-agent`).** Product
+upgrade for judge, investor and agent readiness:
+
+13. **No machine-readable catalogue for agents.** Nothing let software discover the cover without
+    scraping the page. Fix: `scripts/products-feed.mjs` derives `ui/products.json` **only** from live
+    contract state (`get_pool`, `list_products`), classifies each product as a real offering or a
+    demo fixture, emits the exact `buy_cover` call shape, and writes money as exact yoctoNEAR
+    **strings**. `ui/products.schema.json` (draft 2020-12) describes it. Regression:
+    `tests/products-feed.test.mjs` (10 tests) validates the shipped artifact offline. The page and
+    `ui/llms.txt` now link the feed.
+14. **u128 money fields were emitted as JS numbers and rounded.** `reserved: 0` and large payouts
+    exceeded 2^53 when serialised as numbers, silently corrupting the feed. Fix: every money field is
+    a forced decimal string; the feed generator and the live chain read use `parseBigIntJson`. This is
+    the same precision trap recorded for the proof scripts — now closed in the feed too.
+15. **A link inside a sentence was colour-only.** Adding the feed link exposed an axe
+    `link-in-text-block` violation (WCAG 1.4.1) — serious — at all seven widths, page and dialog. Fix:
+    `.proof .val a { text-decoration: underline }`. `npm run axe` returned to 0 violations.
+    Regression: `tests/console.test.js` asserts the underline rule, the feed link, and that the
+    shipped artifacts exist and validate.
+16. **Agent readiness was undocumented.** Fix: `docs/AGENT_INTEGRATION.md` documents the feed, the
+    spending-policy engine, the HTTP API and the SDK, accurate to the code. `tests/agent-eval.test.mjs`
+    (12 tests) proves the boundary cases and re-reads the live product. CI now runs `test:agent-eval`.
+
+Console tests went 77 → 78.
 
 ## Not fixed / not verified (honest list)
 

@@ -63,6 +63,21 @@ License: MIT
 - The live demonstration uses a 60-second challenge window; production would use a
   longer one.
 
+## Machine-readable catalogue (for agents)
+
+- [products.json](https://overcover.vercel.app/products.json) is the whole
+  insurance catalogue as JSON, generated from live contract state by
+  `scripts/products-feed.mjs` — never hand-written. It lists every product, which
+  ones are actually offered (`offerings`), the trigger rule, the premium formula,
+  the payout bounds, remaining capacity, and the exact `buy_cover` call shape.
+- [products.schema.json](https://overcover.vercel.app/products.schema.json) is the
+  JSON Schema (draft 2020-12) for that feed. **All money fields are exact decimal
+  integer strings in yoctoNEAR** (1 NEAR = 10^24 yoctoNEAR); never parse them as
+  floating point, which would round values above 2^53.
+- An agent decides whether to buy with the spending-limits engine
+  (`agent/limits.mjs`): hard per-policy and rolling-24h caps, allow-lists, a
+  cooldown, and a kill switch. A refused purchase never reaches the network.
+
 ## More detail
 
 - [Full description for language models](https://overcover.vercel.app/llms-full.txt)

@@ -62,6 +62,12 @@ export OVERCOVER_AGENT_DRY_RUN=1                     # decide, never send
 node agent/server.mjs
 ```
 
+The service binds `127.0.0.1` by default. If you bind it to any other host
+(`OVERCOVER_AGENT_HOST=0.0.0.0`) it **requires** a bearer token
+(`OVERCOVER_AGENT_TOKEN`) and refuses to start without one — an exposed agent
+endpoint would otherwise let any caller spend the agent's funds. Clients send
+`Authorization: Bearer <token>`; the SDK takes `new AgentClient({ token })`.
+
 Then, from another shell:
 
 ```bash

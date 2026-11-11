@@ -7,6 +7,7 @@
     "license": { "name": "MIT" }
   },
   "servers": [{ "url": "http://127.0.0.1:8787", "description": "local service (default bind)" }],
+  "security": [{ "bearerAuth": [] }],
   "tags": [{ "name": "agent", "description": "discover, decide and buy under the spending policy" }],
   "paths": {
     "/api/v1/health": {
@@ -110,6 +111,13 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Required whenever the service is not bound to loopback. Set OVERCOVER_AGENT_TOKEN; the service refuses to bind a non-loopback host without it. A loopback service with no token configured is open (local development only)."
+      }
+    },
     "requestBodies": {
       "Quote": {
         "required": true,
@@ -136,6 +144,10 @@
       "Denied": {
         "description": "the spending policy refused the purchase, before any network call",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Denied" } } }
+      },
+      "Unauthorized": {
+        "description": "a token is configured and the request did not present the correct bearer token",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       },
       "TooLarge": {
         "description": "the request body exceeded the size limit",

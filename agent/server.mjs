@@ -19,11 +19,15 @@
 //   * Every buy goes through agent/limits.mjs. A denied buy never touches the
 //     network (see agent.mjs), so no funds move on a refusal.
 //   * Idempotency keys make a retried buy return the original result instead of
-//     buying twice.
+//     buying twice, even under concurrent requests.
 //   * The key is never logged or returned.
+//   * If the service is bound to a non-loopback host it REQUIRES a bearer token
+//     (OVERCOVER_AGENT_TOKEN) and refuses to start without one, so an exposed
+//     endpoint can never let an anonymous caller spend the agent's funds.
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import { timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { createAgent, AgentError } from "./agent.mjs";
 import { normalizeLimits } from "./limits.mjs";
@@ -32,6 +36,22 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.OVERCOVER_AGENT_PORT ?? 8787);
 const HOST = process.env.OVERCOVER_AGENT_HOST ?? "127.0.0.1";
 const MAX_BODY_BYTES = 8 * 1024;
+
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
+export function isLoopbackHost(host) {
+  return LOOPBACK_HOSTS.has(host);
+}
+
+/** Constant-time bearer-token check. Returns true only for an exact match. */
+export function tokenAccepted(header, expected) {
+  if (!expected) return true; // no token configured
+  const prefix = "Bearer ";
+  if (typeof header !== "string" || !header.startsWith(prefix)) return false;
+  const got = Buffer.from(header.slice(prefix.length));
+  const want = Buffer.from(expected);
+  return got.length === want.length && timingSafeEqual(got, want);
+}
+
 
 // CORS: the public console may call a locally-run agent service. Only the
 // methods and headers the API actually uses are allowed; credentials are not.
@@ -123,10 +143,23 @@ async function main() {
   const agent = await createAgent({ accountId, secretKey, contractId, limits, auditPath: AUDIT_PATH, dryRun });
   const idempotency = new Map(); // key -> settled result
 
+  // An exposed (non-loopback) service must not be spendable anonymously.
+  const token = process.env.OVERCOVER_AGENT_TOKEN || "";
+  if (!isLoopbackHost(HOST) && !token) {
+    console.error(`refusing to bind ${HOST} without OVERCOVER_AGENT_TOKEN: an exposed agent endpoint would let any caller spend the agent's funds.`);
+    process.exit(1);
+  }
+
   const server = http.createServer(async (req, res) => {
     const origin = req.headers.origin;
     const cors = corsHeaders(origin);
     if (req.method === "OPTIONS") { res.writeHead(204, cors); res.end(); return; }
+
+    // Bearer-token gate (only when a token is configured, i.e. whenever the
+    // service is not on loopback). Constant-time comparison.
+    if (!tokenAccepted(req.headers.authorization, token)) {
+      return send(res, 401, { error: "unauthorized" }, { ...cors, "WWW-Authenticate": "Bearer" });
+    }
 
     const url = new URL(req.url, `http://${req.headers.host}`);
     const route = `${req.method} ${url.pathname}`;
@@ -177,11 +210,33 @@ async function main() {
         if (typeof body.productId !== "string") throw Object.assign(new Error("productId must be a string"), { status: 400 });
         const idem = body.idempotencyKey ?? req.headers["idempotency-key"];
         if (idem !== undefined && (typeof idem !== "string" || idem.length > 200)) throw Object.assign(new Error("idempotencyKey must be a string <= 200 chars"), { status: 400 });
-        if (idem && idempotency.has(idem)) return send(res, 200, { ...idempotency.get(idem), idempotentReplay: true }, cors);
 
-        const result = await agent.buy({ productId: body.productId, payoutYocto: payout, obsDateSec, beneficiary: body.beneficiary ?? null, idempotencyKey: idem ?? null });
-        if (idem) idempotency.set(idem, result);
-        return send(res, 200, result, cors);
+        // Idempotency under concurrency: reserve the key BEFORE the first await,
+        // storing a promise. Two requests that arrive together with the same key
+        // therefore share one execution — the second awaits the first's result
+        // instead of starting a second buy. Without this reservation, both
+        // requests pass the "have we seen this key?" check and both execute.
+        const entry = idem ? idempotency.get(idem) : undefined;
+        if (entry) {
+          const settled = await entry.promise;
+          return send(res, 200, { ...settled, idempotentReplay: true }, cors);
+        }
+        let resolveIt, rejectIt;
+        if (idem) {
+          const promise = new Promise((res, rej) => { resolveIt = res; rejectIt = rej; });
+          promise.catch(() => {}); // a failure is delivered to the first caller directly
+          idempotency.set(idem, { promise });
+        }
+
+        try {
+          const result = await agent.buy({ productId: body.productId, payoutYocto: payout, obsDateSec, beneficiary: body.beneficiary ?? null, idempotencyKey: idem ?? null });
+          if (idem) resolveIt(result);
+          return send(res, 200, result, cors);
+        } catch (e) {
+          // Do not cache a failure: a later retry with the same key may succeed.
+          if (idem) { idempotency.delete(idem); rejectIt(e); }
+          throw e;
+        }
       }
 
       if (route === "POST /api/v1/agent/control") {

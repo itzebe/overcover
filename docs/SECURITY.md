@@ -28,8 +28,21 @@ does not, and the residual risk a reviewer should weigh.
 | Silent failure | Every refusal aborts with a human-readable `panic_utf8` reason, never a bare trap. |
 | Front-end trust | The console holds no key and signs nothing on its own; a read failure is shown as stale or "no data", never as live. The only write it can create is a single `buy_cover` call the user approves in their own wallet. |
 
-## Browser wallet model
+## Known issue — `migrate()` on the deployed v1 contract (pre-audit finding SEC-1)
 
+The deployed v1 contract exports `migrate`, which is `#[init(ignore_state)]`. Because an `init`
+method runs before any state is read, it cannot consult the stored owner, so **any account can call
+it and overwrite all state** (become owner, install its own attestor, then forge an observation and
+drain the pool). This was **reproduced on a local `neard` sandbox against the exact deployed
+bytecode** and is fixed in the v2 source (`ensure!(predecessor == current_account_id)`), verified by
+the same attack being refused and by two Rust regression tests.
+
+**The live v1 contract is still vulnerable** until it is redeployed, which needs the operator key
+that this environment does not hold. The v2 deploy is the fix; see `docs/DEPLOY_RUNBOOK.md`. Full
+detail, reproduction and the other pre-audit findings (agent idempotency and limit races, service
+auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
+
+## Browser wallet model
 - **The page never holds a key.** `ui/wallet.js` asks the user's wallet to sign one
   `buy_cover` call; the key stays inside the wallet. There is no key, seed phrase or
   signing secret in the bundle, the page, or this repository.
@@ -81,9 +94,13 @@ does not, and the residual risk a reviewer should weigh.
 - A 31-attack reference model (`npm run test:model`): **31 attacks, 31 defended, 0 exploitable.**
 - 21 Rust unit tests (`npm run test:contract`).
 - 17 adversarial tests against the **live** contract (`npm run test:onchain`): each attack is refused
-  with the expected reason.
-- The console: 77 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
+  with the expected reason. These need the gitignored operator key files and do not run in CI; see
+  `docs/SECURITY_PRE_AUDIT.md` §4.
+- The console: 87 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
   violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog.
+- The agent service: 51 tests including idempotency and limit enforcement **under concurrency**
+  (`npm run test:agent`), and the OpenAPI spec is checked against the running routes.
+- A security pre-audit with a reproduced critical finding and its fix: `docs/SECURITY_PRE_AUDIT.md`.
 
 ## Reporting
 

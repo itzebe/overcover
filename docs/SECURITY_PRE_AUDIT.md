@@ -1,0 +1,260 @@
+# Security pre-audit
+
+**As of:** 2026-11-11 · **Auditor:** OpenHands agent (self-review) · **Scope:** the Overcover
+contract, agent service, human wallet path, and production deployment.
+
+This is an **internal pre-audit**, not a third-party audit. It records what was reviewed, what was
+found, what was fixed, and what remains open. Every finding below has a reproduction command or an
+on-chain/local artefact. Statuses: `FIXED` · `NOT FIXED` · `BLOCKED`.
+
+---
+
+## 1. Method
+
+- Read the full contract (`contract/src/lib.rs`, v1 deployed), the agent (`agent/*.mjs`), the human
+  wallet module (`ui/wallet.js` / `ui/index.html`), and the service boundary.
+- Reproduce the **exact deployed bytecode** on a local `neard` sandbox (neard 2.14, real JSON-RPC,
+  real gas, real signatures) and attack it.
+- Run the pure-model adversarial suite (31 attacks) and the Rust unit tests.
+- Enumerate the 17 live adversarial tests and state, for each, why it is or is not runnable here.
+- Static scans: secret scan over tracked files, dependency audit, "no owner-only method reachable
+  from the UI" scan.
+
+The deployed contract was identified by `code_hash 36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`
+and bytecode sha256 `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`, pulled fresh
+from RPC and re-hashed locally.
+
+---
+
+## 2. Findings
+
+### SEC-1 — CRITICAL — `migrate()` is unauthenticated: any account can overwrite all state
+
+**Where:** `contract/src/lib.rs`, `pub fn migrate` (deployed v1 **and** v2 on PR #9).
+
+**What.** `migrate` is declared `#[init(ignore_state)]`. A NEAR `init` method runs **before any
+state is read**, so it cannot consult the stored `owner`. As written it accepts `owner`, `attestor`,
+`challenge_bond`, `settle_delay_sec` and `challenge_window_sec` from the caller and writes a brand
+new `Self`. Nothing checks who called it.
+
+**Impact.** Any account can call `migrate(owner = attacker, attestor = <attacker key>, …)` and:
+1. become the contract **owner** (then `add_product`, `set_paused`, `set_attestor`,
+   `resolve_dispute` are all under attacker control); and
+2. install an **attacker-controlled attestor key**, so the attacker can sign arbitrary observations
+   and drive `resolve` to pay attacker beneficiaries.
+
+Because `resolve` is the only payout path and the pool holds real (testnet) capital
+(`capital 14.05 NEAR` at review time), the chain is: hijack → forge a breaching observation for a
+large live policy → `resolve` → drain. The unauthenticated state overwrite also wipes all policies,
+products, providers and accounting, so `verify:proof`'s pool check would then read attacker state.
+
+**Reproduction (deployed bytecode, local sandbox, no network, no funds).**
+
+```bash
+# fetch the exact deployed module
+node -e '
+const fs=require("fs");
+fetch("https://test.rpc.fastnear.com",{method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({jsonrpc:"2.0",id:1,method:"query",params:{request_type:"view_code",finality:"final",
+  account_id:"contract.attestor-overcover.testnet"}})}).then(r=>r.json())
+  .then(j=>fs.writeFileSync("/tmp/deployed-v1.wasm",Buffer.from(j.result.code_base64,"base64")));
+'
+# deploy it on a local sandbox and call migrate() from a third-party account
+# (see scripts/ for the sandbox helper; a minimal repro is in this doc's history)
+```
+
+Observed on the sandbox:
+
+```
+initial owner: owner.test.near | attestor: Afq1eoN3nsGL9NB149yVRZ3CqMujc6GmgcSn2KMwLnKX
+PASS  contract initialised with owner
+after attacker migrate, owner: attacker.test.near | migrate error: null
+VULNERABLE  attacker became owner via migrate()
+```
+
+**Fix (v2, PR #9).** Restrict `migrate` to a self-call — the only authority that a
+`#[init(ignore_state)]` method can check safely:
+
+```rust
+ensure!(
+    env::predecessor_account_id() == env::current_account_id(),
+    "migrate may only be called by the contract account itself"
+);
+```
+
+A redeploy performs exactly this self-call (signed by the contract's full-access key). Re-running the
+same attack against the fixed wasm:
+
+```
+after attacker migrate, owner: owner.test.near | migrate error: Smart contract panicked: migrate may only be called by the contract account itself
+SAFE  migrate() was refused or had no effect
+```
+
+Rust regression tests: `migrate_by_a_third_party_is_refused`,
+`migrate_by_the_contract_itself_is_allowed` (`cargo test` → 36 passed).
+
+**Status: FIXED in source (v2).** The fix is on branch `feat/decentralized-insurance-lifecycle`
+(PR #9). **The live v1 contract remains vulnerable** because patching it requires redeploying the
+wasm, which needs the operator key this environment does not hold (see §4). This is the single most
+important reason the v2 deploy must happen before the submission is presented as hardened.
+
+---
+
+### SEC-2 — HIGH — idempotency was not safe under concurrent requests (agent service)
+
+**Where:** `agent/server.mjs`, `POST /api/v1/agent/buy`.
+
+**What.** The route did *check → `await` buy → store result*. Two requests carrying the **same**
+`idempotencyKey` that arrive together both see the key as unknown and both execute the buy — the
+exact double-purchase the key exists to prevent.
+
+**Impact.** A retrying client (or an attacker who can reach the service) can cause two purchases from
+one logical order, spending the agent's funds twice.
+
+**Reproduction.** `tests/agent-api.test.mjs` → *"concurrent buys with the same idempotency key execute
+exactly once"*: fails on the old code (two `dry_run` audit entries), passes after the fix.
+
+**Fix.** Reserve the key **before** the first `await`, storing a promise; a second request awaits the
+first's result and is flagged `idempotentReplay`. A failure is not cached, so a genuine retry can
+still succeed.
+
+**Status: FIXED** (PR #14).
+
+---
+
+### SEC-3 — HIGH — spending limits could be bypassed by overlapping buys
+
+**Where:** `agent/agent.mjs` + `agent/limits.mjs` (`evaluate` reads `history`, then `buy` records).
+
+**What.** The limits are check-then-act. Two buys with **different** keys that overlapped both read
+the same pre-buy `history`, both passed, and only then recorded their spend. Together they could
+exceed `dailyPremiumBudget` or `dailyPolicyLimit`.
+
+**Impact.** The agent's headline safety property — "it cannot spend beyond the policy's ceilings" —
+was false under concurrency.
+
+**Reproduction.** `tests/agent-limits.test.mjs` → *"without serialization, two overlapping checks both
+pass and breach the budget"* documents the race; the serializer tests prove the fix.
+
+**Fix.** A `createSerializer()` primitive runs every buy one at a time, in submission order;
+`decide` stays read-only and unserialized.
+
+**Status: FIXED** (PR #14).
+
+---
+
+### SEC-4 — MEDIUM — the agent service had no authentication
+
+**Where:** `agent/server.mjs`.
+
+**What.** The service binds `127.0.0.1` by default and is dry-run by default, but nothing prevented
+an operator from binding it to `0.0.0.0` — at which point **any** caller could spend the agent's
+funds (subject only to the spending limits).
+
+**Fix.** If `OVERCOVER_AGENT_HOST` is not loopback, the service **requires** `OVERCOVER_AGENT_TOKEN`
+and refuses to start without one. A configured token is enforced on every route with a constant-time
+comparison; a request without the correct bearer token gets `401` before any work. The OpenAPI spec
+now declares `bearerAuth` and the `401`. Loopback with no token stays open for local development.
+
+**Status: FIXED** (PR #14). `tests/agent-api.test.mjs` (401 without / 401 wrong / 200 correct) and
+`tests/agent-openapi.test.mjs` (spec documents the scheme).
+
+---
+
+### SEC-5 — LOW — accepted dependency advisories in the wallet stack
+
+**What.** `npm audit` reports 9 high / 2 moderate / 13 low advisories, all transitively through the
+wallet libraries: `@here-wallet/core` → `bn.js`; `@meteorwallet/sdk` → `near-api-js` → `bs58` →
+`base-x` (homograph), `nanoid`, `query-string` → `decode-uri-component` (DoS). The fixes require a
+**breaking** downgrade of `@near-wallet-selector/meteor-wallet` (10 → 9).
+
+**Assessment.** These are build-time/transitive; the shipped page (`ui/index.html` + `ui/vendor/*`)
+is a pre-built static bundle with no server, and the contract is the money authority. No path uses
+these libraries to handle untrusted input on a hot path. Downgrading the wallet selector to silence
+the audit would regress working wallet support, which the engineering constitution forbids without a
+clear need.
+
+**Status: NOT FIXED (accepted, documented).** Recommended follow-up: track an upstream
+`@near-wallet-selector` release that moves `@meteorwallet/sdk` off the affected `near-api-js`.
+
+---
+
+## 3. Controls that held
+
+| Threat | Control | Evidence |
+| --- | --- | --- |
+| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 31-attack model (31 defended); Rust tests; live `check_invariant` true |
+| Withdraw capital backing live policies | `withdraw` refuses unless `capital − amount ≥ reserved` | model A5; live `reconcile` true |
+| Buyer re-prices or underpays | Product owns threshold + premium; deposit must equal `quote` | model A4; Rust tests |
+| Forged / replayed / cross-contract observation | ed25519 signature binds city, date, value, time, nonce **and contract id** | Rust tests; live demo |
+| Double payout | `resolve` settles exactly once (terminal status) | Rust tests; policies 3/4 |
+| Oracle lies | Bonded `challenge_observation`; disputed reading cannot settle | live demo (both directions) |
+| Unauthorised admin | `add_product`, `set_attestor`, `set_paused`, `resolve_dispute` owner-only | Rust tests; live |
+| Silent failure | every refusal aborts with a `panic_utf8` reason | live refusals observed |
+| UI reaches an owner-only method | page/wallet/agent never name one | `verify:connectivity` check 8 |
+| UI holds a key | page signs nothing; wallet signs one `buy_cover` scoped key | `verify:connectivity` 7, 10, 11 |
+| Secret in tracked files | no ed25519 secret, key file, or private key | `git grep` scan clean; CI check |
+
+---
+
+## 4. Live adversarial suite (17 tests) — status and blockers
+
+`npm run test:onchain` runs `tests/adversarial.test.js` against the **live** contract. It needs two
+gitignored operator files — `keys/identities.json` and `keys/state.json` — which do not exist in this
+environment. It fails cleanly with `missing …/keys/identities.json; run: node driver/keys.js`, it does
+not corrupt state, and it is not part of `npm test`. **Blocked by human action (the funded operator
+key); this is by design — the keys are never committed.**
+
+The 17 cases it covers, and where each is independently defended today:
+
+| # | Case | Also proven by |
+| --- | --- | --- |
+| 1 | Non-owner cannot publish a product | Rust tests; model |
+| 2 | Capacity < a single max payout rejected | Rust tests; model A3 |
+| 3 | Premium rate > 100 % rejected | Rust tests |
+| 4 | Buy beyond product capacity rejected | model A3 |
+| 5 | Underpaid premium rejected | Rust tests; model A4 |
+| 6 | Buy past the observation date rejected | Rust tests; model A7 |
+| 7 | Coverage beyond available capital rejected (solvency) | Rust tests; model A8 |
+| 8 | Non-owner cannot pause / rotate attestor | Rust tests |
+| 9 | Non-attestor signature rejected | Rust tests |
+| 10 | Replayed observation nonce rejected | Rust tests |
+| 11 | Cross-contract signature rejected | Rust tests |
+| 12 | Stale observation rejected | Rust tests |
+| 13 | Implausible reading rejected | Rust tests |
+| 14 | Resolve before observation date rejected | Rust tests; model A9 |
+| 15 | Disputed observation cannot settle | Rust tests |
+| 16 | Double resolve rejected | Rust tests |
+| 17 | Paused pool refuses purchases | Rust tests; v2 sandbox |
+
+---
+
+## 5. Residual risk (honest)
+
+- **The live v1 contract is vulnerable to SEC-1 until it is redeployed.** No key material exists in
+  this environment; the operator account `attestor-overcover.testnet` holds 13.31 NEAR (funding is
+  sufficient — the blocker is the key, not the balance). See `docs/DEPLOY_RUNBOOK.md`.
+- **Single attestor on v1; owner-resolved disputes** — a centralisation point. v2 (operator quorum +
+  independent resolvers) removes it but is not deployed.
+- **No third-party audit; testnet only.** Not for real funds.
+- **Agent rate limits and idempotency are per-process**, not a distributed limit. A multi-process
+  deployment must centralise spend state.
+- **Dependency advisories (SEC-5)** remain in the wallet stack; no exploit path was identified in the
+  shipped static page, but they are real and tracked.
+
+---
+
+## 6. Verification matrix
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Reference adversarial model | `npm run test:model` | 31 attacks, 31 defended, 0 exploitable |
+| Contract unit tests | `npm run test:contract` | 21 passed (v1) / 36 passed (v2, PR #9) |
+| Console + wallet journey | `npm run test:console` | 87 passed |
+| Agent limits/API/OpenAPI | `npm run test:agent` | 51 passed |
+| Product feed + agent eval | `npm run test:agent-eval` | 32 passed |
+| v2 lifecycle (local sandbox) | `npm run verify:sandbox` (PR #9) | 21/21 passed |
+| SEC-1 reproduction (deployed v1) | local sandbox attack | VULNERABLE (pre-fix) |
+| SEC-1 fix (v2 wasm) | local sandbox attack | SAFE (post-fix) |
+| Secret scan | `git grep -nIE 'ed25519:[0-9A-Za-z]{40,}\|BEGIN .*PRIVATE KEY'` | clean |
+| Dependency audit | `npm audit --omit=dev` | 9 high / 2 moderate / 13 low, accepted (SEC-5) |

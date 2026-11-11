@@ -225,6 +225,10 @@
   .tag.challenged, .tag.nullified { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
   .tag.nullified { text-decoration: line-through; }
   .tag.paused { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
+  .tag.due { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
+  .prod .lim.warn { color: var(--bad); }
+  .prod .lim.warn::before { background: var(--bad-w); color: var(--bad); }
+  .panel .lim { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; }
   .meter { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
   .meter .track { width: 54px; height: 6px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
   .meter .m-fill { height: 100%; background: var(--accent); }
@@ -495,7 +499,7 @@
       <div>
         <p class="eyebrow">Parametric insurance · live on NEAR testnet</p>
         <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
-        <p class="sub">Overcover covers one clearly-defined event at a time: rainfall below a set level, in a named city, on a named date. If the signed reading meets the trigger, the payout follows from contract rules — no adjuster, no queue.</p>
+        <p class="sub">Overcover covers one clearly-defined event at a time: a public rainfall reading meeting a set trigger, in a named city, on a named date. Each product states its trigger as “at or above” a threshold — the payout follows from contract rules, no adjuster, no queue.</p>
         <div class="actions">
           <button class="btn-gold" type="button" data-wallet="connect">Connect a wallet</button>
           <a class="btn-ghost" href="#cover">See the cover available</a>
@@ -1220,6 +1224,19 @@
       " or more on the observation date.";
   }
 
+  // The contract's own plausibility bound is 500.0 mm (MAX_RAINFALL_TENTHS). A
+  // product whose threshold sits exactly at that ceiling can only ever trigger on
+  // an impossible reading, so it can never pay out. Flag it from contract data
+  // rather than naming ids.
+  var PLAUSIBLE_CEILING_TENTHS = 5000;
+  function neverTriggers(p) { return Number(p.threshold_tenths) >= PLAUSIBLE_CEILING_TENTHS; }
+  // A named product is a real, contract-backed offering. Machine-generated ids
+  // (p-<ts>-<n>) are demo fixtures from the recorded cycle, and a product that can
+  // never trigger is a test fixture too. Neither is presented as a live offering.
+  function isNamed(p) { return !MACHINE_ID.test(p.id); }
+  function isFixture(p) { return MACHINE_ID.test(p.id) || neverTriggers(p); }
+  function isSellable(p) { return isNamed(p) && !isFixture(p) && p.active !== false; }
+
   function capacityLeft(p) {
     var max = big(p.max_total_coverage) || 0n, res = big(p.reserved) || 0n;
     return max > res ? max - res : 0n;
@@ -1253,14 +1270,20 @@
         '<div class="row"><span>Reserved ' + fmt(p.reserved, 2) + " NEAR</span><span>" + util.toFixed(0) + "% of capacity</span></div>" +
         '<div class="capbar"><div class="cf" style="width:' + Math.min(100, util).toFixed(1) + '%"></div></div>' +
         '<p class="lim">Parametric: pays on the reading meeting the trigger, not on an assessed loss.</p>' +
-        '<p class="lim">Observation date must be at least ' + esc(String(p.min_lead_sec)) + "s after purchase.</p>" +
+        (neverTriggers(p)
+          ? '<p class="lim warn">Definition problem: the trigger is at the contract\u2019s maximum plausible rainfall, so this product can never pay out. Shown for completeness, not offered as cover.</p>'
+          : "") +
+        '<p class="lim">Observation date must be in the future (at least ' + Math.max(OBS_DATE_BUFFER_SEC, Number(p.min_lead_sec) || 0) + "s after purchase).</p>" +
       "</div></article>";
   }
 
   function productRow(p) {
     var util = pct(p.reserved, p.max_total_coverage);
     return "<tr>" +
-      "<td>" + esc(p.id) + (p.active === false ? ' <span class="tag paused">paused</span>' : "") + "</td>" +
+      "<td>" + esc(p.id) +
+        (p.active === false ? ' <span class="tag paused">paused</span>' : "") +
+        (neverTriggers(p) ? ' <span class="tag nullified" title="Trigger sits at the contract\'s maximum plausible rainfall, so this product can never pay out">never triggers</span>' : "") +
+      "</td>" +
       '<td class="sub">' + esc(p.city) + "</td>" +
       '<td class="num">' + mm(p.threshold_tenths) + "</td>" +
       '<td class="num">' + (p.premium_bp / 100).toFixed(2) + "%</td>" +
@@ -1275,28 +1298,46 @@
     if (!list.length) {
       return '<div class="card"><div class="empty"><span class="e-t">No cover is available</span>Nothing can be bought until a risk product is published. A product fixes the city, index, trigger, premium and a capacity cap.</div></div>';
     }
-    var canonical = list.filter(function (p) { return !MACHINE_ID.test(p.id); });
-    var test = list.filter(function (p) { return MACHINE_ID.test(p.id); });
+    var canonical = list.filter(isSellable);
+    var fixtures = list.filter(function (p) { return !isSellable(p); });
     var out = "";
     if (canonical.length) {
       out += '<div class="prod-grid">' + canonical.map(productCard).join("") + "</div>";
     } else {
-      out += '<div class="card"><div class="empty"><span class="e-t">No named products</span>Only demo-generated product ids are present in the contract right now.</div></div>';
+      out += '<div class="card"><div class="empty"><span class="e-t">No cover is on offer right now</span>No active, payable product is published in the contract. The contract-backed definitions that exist are listed below as fixtures.</div></div>';
     }
-    if (test.length) {
-      out += '<div class="card" style="margin-top:20px"><details class="legacy"><summary>Show ' + test.length +
-        " demo-generated products (test state, not a current customer offering)</summary>" +
-        '<div class="scroll" tabindex="0" role="region" aria-label="Demo-generated products"><table><caption>Demo-generated products</caption>' +
-        PROD_HEAD + "<tbody>" + test.map(productRow).join("") + "</tbody></table></div></details></div>";
+    if (fixtures.length) {
+      out += '<div class="card" style="margin-top:20px"><details class="legacy"><summary>Show ' + fixtures.length +
+        " contract-backed test fixtures (demo cycle + definitions that cannot trigger \u2014 not current customer offerings)</summary>" +
+        '<div class="scroll" tabindex="0" role="region" aria-label="Test fixtures"><table><caption>Contract-backed test fixtures</caption>' +
+        PROD_HEAD + "<tbody>" + fixtures.map(productRow).join("") + "</tbody></table></div></details></div>";
     }
     return out;
   }
 
-  function renderPolicies(list) {
+  // The contract stores one field, `status`, which is exactly one of:
+  // "active" | "settled_paid" | "settled_no_pay". Those are the only states a
+  // policy can be in. To stay honest about a past-due policy the contract has not
+  // settled, derive a *display* state from the settlement rule
+  // (resolve: status==active AND now >= obs_date + settle_delay_sec) rather than
+  // claiming a settlement that has not happened. Every displayed value is
+  // contract state; the derived label only says what the contract permits next.
+  function policyDisplayStatus(pol, cfg) {
+    var raw = String(pol.status || "");
+    if (raw !== "active") return { label: raw.replace(/_/g, " "), cls: raw, derived: false };
+    var delay = Number((cfg && cfg.settle_delay_sec) || 0);
+    var eligible = Number(pol.obs_date) + delay <= Math.floor(Date.now() / 1000);
+    return eligible
+      ? { label: "settlement due \u2014 awaiting resolve()", cls: "due", derived: true }
+      : { label: "active \u2014 awaiting observation", cls: "active", derived: true };
+  }
+
+  function renderPolicies(list, cfg) {
     if (!list.length) {
       return '<div class="empty"><span class="e-t">No cover written yet</span>A business buys cover by paying the product premium; the payout is reserved from the pool at that moment.</div>';
     }
     var rows = list.slice().sort(function (a, b) { return b.id - a.id; }).map(function (p) {
+      var st = policyDisplayStatus(p, cfg);
       return "<tr>" +
         "<td>#" + esc(p.id) + "</td>" +
         '<td class="sub">' + esc(p.product_id) + "</td>" +
@@ -1304,13 +1345,14 @@
         '<td class="num">' + fmt(p.premium, 4) + "</td>" +
         '<td class="sub">' + esc(shortAcct(p.beneficiary || p.buyer)) + "</td>" +
         '<td class="num sub">' + utc(p.obs_date) + "</td>" +
-        '<td><span class="tag ' + esc(p.status) + '">' + esc(String(p.status).replace(/_/g, " ")) + "</span></td>" +
+        '<td><span class="tag ' + esc(st.cls) + '"' + (st.derived ? ' title="derived from the contract settlement rule, not a stored status"' : "") + ">" + esc(st.label) + "</span></td>" +
         "</tr>";
     }).join("");
     return '<div class="scroll" tabindex="0" role="region" aria-label="Policies written"><table><caption>Policies written, with settlement status</caption><thead><tr>' +
       '<th>Policy</th><th>Product</th><th class="num">Payout</th><th class="num">Premium</th>' +
       '<th>Beneficiary</th><th class="num">Observation date</th><th>Status</th>' +
-      "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+      "</tr></thead><tbody>" + rows + "</tbody></table>" +
+      '<p class="lim">Status is the contract\u2019s own field. A policy the contract still holds as <em>active</em> past its observation date is shown as awaiting settlement, never as settled.</p></div>';
   }
 
   function renderObservations(list) {
@@ -1480,20 +1522,28 @@
 
   function connectWallet(id) {
     if (!WALLET) { setWalletPickerStatus("The wallet library did not load. Reload the page.", "err"); return; }
-    var mod = (WALLET.status().available || []).filter(function (m) { return m.id === id; })[0];
+    var st0 = WALLET.status();
+    if (!st0.ready) { setWalletPickerStatus("The wallet library is still starting. Try again in a moment.", "err"); return; }
+    var mod = (st0.available || []).filter(function (m) { return m.id === id; })[0];
     var name = mod ? mod.name : id;
     setWalletPickerStatus("Opening " + name + "… approve the connection in the wallet window.", null);
     WALLET.connect(id).then(function (accountId) {
       walletState.connected = true;
       walletState.accountId = accountId;
       renderWallet();
-      setWalletPickerStatus("Connected as " + accountId + ".", "ok");
-      setBuyStatus("Connected as " + accountId + ". Set the cover terms below, then press Buy cover.", false, true);
+      var st = WALLET.status();
+      if (st.networkMismatch) {
+        setWalletPickerStatus("Connected as " + accountId + " — but this wallet may not be on NEAR testnet. Overcover settles on testnet only.", "err");
+        setBuyStatus("Connected as " + accountId + ". Confirm the wallet is on NEAR testnet before buying.", true);
+      } else {
+        setWalletPickerStatus("Connected as " + accountId + ".", "ok");
+        setBuyStatus("Connected as " + accountId + ". Set the cover terms below, then press Buy cover.", false, true);
+      }
       setTimeout(closeWalletPicker, 650);
     }).catch(function (e) {
-      var msg = e && e.message ? e.message : String(e);
-      setWalletPickerStatus("Could not connect: " + msg, "err");
-      setBuyStatus("Could not connect: " + msg, true);
+      var msg = e && e.message ? e.message : (e ? String(e) : "The wallet did not complete the connection.");
+      setWalletPickerStatus(msg, "err");
+      setBuyStatus(msg, true);
     });
   }
 
@@ -1575,11 +1625,29 @@
     else h.textContent = "";
   }
 
+  // The observation date must be genuinely in the future. The product's own
+  // min_lead_sec is the contract's floor, but it is 0 for every product currently
+  // published, and the date is compared in whole seconds — so "one second ahead"
+  // is not really in the future once the transaction is signed and included. A
+  // small wall-clock buffer keeps the chosen date ahead of the settlement block.
+  var OBS_DATE_BUFFER_SEC = 120;
+  function obsDateFloorSec(p) {
+    return Math.floor(Date.now() / 1000) + Math.max(Number(p && p.min_lead_sec) || 0, OBS_DATE_BUFFER_SEC);
+  }
+  function obsDateError(p, obsSec) {
+    if (obsSec === null) return "Choose an observation date.";
+    if (obsSec < obsDateFloorSec(p)) {
+      return "The observation date must be in the future — at least " +
+        Math.ceil(OBS_DATE_BUFFER_SEC / 60) + " minutes from now (the contract requires at least " +
+        ((p && p.min_lead_sec) || 0) + "s, and the reading is taken in whole seconds).";
+    }
+    return null;
+  }
+
   // The observation date defaults to the product's minimum lead plus one day, in
   // UTC, and is re-clamped whenever the selected product changes.
   function defaultObsDate(p) {
-    var lead = Number(p.min_lead_sec || 0);
-    var t = Date.now() + (lead + 24 * 3600) * 1000;
+    var t = (obsDateFloorSec(p) + 24 * 3600) * 1000;
     var d = new Date(t);
     var pad = function (n) { return (n < 10 ? "0" : "") + n; };
     return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
@@ -1629,11 +1697,8 @@
     if (!WALLET || !walletState.connected) { setBuyStatus("Connect a wallet first.", true); return; }
 
     var obs = obsDateSec();
-    if (obs === null) { setBuyStatus("Choose an observation date.", true); return; }
-    if (obs < Math.floor(Date.now() / 1000) + Number(p.min_lead_sec || 0)) {
-      setBuyStatus("The observation date must be at least " + p.min_lead_sec + "s in the future.", true);
-      return;
-    }
+    var obsErr = obsDateError(p, obs);
+    if (obsErr) { setBuyStatus(obsErr, true); return; }
     var ben = (el("b-beneficiary").value || "").trim();
     if (ben && (!ACCOUNT_RE.test(ben) || ben.length > 64)) {
       setBuyStatus("The beneficiary is not a valid NEAR account id.", true);
@@ -1798,8 +1863,9 @@
   function renderAgentProducts() {
     var sel = el("a-product");
     if (!sel) return;
-    // Only canonical products, never the throwaway machine-generated ones.
-    var list = quoteState.products.filter(function (p) { return p.active !== false && !MACHINE_ID.test(p.id); });
+    // Only sellable products (named, payable, active) — never the throwaway
+    // machine-generated fixtures or a definition that cannot trigger.
+    var list = quoteState.products.filter(isSellable);
     var prev = sel.value;
     sel.innerHTML = list.map(function (p) {
       return '<option value="' + esc(p.id) + '">' + esc(cap(p.city)) + " — " + esc(p.id) + "</option>";
@@ -1988,13 +2054,13 @@
 
   function renderQuote() {
     var sel = el("q-product");
-    var canonical = quoteState.products.filter(function (p) { return !MACHINE_ID.test(p.id) && p.active !== false; });
+    var canonical = quoteState.products.filter(isSellable);
     if (!canonical.length) {
       sel.innerHTML = "";
       el("q-premium").textContent = "—"; el("q-reserve").textContent = "—";
       el("q-rate").textContent = "—"; el("q-capacity").textContent = "—";
       el("q-terms").innerHTML = "";
-      el("q-readonly").innerHTML = "<b>No cover available to price.</b> The contract has no active named product right now.";
+      el("q-readonly").innerHTML = "<b>No cover available to price.</b> The contract has no active, payable product right now.";
       return;
     }
     if (sel.options.length !== canonical.length) {
@@ -2025,7 +2091,7 @@
 
     el("q-terms").innerHTML =
       '<div><span>Covered event</span><span>' + esc(cap(p.city)) + " rainfall ≥ " + mm(p.threshold_tenths) + "</span></div>" +
-      "<div><span>Observation date</span><span>chosen at purchase, ≥ " + esc(String(p.min_lead_sec)) + "s ahead</span></div>" +
+      "<div><span>Observation date</span><span>chosen at purchase, in the future</span></div>" +
       "<div><span>Product capacity</span><span>" + fmt(p.max_total_coverage, 2) + " NEAR · " + fmt(left, 2) + " left</span></div>" +
       "<div><span>Limitations</span><span>parametric, not indemnity; single city and date</span></div>";
 
@@ -2128,7 +2194,7 @@
       el("hero-dot").className = "dot live";
 
       el("products").innerHTML = renderProducts(products);
-      el("policies").innerHTML = renderPolicies(policies);
+      el("policies").innerHTML = renderPolicies(policies, cfg);
       el("observations").innerHTML = renderObservations(obs);
       quoteState.products = products;
       renderQuote();

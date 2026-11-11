@@ -1,0 +1,110 @@
+{
+  "mode": "SANDBOX",
+  "nodeUrl": "http://127.0.0.1:3035",
+  "contract": "cover.test.near",
+  "v1WasmSha256": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e",
+  "v2WasmSha256": "eb2070d73aebcc53fc98779938c7a06c877fc080a17693bd2a553b109c129fd2",
+  "migrateAccepted": true,
+  "migrateError": null,
+  "migratedPolicySettled": true,
+  "migrateSettleDetail": "status=settled_paid paid=3e+23",
+  "before": {
+    "config": {
+      "owner": "owner.test.near",
+      "attestor": "9Q68J5QLS4rQPhd6dEZcjmYpU5TkjnMFzKHpHtkHQnQP",
+      "challenge_bond": "100000000000000000000000",
+      "challenge_window_sec": 1,
+      "settle_delay_sec": 0
+    },
+    "pool": {
+      "capital": "5030000000000000000000000",
+      "reserved": "300000000000000000000000",
+      "available": "4730000000000000000000000",
+      "held_bonds": "0",
+      "premiums_collected": "30000000000000000000000",
+      "total_paid": "0",
+      "total_deposited": "5000000000000000000000000",
+      "total_withdrawn": "0",
+      "bonds_forfeited": "0",
+      "policy_count": 1,
+      "solvent": true,
+      "paused": false
+    },
+    "policies": [
+      {
+        "id": 1,
+        "buyer": "buyer.test.near",
+        "beneficiary": "buyer.test.near",
+        "product_id": "heat-lagos",
+        "city": "lagos",
+        "threshold_tenths": 400,
+        "payout": 3e+23,
+        "premium": 3e+22,
+        "obs_date": 1794421094,
+        "issued_at": 1794421092,
+        "status": "active",
+        "paid_amount": 0,
+        "observed_value": 0,
+        "settled_at": 0
+      }
+    ],
+    "products": [
+      "heat-lagos"
+    ],
+    "reconcile": true,
+    "invariant": true
+  },
+  "after": {
+    "config": {
+      "owner": "owner.test.near",
+      "attestor": "9Q68J5QLS4rQPhd6dEZcjmYpU5TkjnMFzKHpHtkHQnQP",
+      "challenge_bond": "100000000000000000000000",
+      "challenge_window_sec": 1,
+      "settle_delay_sec": 0,
+      "quorum": 3,
+      "resolver_quorum": 3,
+      "dispute_window_sec": 3600
+    },
+    "pool": {
+      "capital": "5030000000000000000000000",
+      "reserved": "300000000000000000000000",
+      "available": "4730000000000000000000000",
+      "held_bonds": "0",
+      "premiums_collected": "30000000000000000000000",
+      "total_paid": "0",
+      "total_deposited": "5000000000000000000000000",
+      "total_withdrawn": "0",
+      "bonds_forfeited": "0",
+      "policy_count": 1,
+      "solvent": true,
+      "paused": false
+    },
+    "policies": [
+      {
+        "id": 1,
+        "buyer": "buyer.test.near",
+        "beneficiary": "buyer.test.near",
+        "product_id": "heat-lagos",
+        "city": "lagos",
+        "metric_id": "",
+        "direction": "Above",
+        "threshold_tenths": 400,
+        "payout": 3e+23,
+        "premium": 3e+22,
+        "obs_date": 1794421094,
+        "issued_at": 1794421092,
+        "status": "active",
+        "paid_amount": 0,
+        "observed_value": 0,
+        "settled_at": 0
+      }
+    ],
+    "products": [
+      "heat-lagos"
+    ],
+    "reconcile": true,
+    "invariant": true
+  },
+  "differences": [],
+  "statePreserved": true
+}

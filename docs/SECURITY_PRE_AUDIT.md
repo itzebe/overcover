@@ -251,8 +251,10 @@ The 17 cases it covers, and where each is independently defended today:
   account `contract.attestor-overcover.testnet` holds 18.55 NEAR (funding is sufficient — the blocker
   is the key, not the balance). Closing it needs one in-place upgrade: `node driver/upgrade.js`
   (DeployContract + self-call `migrate`, ~4.63 NEAR refundable code stake). The runbook is
-  `docs/DEPLOY_RUNBOOK.md`. The upgrade is non-destructive: the address, pool capital and policies
-  survive. It cannot be done from this environment.
+  `docs/DEPLOY_RUNBOOK.md`. The upgrade is non-destructive: `migrate` preserves the address, pool
+  capital, products and policies — proven against the exact live v1 bytecode by
+  `npm run verify:upgrade-preservation` (the earlier `migrate` that called `new_state` did **not**
+  preserve state; that is the bug this fixed). It cannot be done from this environment.
 - **Single attestor on v1; owner-resolved disputes** — a centralisation point. v2 (operator quorum +
   independent resolvers) removes it but is not deployed.
 - **No third-party audit; testnet only.** Not for real funds.

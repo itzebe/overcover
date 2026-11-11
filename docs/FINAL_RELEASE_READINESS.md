@@ -20,6 +20,7 @@ npm run test:deploy         # 3 — the deploy/upgrade paths refuse a stale (gua
 npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
 npm run verify:agent        # limits engine vs the live product
 npm run verify:upgrade      # 8/8 — the SEC-1 guard on the compiled wasm (real neard node)
+npm run verify:upgrade-preservation  # state PRESERVED + the migrated policy still settles (real v1 bytecode)
 npm run verify:connectivity # 12/12 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
 npm run axe                 # 0 violations, page + dialog
@@ -356,8 +357,23 @@ Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SE
 27. **The SEC-1 guard was proven in Rust unit tests but never on the compiled wasm.** Root cause: the
     sandbox lifecycle exercised the happy path and the paused-refusal, not the migrate guard. Fix:
     `proof/upgrade-guard.mjs` (8/8) runs the built wasm on a real `neard` node and asserts the
-    third-party refusal, the unchanged state, the repeated refusal and the permitted self-call. Added
+    third-party refusal, the unchanged state, the repeated refusal and the fail-closed self-call. Added
     to CI (`npm run verify:upgrade`, `REQUIRE_SANDBOX=1`).
+28. **CRITICAL — the documented in-place upgrade DESTROYED the live state.** Root cause: v2's
+    `migrate` was `#[init(ignore_state)]` and called `Self::new_state(...)`, which rebuilt empty state
+    — `capital`, `reserved` and `next_policy_id` were zeroed, and the v1 `Product`/`Policy`/
+    `Observation` Borsh layouts no longer matched v2, so the collection entries became undecodable
+    (`WasmTrap(Unreachable)` on the first read). The runbook claimed the upgrade "keeps the pool
+    capital and the policies"; it did not. Reproduced against the **exact live v1 bytecode**
+    (`1f30ccf1…`) on a real `neard` sandbox: capital 5.03→0, reserved 0.3→0, policies 1→0. Fix:
+    `migrate` now reads the raw v1 blob and re-encodes it in the v2 shape via `import_legacy`
+    (raw `insert_raw`/`remove_raw`, because `LookupMap::insert` decodes the value it evicts as the
+    *new* type and would trap on v1 bytes). Pool accounting, `next_policy_id`, owner/config, products,
+    policies, providers and observations all survive; legacy records take `metric_id=""` /
+    `direction="Above"` and observations are re-keyed `city|date` → `metric|city|date`. A non-v1 state
+    fails closed with a readable reason. Regressions: `proof/upgrade-state-preservation.mjs`
+    (state preserved **and** the migrated policy still settles) + Rust
+    `tests::migrate_preserves_legacy_state`. Files: `contract/src/lib.rs`, `contract/src/tests.rs`.
 
 ## Blockchain evidence (real testnet)
 
@@ -406,13 +422,15 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
 - **The v2 contract (with the SEC-1 fix) is merged but not deployed to the live address.** The v2 build
   (multi-operator oracle quorum + resolver dispute resolution, generic metric model, hardened
   `migrate`) is implemented and proven end-to-end in a **local sandbox** (`npm run verify:sandbox` =
-  21/21) and on a **real, isolated testnet deployment** (`proof/testnet-v2-deploy.mjs`). It is **not**
-  on the live address `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the
-  contract's full-access key, which this environment does not hold. The public console therefore reads
-  the live **v1** contract; its v2 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1
-  vulnerability remains live** until the operator runs `node driver/upgrade.js` (non-destructive,
-  ~4.63 NEAR refundable stake). Status: IMPLEMENTED, VERIFIED IN SANDBOX AND ON AN ISOLATED TESTNET
-  DEPLOY, MERGED — the single remaining BLOCKED BY HUMAN ACTION item.
+  21/21), on a **real, isolated testnet deployment** (`proof/testnet-v2-deploy.mjs`), and the in-place
+  `migrate` is proven **state-preserving** against the exact live v1 bytecode
+  (`npm run verify:upgrade-preservation`). It is **not** on the live address
+  `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the contract's full-access
+  key, which this environment does not hold. The public console therefore reads the live **v1**
+  contract; its v2 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1 vulnerability
+  remains live** until the operator runs `node driver/upgrade.js` (non-destructive, ~4.63 NEAR
+  refundable stake). Status: IMPLEMENTED, VERIFIED IN SANDBOX AND ON AN ISOLATED TESTNET
+  DEPLOY, MIGRATION PROVEN STATE-PRESERVING, MERGED — the single remaining BLOCKED BY HUMAN ACTION item.
 - **No professional audit; testnet only.** Not for real funds. An internal pre-audit
   (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
   not a substitute for a third-party audit.

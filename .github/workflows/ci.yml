@@ -78,12 +78,20 @@ jobs:
         run: npm run verify:sandbox
 
       # SEC-1 closure on the COMPILED wasm: a third-party migrate() is refused,
-      # the state is untouched, a repeat is refused, and the contract's own
-      # self-call migrate() (the redeploy path) is accepted.
+      # the state is untouched, a repeat is refused, and a self-call with no
+      # legacy state fails closed.
       - name: SEC-1 migrate() guard on the compiled wasm
         env:
           REQUIRE_SANDBOX: "1"
         run: npm run verify:upgrade
+
+      # The in-place upgrade must PRESERVE live state: runs the exact deployed v1
+      # bytecode, deploys v2 over it, self-calls migrate(), and asserts capital,
+      # reserved, products and policies survive and the migrated policy settles.
+      - name: In-place upgrade preserves state
+        env:
+          REQUIRE_SANDBOX: "1"
+        run: npm run verify:upgrade-preservation
 
       - name: Agent spend-authorization vs the live contract
         run: npm run verify:agent

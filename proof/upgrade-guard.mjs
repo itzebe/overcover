@@ -123,12 +123,18 @@ async function main() {
   const e2 = await callErr(attacker, "migrate", attackArgs);
   check("a repeated third-party migrate() is still refused", !!e2 && e2.includes(GUARD), (e2 || "no error!").slice(0, 90));
 
-  // 4. The contract account itself may migrate (the redeploy self-call).
+  // 4. The contract account itself calls migrate(). There is no legacy v1 blob
+  // here (the state was written by `new`), so the migration must FAIL CLOSED and
+  // change nothing. This is the second half of SEC-1: migrate() cannot be used
+  // to overwrite an already-migrated contract either. The real v1 -> v2 self-call
+  // (which preserves capital, policies and products) is proven against the exact
+  // live v1 bytecode by `proof/upgrade-state-preservation.mjs`.
   let selfOk = false, selfErr = null;
   try { await c.functionCall({ contractId: CONTRACT, methodName: "migrate", args: initArgs, gas: "300000000000000", attachedDeposit: "0" }); selfOk = true; } catch (e) { selfErr = e.message || String(e); }
-  check("the contract account itself may migrate() (self-call)", selfOk, selfOk ? "accepted" : (selfErr || "").slice(0, 90));
+  check("a self-call migrate() with no legacy state FAILS CLOSED", !selfOk, selfOk ? "accepted (state overwrite!)" : (selfErr || "").slice(0, 90));
   const cfg2 = await view("get_config");
-  check("the self-call migrate re-initialised the contract", cfg2.owner === owner.id, `owner=${cfg2.owner}`);
+  const metrics2 = await view("list_metrics");
+  check("the contract state is unchanged after the failed self-call", cfg2.owner === owner.id && metrics2.length === metrics0.length, `owner=${cfg2.owner}, metrics=${metrics2.length}`);
 
   const passed = results.filter((r) => r.ok).length;
   console.log(`\n${passed}/${results.length} upgrade-guard checks passed.`);

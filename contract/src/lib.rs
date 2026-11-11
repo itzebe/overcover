@@ -16,7 +16,7 @@
 //! finding (E1) is why `buy_cover` does NOT accept a caller-supplied threshold
 //! or premium: both are owned by the immutable product.
 
-use near_sdk::borsh::BorshSerialize;
+use near_sdk::borsh::{to_vec, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::{env, near, AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise};
@@ -91,7 +91,7 @@ enum StorageKey {
 
 /// Direction of a trigger relative to the threshold.
 #[near(serializers = [borsh, json])]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Direction {
     /// The event occurs when the measured value is AT OR ABOVE the threshold
     /// (excess rainfall, extreme heat, high wind).
@@ -320,6 +320,97 @@ pub struct Overcover {
     pub next_policy_id: u64,
 }
 
+// ---------------------------------------------------------------------------
+// Legacy (v1) storage layout — read only by `migrate_legacy`.
+//
+// The v2 contract reuses v1's `StorageKey` variants (so the collections keep
+// their prefixes) but changed the Borsh shape of `Product`, `Policy` and
+// `Observation`, and re-keyed observations by `(metric, city, date)`. These
+// mirrors exist so `migrate_legacy` can read the live v1 state and re-encode it.
+//
+// Borsh is positional: field ORDER here must match the deployed v1 struct
+// exactly. The collection VALUE types do not affect the encoding of the state
+// blob (a collection serialises only its prefix), so they are not mirrored.
+// ---------------------------------------------------------------------------
+#[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+struct LegacyProduct {
+    id: String,
+    city: String,
+    threshold_tenths: u64,
+    premium_bp: u32,
+    min_payout: Yocto,
+    max_payout: Yocto,
+    min_lead_sec: u64,
+    max_total_coverage: Yocto,
+    reserved: Yocto,
+    active: bool,
+}
+
+#[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+struct LegacyPolicy {
+    id: u64,
+    buyer: AccountId,
+    beneficiary: AccountId,
+    product_id: String,
+    city: String,
+    threshold_tenths: u64,
+    payout: Yocto,
+    premium: Yocto,
+    obs_date: u64,
+    issued_at: u64,
+    status: String,
+    paid_amount: Yocto,
+    observed_value: u64,
+    settled_at: u64,
+}
+
+#[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+struct LegacyObservation {
+    city: String,
+    obs_date: u64,
+    value_tenths: u64,
+    reported_at: u64,
+    nonce: u64,
+    disputed: bool,
+    nullified: bool,
+    challenger: Option<AccountId>,
+    counter_value_tenths: u64,
+    bond: Yocto,
+}
+
+#[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+// Fields are read to decode the blob; `providers` is kept only so the layout
+// matches v1 (its entries are already valid v2 records).
+#[allow(dead_code)]
+struct LegacyState {
+    owner: AccountId,
+    attestor: Vec<u8>,
+    paused: bool,
+    challenge_bond: Yocto,
+    settle_delay_sec: u64,
+    challenge_window_sec: u64,
+    products: LookupMap<String, LegacyProduct>,
+    product_ids: UnorderedSet<String>,
+    policies: LookupMap<u64, LegacyPolicy>,
+    policy_ids: UnorderedSet<u64>,
+    providers: LookupMap<AccountId, Provider>,
+    observations: LookupMap<Vec<u8>, LegacyObservation>,
+    observation_ids: UnorderedSet<Vec<u8>>,
+    capital: Yocto,
+    reserved: Yocto,
+    held_bonds: Yocto,
+    total_deposited: Yocto,
+    total_withdrawn: Yocto,
+    premiums_collected: Yocto,
+    total_paid: Yocto,
+    bonds_forfeited: Yocto,
+    next_policy_id: u64,
+}
+
 impl Overcover {
     fn new_state(
         owner: AccountId,
@@ -388,8 +479,9 @@ impl Overcover {
         Self::new_state(owner, attestor, challenge_bond, settle_delay_sec, challenge_window_sec, 3, 3, 3600)
     }
 
-    /// Re-initialize in place (deploy new wasm, then call this). Overwrites any
-    /// previous state, so a redeploy never requires deleting the account.
+    /// Upgrade in place: deploy the new wasm, then call this. It **preserves**
+    /// the live state (pool accounting, policies, products, providers,
+    /// observations) and only adds the v2 fields.
     ///
     /// Privilege guard: a `#[init(ignore_state)]` method runs BEFORE any state is
     /// read, so it cannot check the stored owner. Without a guard, ANY account
@@ -397,6 +489,9 @@ impl Overcover {
     /// unauthenticated full takeover. The only safe authority is the contract
     /// account itself (a self-call signed by its full-access key), which is what
     /// a redeploy uses. Third parties are refused.
+    ///
+    /// `ignore_state` means the SDK does not decode the stored state for us, so we
+    /// read the raw v1 blob ourselves and re-encode it in the v2 shape.
     #[init(ignore_state)]
     pub fn migrate(
         owner: AccountId,
@@ -409,7 +504,150 @@ impl Overcover {
             env::predecessor_account_id() == env::current_account_id(),
             "migrate may only be called by the contract account itself"
         );
-        Self::new(owner, attestor, challenge_bond, settle_delay_sec, challenge_window_sec)
+        ensure!(attestor.len() == 32, "attestor key must be 32 bytes");
+        let mut s = Self::new_state(owner, attestor, challenge_bond, settle_delay_sec, challenge_window_sec, 3, 3, 3600);
+        // Re-encode any legacy state. On a fresh (never-initialised) account there
+        // is nothing to read and the v2 defaults stand.
+        if env::state_exists() {
+            Self::import_legacy(&mut s);
+        }
+        s
+    }
+
+    /// Re-encode the live v1 state into `s` (v2 shape). The collections keep the
+    /// same storage prefixes, so their entries stay addressable; only the record
+    /// shapes and the observation key format changed. `Product`, `Policy` and
+    /// `Observation` are rewritten in place under the same keys.
+    ///
+    /// Every rewrite goes through `insert_raw`/`remove_raw` with Borsh bytes we
+    /// produce here. `LookupMap::insert` would decode the value it evicts as the
+    /// *new* type, and the bytes on chain are still v1-shaped, so the typed API
+    /// would panic mid-migration. Writing raw bytes never decodes the old value.
+    fn import_legacy(s: &mut Self) {
+        // Read the legacy blob by hand: `env::state_read` panics with an opaque
+        // "Cannot deserialize the contract state." when the bytes are not a v1
+        // blob, which would surface as a bare wasm trap. A missing or
+        // unrecognisable state must fail closed with a readable reason.
+        let raw = env::storage_read(b"STATE").unwrap_or_else(|| fail("migrate: no state to migrate"));
+        let legacy: LegacyState = LegacyState::try_from_slice(&raw)
+            .unwrap_or_else(|_| fail("migrate: existing state is not a v1 blob (already migrated?)"));
+
+        // Owner, attestor and protocol config are preserved from the live state:
+        // an in-place upgrade must not silently change who controls the contract.
+        // The `migrate` arguments are used only when there is no existing state
+        // (a fresh account), which is the `if env::state_exists()` guard above.
+        s.owner = legacy.owner;
+        s.attestor = legacy.attestor;
+        s.challenge_bond = legacy.challenge_bond;
+        s.settle_delay_sec = legacy.settle_delay_sec;
+        s.challenge_window_sec = legacy.challenge_window_sec;
+        s.paused = legacy.paused;
+        s.capital = legacy.capital;
+        s.reserved = legacy.reserved;
+        s.held_bonds = legacy.held_bonds;
+        s.total_deposited = legacy.total_deposited;
+        s.total_withdrawn = legacy.total_withdrawn;
+        s.premiums_collected = legacy.premiums_collected;
+        s.total_paid = legacy.total_paid;
+        s.bonds_forfeited = legacy.bonds_forfeited;
+        s.next_policy_id = legacy.next_policy_id;
+
+        // The id sets and the provider map are encoded identically in v1 and v2,
+        // and they share the storage prefixes, so they carry over by move. Their
+        // in-blob length must come along: a freshly built set would read length 0
+        // and enumerate nothing even though the entries are still on chain.
+        s.product_ids = legacy.product_ids;
+        s.policy_ids = legacy.policy_ids;
+        s.providers = legacy.providers;
+        s.observation_ids = legacy.observation_ids;
+
+        // Snapshot the ids before rewriting the maps.
+        let product_ids: Vec<String> = s.product_ids.iter().collect();
+        let policy_ids: Vec<u64> = s.policy_ids.iter().collect();
+        let old_obs_keys: Vec<Vec<u8>> = s.observation_ids.iter().collect();
+
+        // Products: legacy products carry no metric; they settle as rainfall
+        // ("Above"), which is exactly how `metric_spec("")` behaves.
+        for id in product_ids {
+            let lp: LegacyProduct = legacy
+                .products
+                .get(&id)
+                .unwrap_or_else(|| fail("migrate: missing legacy product"));
+            let p = Product {
+                id: lp.id,
+                city: lp.city,
+                metric_id: String::new(),
+                category: String::new(),
+                threshold_tenths: lp.threshold_tenths,
+                premium_bp: lp.premium_bp,
+                min_payout: lp.min_payout,
+                max_payout: lp.max_payout,
+                min_lead_sec: lp.min_lead_sec,
+                max_total_coverage: lp.max_total_coverage,
+                reserved: lp.reserved,
+                active: lp.active,
+            };
+            s.products.insert_raw(&to_vec(&id).unwrap(), &to_vec(&p).unwrap());
+        }
+
+        // Policies: legacy policies were all rainfall "Above".
+        for id in policy_ids {
+            let lp: LegacyPolicy = legacy
+                .policies
+                .get(&id)
+                .unwrap_or_else(|| fail("migrate: missing legacy policy"));
+            let p = Policy {
+                id: lp.id,
+                buyer: lp.buyer,
+                beneficiary: lp.beneficiary,
+                product_id: lp.product_id,
+                city: lp.city,
+                metric_id: String::new(),
+                direction: Direction::Above,
+                threshold_tenths: lp.threshold_tenths,
+                payout: lp.payout,
+                premium: lp.premium,
+                obs_date: lp.obs_date,
+                issued_at: lp.issued_at,
+                status: lp.status,
+                paid_amount: lp.paid_amount,
+                observed_value: lp.observed_value,
+                settled_at: lp.settled_at,
+            };
+            s.policies.insert_raw(&to_vec(&id).unwrap(), &to_vec(&p).unwrap());
+        }
+
+        // Observations: v1 keyed by `city|date`; v2 by `metric|city|date` with the
+        // legacy metric being the empty string. Re-insert under the new key and
+        // rebuild the id set (cleared first so no stale v1 keys remain).
+        s.observation_ids.clear();
+        for old_key in old_obs_keys {
+            let lo: LegacyObservation = legacy
+                .observations
+                .get(&old_key)
+                .unwrap_or_else(|| fail("migrate: missing legacy observation"));
+            let new_key = Self::obs_key("", &lo.city, lo.obs_date);
+            let o = Observation {
+                metric_id: String::new(),
+                city: lo.city,
+                obs_date: lo.obs_date,
+                value_tenths: lo.value_tenths,
+                reported_at: lo.reported_at,
+                quorum: 1,
+                dispute_key: Vec::new(),
+                disputed: lo.disputed,
+                nullified: lo.nullified,
+                challenger: lo.challenger,
+                counter_value_tenths: lo.counter_value_tenths,
+                bond: lo.bond,
+            };
+            s.observations.insert_raw(&to_vec(&new_key).unwrap(), &to_vec(&o).unwrap());
+            // Drop the stale v1 entry so it cannot shadow the new key.
+            s.observations.remove_raw(&to_vec(&old_key).unwrap());
+            s.observation_ids.insert(&new_key);
+        }
+
+        s.check_invariant_or_panic();
     }
 
     // ---------------------------------------------------------------------

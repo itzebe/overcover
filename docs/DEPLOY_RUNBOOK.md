@@ -63,7 +63,21 @@ node driver/upgrade.js          # DeployContract + self-call migrate + reconfigu
 `driver/upgrade.js` deploys the new wasm to the **existing** account and then calls `migrate` as a
 **self-call** (`predecessor == current_account_id`), which is the only caller the SEC-1 guard permits.
 It then re-applies the owner-side configuration (quorum, resolvers, metrics). It refuses to run if the
-wasm lacks the guard. Code stake for ~450 KB is ~4.63 NEAR, refunded on the next upgrade.
+wasm lacks the guard. Code stake for ~470 KB is ~4.63 NEAR, refunded on the next upgrade.
+
+**`migrate` preserves the live state.** It reads the v1 blob and re-encodes it in the v2 shape:
+pool accounting (`capital`, `reserved`, `premiums_collected`, …), `next_policy_id`, the owner and
+protocol config, and every product, policy, provider and observation survive; the only change is that
+records gain the v2 fields (legacy products/policies take `metric_id = ""`, `direction = "Above"`) and
+observations are re-keyed from `city|date` to `metric|city|date`. `proof/upgrade-state-preservation.mjs`
+proves this against the **exact live v1 bytecode** on a real neard sandbox: after `DeployContract(v2)`
++ self-call `migrate()`, capital and reserved are unchanged, the policy and product are still listed,
+and the migrated policy still **settles**. (An earlier `migrate` called `new_state`, which zeroed the
+scalars and left the collections undecodable — that path is what this fixes.)
+
+`migrate` also **fails closed**: on a state that is not a v1 blob (e.g. a second self-call after the
+upgrade) it refuses with `migrate: existing state is not a v1 blob (already migrated?)` and changes
+nothing. `proof/upgrade-guard.mjs` proves both the third-party refusal and this fail-closed case.
 
 ### 3b. Fresh deploy (destructive — resets all state)
 

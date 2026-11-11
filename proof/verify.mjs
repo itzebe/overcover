@@ -21,6 +21,11 @@ import { parseBigIntJson } from "../agent/json.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RPC = ["https://test.rpc.fastnear.com", "https://rpc.testnet.fastnear.com", "https://near-testnet.drpc.org"];
+// The public JSON-RPC endpoints serve a transaction only from a recent cache;
+// older txs return NOT_OBSERVED (they keep no history). The demo txs are weeks
+// old, so historical lookups use the ARCHIVAL endpoints, which keep full history
+// and return the same shape.
+const TX_RPC = ["https://archival-rpc.testnet.fastnear.com", "https://archival-rpc.testnet.near.org"];
 const CONTRACT = "contract.attestor-overcover.testnet";
 const WASM = path.join(root, "contract/target/wasm32-unknown-unknown/release/overcover.wasm");
 const checks = [];
@@ -30,7 +35,7 @@ async function rpc(method, params) {
   let last;
   for (const url of RPC) {
     try {
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(15000) });
       const j = await res.json();
       if (j.error) throw new Error(j.error.message || JSON.stringify(j.error));
       return j.result;
@@ -44,7 +49,20 @@ const view = async (method, args = {}) => {
   // would make the payout/premium equality checks below fail spuriously.
   return parseBigIntJson(Buffer.from(r.result).toString("utf8"));
 };
-const tx = (hash, sender) => rpc("tx", { tx_hash: hash, sender_account_id: sender, wait_until: "FINAL" });
+// A historical tx is looked up on the archival endpoints (the non-archival ones
+// keep only a recent cache and return NOT_OBSERVED for the weeks-old demo txs).
+async function tx(hash, sender) {
+  let last;
+  for (const url of TX_RPC) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tx", params: { tx_hash: hash, sender_account_id: sender, wait_until: "FINAL" } }), signal: AbortSignal.timeout(20000) });
+      const j = await res.json();
+      if (j.error) throw new Error(j.error.message || JSON.stringify(j.error));
+      return j.result;
+    } catch (e) { last = e; }
+  }
+  throw last;
+}
 const near = (yocto) => (Number(BigInt(yocto)) / 1e24).toFixed(4);
 
 // 1. deployed bytecode == the published hash, and (if built) == this source

@@ -43,18 +43,26 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
 `demo-log.json` holds 18 hashes covering the whole cycle: publish, deposit, buy cover, report,
 settle (paid and no-pay), and both dispute outcomes. Each resolves via RPC. (The `tx` method
 requires a `sender_account_id`; the node rejects an empty value with HTTP 400 but does not check it
-against the transaction, so any valid account id works.)
+against the transaction, so any valid account id works. Use an **archival** endpoint: the
+non-archival ones keep only a recent tx cache and return `NOT_OBSERVED` for these weeks-old txs.)
 
 ```bash
 python3 - <<'PY'
 import json, urllib.request
+ENDPOINTS = ["https://archival-rpc.testnet.fastnear.com", "https://archival-rpc.testnet.near.org"]
 for e in json.load(open("demo-log.json")):
-    req = urllib.request.Request("https://test.rpc.fastnear.com",
-        data=json.dumps({"jsonrpc":"2.0","id":1,"method":"tx","params":{"tx_hash":e["hash"],"sender_account_id":"contract.attestor-overcover.testnet","wait_until":"FINAL"}}).encode(),
-        headers={"Content-Type":"application/json"})
-    r = json.load(urllib.request.urlopen(req))
-    ok = "result" in r and "Failure" not in (r["result"].get("status") or {})
-    print(("OK  " if ok else "FAIL"), e["label"])
+    for url in ENDPOINTS:
+        try:
+            req = urllib.request.Request(url,
+                data=json.dumps({"jsonrpc":"2.0","id":1,"method":"tx","params":{"tx_hash":e["hash"],"sender_account_id":"contract.attestor-overcover.testnet","wait_until":"FINAL"}}).encode(),
+                headers={"Content-Type":"application/json"})
+            r = json.load(urllib.request.urlopen(req))
+        except Exception as ex:          # 429 rate limit, or NOT_OBSERVED on a non-archival node
+            last = ex; continue
+        ok = "result" in r and "Failure" not in (r["result"].get("status") or {})
+        print(("OK  " if ok else "FAIL"), e["label"]); break
+    else:
+        print("FAIL", e["label"], "—", last)
 PY
 ```
 

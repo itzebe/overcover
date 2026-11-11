@@ -72,8 +72,13 @@ async function main() {
   try {
     if (!haveV1) throw new Error("v1 ref not in this clone's history");
     sh("git", ["worktree", "add", "-q", "--detach", v1dir, V1_REF]);
+    // The wasm embeds the absolute cargo registry path, so a byte-identical
+    // rebuild must use the CARGO_HOME the deployment was built with.
+    const cargoHome = fs.existsSync("/home/openhands/.cargo")
+      ? "/home/openhands/.cargo"
+      : (process.env.CARGO_HOME || path.join(os.homedir(), ".cargo"));
     sh("cargo", ["build", "--manifest-path", "contract/Cargo.toml", "--target", "wasm32-unknown-unknown", "--release"], {
-      cwd: v1dir, env: { ...process.env, CARGO_HOME: process.env.CARGO_HOME || path.join(os.homedir(), ".cargo") },
+      cwd: v1dir, env: { ...process.env, CARGO_HOME: cargoHome },
     });
     const rebuilt = fs.readFileSync(path.join(v1dir, "contract/target/wasm32-unknown-unknown/release/overcover.wasm"));
     check("v1 source rebuilds to the deployed sha256", sha256(rebuilt) === DEPLOYED_SHA, sha256(rebuilt));

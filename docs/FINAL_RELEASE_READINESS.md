@@ -146,12 +146,19 @@ step: **BLOCKED BY HUMAN ACTION**.
    that a live extension approval is not captured, and how a judge completes it.
 6. **CI did not run the independent proof.** Added `verify:proof` and `verify:agent` to
    `.github/workflows/ci.yml`, so the "deployed bytecode == this source" claim is checked on every push.
-7. **The wasm build was not reproducible across toolchains.** Once CI ran `verify:proof`, it failed the
-   bytecode check: the `stable` Rust toolchain (newer than the one that produced the deployment)
-   emitted different wasm bytes for the same source (`4172cd8e…` vs the deployed `1f30ccf1…`). Fix:
-   pinned the toolchain to **1.99.1** in `.github/workflows/ci.yml` and added a `rust-toolchain.toml`
-   so a local build reproduces the deployed bytes exactly. Verified: a local 1.99.1 build reproduces
-   `1f30ccf1…`; CI now passes the check.
+7. **The wasm build was not byte-reproducible across build environments.** Once CI ran `verify:proof`,
+   the bytecode check failed (`4172cd8e…` vs the deployed `1f30ccf1…`) even though the toolchain was
+   identical (`rustc 1.99.1 (58cf8f9c3)`), the committed `Cargo.lock` resolved the same dependency
+   versions, and the target was the same. Root cause, isolated by experiment: the wasm embeds the
+   **absolute path of the cargo registry** (17 occurrences, e.g.
+   `/home/openhands/.cargo/registry/src/index.crates.io-…/near-sdk-5.30.1/src/promise.rs`), so the
+   bytes depend on `CARGO_HOME` at build time. Building the same source with `CARGO_HOME=/tmp/…`
+   produced a different hash; building with the canonical path reproduced `1f30ccf1…` exactly. Fix:
+   pin the toolchain (`rust-toolchain.toml`, `1.99.1`) and build in CI with the same `CARGO_HOME` the
+   deployment used (`/home/openhands/.cargo`). This is a **known limitation of the reproducibility
+   claim**, stated plainly in the README: the sha256 match confirms *source ↔ bytecode* under the
+   pinned toolchain and registry path; it is not a claim of byte-reproducibility from an arbitrary
+   environment.
 
 ## Not fixed / not verified (honest list)
 

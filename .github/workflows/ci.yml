@@ -41,7 +41,14 @@ jobs:
         run: npm run test:agent
 
       - name: Build the contract to wasm
-        run: cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
+        run: |
+          # The wasm embeds the absolute cargo registry path, so a byte-identical
+          # rebuild must use the CARGO_HOME the deployment was built with. The
+          # toolchain is pinned via rust-toolchain.toml. See README "Verification
+          # evidence" for the exact values.
+          sudo mkdir -p /home/openhands
+          sudo chown "$(id -u):$(id -g)" /home/openhands
+          CARGO_HOME=/home/openhands/.cargo cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
 
       - name: Independent proof (deployed bytecode == this source, pool solvent, on-chain evidence)
         run: npm run verify:proof

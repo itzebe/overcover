@@ -199,7 +199,7 @@ npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
 npm run test:console    # 71 regression + live-RPC tests          (browser console)
-npm run test:agent      # 34 limits + API + u128-precision tests  (autonomous agent)
+npm run test:agent      # 36 limits + API + u128-precision + idempotency tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run verify:proof    # one-command independent proof of the headline claims (bytecode,
                         #   solvency, all 18 demo txs, the agent's buys, settled outcomes)
@@ -234,7 +234,7 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 
 | Claim | How to check |
 | --- | --- |
-| Deployed bytecode matches this source | `cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the module the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. |
+| Deployed bytecode matches this source | The repo pins Rust **1.99.1** (`rust-toolchain.toml`). Because the wasm embeds the **absolute cargo registry path**, a byte-identical rebuild also needs the same `CARGO_HOME`. Reproduce exactly: `CARGO_HOME=/home/openhands/.cargo cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release` then compare `sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm` with the module the RPC returns for `contract.attestor-overcover.testnet`. Expected `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. CI does the same (`verify:proof`). A different `CARGO_HOME` changes the hash — the match confirms *source ↔ bytecode* under the pinned environment, not byte-reproducibility from an arbitrary one. |
 | The pool is solvent right now | `get_pool` returns `reserved ≤ capital` and `solvent: true`; `reconcile` returns `true`. |
 | Every demo transaction is real | `demo-log.json` holds 18 hashes; each resolves via `tx` RPC and on `testnet.nearblocks.io`. |
 | The oracle is challengeable, both ways | The log includes `challenge` + `resolve_dispute:true` (report upheld, bond forfeited) **and** `resolve_dispute:false` (report nullified, bond returned). |
@@ -318,5 +318,7 @@ is read-only and runs the same policy engine in the browser.
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Security model, threat model, residual risk |
 | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | How to reproduce every claim, with exact commands |
 | [`docs/DEMO.md`](docs/DEMO.md) | 60-second judging script and the recorded demo |
+| [`docs/JUDGE_DEMO.md`](docs/JUDGE_DEMO.md) | 2–3 minute judge demonstration, checklist and backup plan |
+| [`docs/FINAL_RELEASE_READINESS.md`](docs/FINAL_RELEASE_READINESS.md) | Fixed / not-fixed register with evidence and honest gaps |
 | [`docs/FAQ.md`](docs/FAQ.md) | Honest answers to the obvious hard questions |
 | [`AGENTS.md`](AGENTS.md) | Orientation for agents and new contributors |

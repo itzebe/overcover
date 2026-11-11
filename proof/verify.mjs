@@ -17,6 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { connect, keyStores } from "near-api-js";
+import { parseBigIntJson } from "../agent/json.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RPC = ["https://test.rpc.fastnear.com", "https://rpc.testnet.fastnear.com", "https://near-testnet.drpc.org"];
@@ -39,7 +40,9 @@ async function rpc(method, params) {
 }
 const view = async (method, args = {}) => {
   const r = await rpc("query", { request_type: "call_function", finality: "final", account_id: CONTRACT, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") });
-  return JSON.parse(Buffer.from(r.result).toString("utf8"));
+  // Exact u128 parsing: a bare JSON.parse rounds money fields above 2^53, which
+  // would make the payout/premium equality checks below fail spuriously.
+  return parseBigIntJson(Buffer.from(r.result).toString("utf8"));
 };
 const tx = (hash, sender) => rpc("tx", { tx_hash: hash, sender_account_id: sender, wait_until: "FINAL" });
 const near = (yocto) => (Number(BigInt(yocto)) / 1e24).toFixed(4);
@@ -82,19 +85,27 @@ for (const e of demo) {
 }
 check("all demo-log transactions resolve on-chain", txOk === demo.length, `${txOk}/${demo.length}`);
 
-// 4. the agent's purchases are real buy_cover calls
-const audit = fs.readFileSync(path.join(root, "agent/audit.log.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l)).filter((e) => e.kind === "buy");
+// 4. the agent's purchases are real buy_cover calls, tied to a matching policy
+// The evidence is a committed file (proof/agent-purchases.json), not the
+// operator's gitignored audit log, so this runs on a clean clone. Every claim
+// in it is re-derived from the chain here: the tx signer is the agent, the call
+// is buy_cover for the stated deposit, and the resulting policy's buyer,
+// product, payout and premium match exactly.
+const purchases = JSON.parse(fs.readFileSync(path.join(root, "proof", "agent-purchases.json"), "utf8"));
+const AGENT_ACCOUNT = purchases.agentAccount;
 let agentOk = 0;
-for (const e of audit) {
+for (const e of purchases.purchases) {
   try {
     const r = await tx(e.hash, CONTRACT);
     const fc = (r.transaction.actions || []).find((a) => a.FunctionCall)?.FunctionCall;
-    const ok = r.transaction.signer_id && fc && fc.method_name === "buy_cover" && !("Failure" in (r.status || {}));
-    if (ok) agentOk++;
-    else console.log(`      FAIL agent buy ${e.hash}`);
+    const txOk = r.transaction.signer_id === AGENT_ACCOUNT && fc && fc.method_name === "buy_cover" && fc.deposit === e.premiumYocto && !("Failure" in (r.status || {}));
+    const p = await view("get_policy", { id: e.policyId });
+    const policyOk = p && p.buyer === AGENT_ACCOUNT && p.product_id === e.productId && p.payout === e.payoutYocto && p.premium === e.premiumYocto;
+    if (txOk && policyOk) agentOk++;
+    else console.log(`      FAIL agent buy ${e.hash}: txOk=${txOk} policyOk=${policyOk}`);
   } catch (err) { console.log(`      FAIL agent buy ${e.hash}: ${err.message}`); }
 }
-check("autonomous-agent purchases are real buy_cover txs", agentOk === audit.length && audit.length > 0, `${agentOk}/${audit.length}`);
+check("autonomous-agent purchases are real buy_cover txs with a matching policy", agentOk === purchases.purchases.length && purchases.purchases.length > 0, `${agentOk}/${purchases.purchases.length}`);
 
 // 5. settled policies match the reported outcome
 const policies = await view("list_policies");

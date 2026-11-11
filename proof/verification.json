@@ -1,6 +1,6 @@
 {
   "contract": "contract.attestor-overcover.testnet",
-  "at": "2026-11-11T00:52:26.971Z",
+  "at": "2026-11-11T08:02:41.409Z",
   "pool": {
     "capital": "14050000000000000000000000",
     "reserved": "10500000000000000000000000",
@@ -59,7 +59,7 @@
       "detail": "18/18"
     },
     {
-      "name": "autonomous-agent purchases are real buy_cover txs",
+      "name": "autonomous-agent purchases are real buy_cover txs with a matching policy",
       "ok": true,
       "detail": "2/2"
     },

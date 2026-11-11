@@ -11,7 +11,9 @@
 // "blocked" case is refused before any network call.
 //
 // The "permitted" outcome is additionally backed by two real agent purchases
-// already on testnet, listed from the committed audit log.
+// already on testnet, listed from the committed evidence file
+// (proof/agent-purchases.json), whose hashes and policies verify.mjs re-checks
+// against the chain.
 import fs from "node:fs";
 import { evaluate, DEFAULT_LIMITS } from "../agent/limits.mjs";
 import { parseBigIntJson } from "../agent/json.mjs";
@@ -32,8 +34,18 @@ async function view(method, args = {}) {
   return parseBigIntJson(Buffer.from(j.result.result).toString("utf8"));
 }
 
+// The shipped createAgent/decide path is exercised with the operator's own key
+// when it is present locally (keys/agent.json, gitignored). When it is not — a
+// clean clone — a throwaway random key is used instead: `decide` only reads the
+// product and the contract quote, so the account id is irrelevant and nothing is
+// signed or broadcast (the agent is created in dry-run). This keeps the proof
+// complete on a clean clone without needing any operator secret.
 let key = null;
-try { key = JSON.parse(fs.readFileSync(new URL("../keys/agent.json", import.meta.url), "utf8")); } catch { /* no local key: pure-engine path only */ }
+try { key = JSON.parse(fs.readFileSync(new URL("../keys/agent.json", import.meta.url), "utf8")); } catch { /* no local key: use a throwaway */ }
+if (!key) {
+  const { KeyPair } = await import("near-api-js");
+  key = { accountId: "agent-proof-readonly.testnet", secretKey: KeyPair.fromRandom("ed25519").toString() };
+}
 
 const products = await view("list_products");
 const product = products.find((p) => p.active) ?? products[0];
@@ -44,9 +56,9 @@ const ctx = { limits: DEFAULT_LIMITS, history: [], nowMs: nowSec * 1000 };
 const over = evaluate({ productId: product.id, city: product.city, payoutYocto: (maxPayout * 5n).toString(), premiumYocto: ((maxPayout * 5n) / 20n).toString(), obsDateSec: nowSec + 600, nowSec }, product, ctx);
 const within = evaluate({ productId: product.id, city: product.city, payoutYocto: maxPayout.toString(), premiumYocto: (maxPayout / 20n).toString(), obsDateSec: nowSec + 600, nowSec }, product, ctx);
 
-// Cross-check with the shipped createAgent/decide path when the local key exists.
+// Cross-check with the shipped createAgent/decide path.
 let shippedPath = null;
-if (key) {
+{
   const { createAgent } = await import("../agent/agent.mjs");
   const agent = await createAgent({ accountId: key.accountId, secretKey: key.secretKey, contractId: CONTRACT, dryRun: true, auditPath: "/tmp/agent-policy-audit.jsonl" });
   const dBlocked = await agent.decide({ productId: product.id, payoutYocto: (maxPayout * 5n).toString(), obsDateSec: nowSec + 600 });
@@ -54,9 +66,9 @@ if (key) {
   shippedPath = { blocked_allow: dBlocked.allow, permitted_allow: dOk.allow, agrees_with_engine: dBlocked.allow === over.allow && dOk.allow === within.allow };
 }
 
-const buys = fs.readFileSync(new URL("../agent/audit.log.jsonl", import.meta.url), "utf8").trim().split("\n")
-  .map((l) => JSON.parse(l)).filter((e) => e.kind === "buy")
-  .map((e) => ({ productId: e.productId, payoutYocto: e.payoutYocto, premiumYocto: e.premiumYocto, tx: e.hash, explorer: `https://testnet.nearblocks.io/txns/${e.hash}` }));
+const purchases = JSON.parse(fs.readFileSync(new URL("./agent-purchases.json", import.meta.url), "utf8"));
+const buys = purchases.purchases
+  .map((e) => ({ productId: e.productId, payoutYocto: e.payoutYocto, premiumYocto: e.premiumYocto, tx: e.hash, policyId: e.policyId, explorer: `https://testnet.nearblocks.io/txns/${e.hash}` }));
 
 const out = {
   contract: CONTRACT,

@@ -16,9 +16,13 @@ jobs:
         with:
           node-version: "20"
 
+      # Pin the toolchain that produced the deployed wasm (1f30ccf1…). A newer
+      # stable emits different wasm bytes for the same source, which would make
+      # the "deployed bytecode == this source" proof fail without any code change.
       - name: Install Rust with wasm target
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.99.1
           targets: wasm32-unknown-unknown
 
       - name: Install Node dependencies
@@ -37,7 +41,20 @@ jobs:
         run: npm run test:agent
 
       - name: Build the contract to wasm
-        run: cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
+        run: |
+          # The wasm embeds the absolute cargo registry path, so a byte-identical
+          # rebuild must use the CARGO_HOME the deployment was built with. The
+          # toolchain is pinned via rust-toolchain.toml. See README "Verification
+          # evidence" for the exact values.
+          sudo mkdir -p /home/openhands
+          sudo chown "$(id -u):$(id -g)" /home/openhands
+          CARGO_HOME=/home/openhands/.cargo cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
+
+      - name: Independent proof (deployed bytecode == this source, pool solvent, on-chain evidence)
+        run: npm run verify:proof
+
+      - name: Agent spend-authorization vs the live contract
+        run: npm run verify:agent
 
       - name: Fail if a secret is tracked
         run: |

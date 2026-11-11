@@ -1,0 +1,21 @@
+{
+  "note": "The autonomous agent's real buy_cover transactions, as committed evidence. Every field here is re-checked against NEAR testnet by proof/verify.mjs and proof/agent-policy.mjs: the transaction signer must be agentAccount, the method must be buy_cover, the call must have succeeded, and the resulting policy's buyer, product, payout and premium must match. This file exists so the proof runs on a clean clone; the operator's local agent/audit.log.jsonl is gitignored and is not required.",
+  "contract": "contract.attestor-overcover.testnet",
+  "agentAccount": "oc-agent-mwb87z4k.testnet",
+  "purchases": [
+    {
+      "hash": "7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ",
+      "policyId": 11,
+      "productId": "rain-lagos",
+      "payoutYocto": "1000000000000000000000000",
+      "premiumYocto": "50000000000000000000000"
+    },
+    {
+      "hash": "26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And",
+      "policyId": 12,
+      "productId": "rain-bergen-dry",
+      "payoutYocto": "500000000000000000000000",
+      "premiumYocto": "25000000000000000000000"
+    }
+  ]
+}

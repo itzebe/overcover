@@ -36,6 +36,7 @@
       "payoutYocto": "1000000000000000000000000",
       "premiumYocto": "50000000000000000000000",
       "tx": "7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ",
+      "policyId": 11,
       "explorer": "https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ"
     },
     {
@@ -43,6 +44,7 @@
       "payoutYocto": "500000000000000000000000",
       "premiumYocto": "25000000000000000000000",
       "tx": "26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And",
+      "policyId": 12,
       "explorer": "https://testnet.nearblocks.io/txns/26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And"
     }
   ]

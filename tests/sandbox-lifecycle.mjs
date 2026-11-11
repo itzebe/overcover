@@ -28,7 +28,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { connect, keyStores, KeyPair, utils } from "near-api-js";
-import { signReading } from "../driver/attestor.js";
+import { readingMessageV3 } from "../driver/attestor.js";
 import { parseBigIntJson } from "../agent/json.mjs";
 import { ensureSandboxBin } from "../scripts/sandbox-bin.mjs";
 
@@ -180,17 +180,23 @@ async function main() {
   // wait for the chain clock to reach it (the sandbox clock is not the host's).
   while ((await blockNow()) < obsDate + 1) await sleep(500);
   const reportedAt = obsDate;
-  const sig = (op, nonce) => signReading(op.kp, { operator: op.id, metricId: "heat", city: "lagos", obsDate, valueTenths: value, reportedAt, nonce, contractId: CONTRACT }).signature;
-  await call(o1, "submit_reading", { metric_id: "heat", city: "lagos", obs_date: obsDate, value_tenths: value, reported_at: reportedAt, nonce: 0, signature: sig(o1, 0) });
-  const finalized = await callRet(o2, "submit_reading", { metric_id: "heat", city: "lagos", obs_date: obsDate, value_tenths: value, reported_at: reportedAt, nonce: 0, signature: sig(o2, 0) });
+  const expiry = reportedAt + 6 * 3600;
+  const evidence = Buffer.from("sandbox-evidence");
+  const sig = (op, nonce) => {
+    const msg = readingMessageV3({ operator: op.id, metricId: "heat", city: "lagos", obsDate, valueTenths: value, reportedAt, expiry, evidenceHash: Array.from(evidence), nonce, contractId: CONTRACT });
+    return Array.from(op.kp.sign(msg).signature);
+  };
+  const baseArgs = { metric_id: "heat", city: "lagos", obs_date: obsDate, value_tenths: value, reported_at: reportedAt, expiry, evidence_hash: Array.from(evidence) };
+  await call(o1, "submit_reading", { ...baseArgs, nonce: 0, signature: sig(o1, 0) });
+  const finalized = await callRet(o2, "submit_reading", { ...baseArgs, nonce: 0, signature: sig(o2, 0) });
   check("a 2-of-3 quorum finalises the observation", Number(finalized) === 2, `quorum=${finalized}`);
   const obs = await view("get_observation", { metric_id: "heat", city: "lagos", obs_date: obsDate });
   check("the finalized value is stored", obs && Number(obs.value_tenths) === value, `value=${obs && obs.value_tenths}`);
 
-  const replay = await callErr(o1, "submit_reading", { metric_id: "heat", city: "lagos", obs_date: obsDate, value_tenths: value, reported_at: reportedAt, nonce: 0, signature: sig(o1, 0) });
+  const replay = await callErr(o1, "submit_reading", { ...baseArgs, nonce: 0, signature: sig(o1, 0) });
   check("a replayed operator nonce is rejected", /nonce|already reported/i.test(replay || ""), (replay || "").slice(0, 80));
 
-  const notOp = await callErr(stranger, "submit_reading", { metric_id: "heat", city: "lagos", obs_date: obsDate, value_tenths: value, reported_at: reportedAt, nonce: 0, signature: sig(o1, 0) });
+  const notOp = await callErr(stranger, "submit_reading", { ...baseArgs, nonce: 0, signature: sig(o1, 0) });
   check("a non-operator cannot submit a reading", /not a registered operator/i.test(notOp || ""), (notOp || "").slice(0, 80));
 
   await call(stranger, "challenge_observation", { metric_id: "heat", city: "lagos", obs_date: obsDate, counter_value_tenths: 100 }, NEAR("0.1"));

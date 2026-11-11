@@ -31,6 +31,20 @@ const MAX_RAINFALL_TENTHS: u64 = 5_000; // 500.0 mm
 const MAX_PREMIUM_BP: u32 = 5_000;
 /// An observation must be reported within this window after its date.
 const REPORT_MAX_DELAY_SEC: u64 = 24 * 3600;
+/// Longest challenge window the owner may configure. The production default is
+/// 24 h; the demo uses 60 s. A window is fixed per policy at purchase, so the
+/// owner can never shorten a challenge that a policy was sold with.
+const CHALLENGE_WINDOW_MAX_SEC: u64 = 7 * 24 * 3600;
+/// Canonical domain tag for an oracle reading. Binds the contract, the schema
+/// version and the exact field set, so a signature can never be replayed as a
+/// different kind of message.
+const READING_DOMAIN: &[u8] = b"overcover:v3:observation";
+/// Longest validity an operator may claim for a reading (7 days). Prevents a
+/// reading from being used indefinitely after its source data has changed, while
+/// still covering a settlement that waits out the challenge window.
+const READING_MAX_VALIDITY_SEC: u64 = 7 * 24 * 3600;
+/// Cap on the off-chain evidence reference stored per reading.
+const MAX_EVIDENCE_BYTES: usize = 128;
 /// Seconds in a nanosecond-epoch conversion.
 const NS_PER_SEC: u64 = 1_000_000_000;
 /// A dispute is "open" until its `resolved_at` is set to this sentinel.
@@ -158,6 +172,10 @@ pub struct Policy {
     pub payout: Yocto,
     pub premium: Yocto,
     pub obs_date: u64,
+    /// The challenge window that applied when this policy was issued. A later
+    /// owner change to `challenge_window_sec` never shortens this policy's
+    /// challenge, so the terms a buyer purchased cannot be changed under them.
+    pub challenge_window_sec: u64,
     pub issued_at: u64,
     pub status: String, // active | settled_paid | settled_no_pay
     pub paid_amount: Yocto,
@@ -196,6 +214,10 @@ pub struct Reading {
     pub operator: AccountId,
     pub value_tenths: u64,
     pub reported_at: u64,
+    /// Expiry of this reading (bound into the signature).
+    pub expiry: u64,
+    /// Evidence reference for this reading (bound into the signature).
+    pub evidence_hash: Vec<u8>,
     pub nonce: u64,
 }
 
@@ -211,6 +233,15 @@ pub struct Observation {
     /// Aggregated value: the median of the accepted readings.
     pub value_tenths: u64,
     pub reported_at: u64,
+    /// The challenge window frozen when this observation was finalized. A later
+    /// owner change to the global `challenge_window_sec` cannot shorten the time
+    /// a challenger has to contest this reading.
+    pub challenge_window_sec: u64,
+    /// Unix seconds after which the reading is no longer valid for settlement.
+    /// Bound into every signature; a stale reading is refused at settle time.
+    pub expiry: u64,
+    /// Hash of the off-chain evidence bundle (e.g. sha256 of the source data).
+    pub evidence_hash: Vec<u8>,
     /// Number of distinct operators whose readings were accepted.
     pub quorum: u32,
     /// Dispute key that finalization produced (empty until first finalized).
@@ -239,6 +270,10 @@ pub struct Dispute {
     pub challenger: AccountId,
     pub counter_value_tenths: u64,
     pub bond: Yocto,
+    /// Distinct resolver votes required to decide this dispute, frozen when the
+    /// dispute opens. A later `set_resolver_quorum` cannot change a live dispute's
+    /// decision rule, so no outcome can be forced by changing the threshold mid-flight.
+    pub threshold: u32,
     /// u64::MAX = open.
     pub resolved_at: u64,
     pub uphold: bool,
@@ -252,6 +287,10 @@ pub struct Dispute {
 pub struct Resolver {
     pub account: AccountId,
     pub active: bool,
+    /// The contract owner at the time this resolver was registered. Recorded so
+    /// `resolver_vote` can refuse the owner a vote by virtue of ownership, even
+    /// if the owner's account id later changes.
+    pub registered_by_owner: AccountId,
 }
 
 #[near(contract_state)]
@@ -422,6 +461,10 @@ impl Overcover {
         resolver_quorum: u32,
         dispute_window_sec: u64,
     ) -> Self {
+        // A challenge window is a buyer-protection term; an unbounded value could
+        // freeze a pool forever, so it is capped. The production default is 24 h
+        // and the demo uses 60 s.
+        ensure!(challenge_window_sec <= CHALLENGE_WINDOW_MAX_SEC, "challenge window above maximum");
         Self {
             owner,
             attestor,
@@ -590,7 +633,9 @@ impl Overcover {
             s.products.insert_raw(&to_vec(&id).unwrap(), &to_vec(&p).unwrap());
         }
 
-        // Policies: legacy policies were all rainfall "Above".
+        // Policies: legacy policies were all rainfall "Above". The challenge
+        // window they were sold under is the contract-wide value at migration.
+        let legacy_window = legacy.challenge_window_sec;
         for id in policy_ids {
             let lp: LegacyPolicy = legacy
                 .policies
@@ -608,6 +653,7 @@ impl Overcover {
                 payout: lp.payout,
                 premium: lp.premium,
                 obs_date: lp.obs_date,
+                challenge_window_sec: legacy_window,
                 issued_at: lp.issued_at,
                 status: lp.status,
                 paid_amount: lp.paid_amount,
@@ -619,7 +665,9 @@ impl Overcover {
 
         // Observations: v1 keyed by `city|date`; v2 by `metric|city|date` with the
         // legacy metric being the empty string. Re-insert under the new key and
-        // rebuild the id set (cleared first so no stale v1 keys remain).
+        // rebuild the id set (cleared first so no stale v1 keys remain). Legacy
+        // readings carry no expiry (`expiry = 0` = unbounded) and no evidence
+        // reference; the challenge window is the contract-wide value.
         s.observation_ids.clear();
         for old_key in old_obs_keys {
             let lo: LegacyObservation = legacy
@@ -633,6 +681,9 @@ impl Overcover {
                 obs_date: lo.obs_date,
                 value_tenths: lo.value_tenths,
                 reported_at: lo.reported_at,
+                challenge_window_sec: legacy_window,
+                expiry: 0,
+                evidence_hash: Vec::new(),
                 quorum: 1,
                 dispute_key: Vec::new(),
                 disputed: lo.disputed,
@@ -852,10 +903,19 @@ impl Overcover {
 
     // ---- dispute resolver registry ----
 
+    /// Register an independent dispute resolver. A resolver must not be the
+    /// contract owner: the owner must not decide disputes by virtue of ownership.
+    /// This is enforced again at vote time, so even an owner that re-registers
+    /// under a new account cannot vote.
     pub fn add_resolver(&mut self, account: AccountId) {
         self.assert_owner();
+        ensure!(account != self.owner, "the owner may not be a dispute resolver");
         ensure!(self.resolvers.get(&account).is_none(), "resolver already registered");
-        self.resolvers.insert(&account, &Resolver { account: account.clone(), active: true });
+        self.resolvers.insert(&account, &Resolver {
+            account: account.clone(),
+            active: true,
+            registered_by_owner: self.owner.clone(),
+        });
         self.resolver_ids.insert(&account);
         log_event("resolver_added", &[("account", &account.to_string())]);
     }
@@ -871,7 +931,21 @@ impl Overcover {
     pub fn set_resolver_quorum(&mut self, quorum: u32) {
         self.assert_owner();
         ensure!(quorum >= 1, "resolver quorum must be >= 1");
+        // Applies only to disputes opened from now on: an open dispute keeps the
+        // threshold it froze when it opened, so an outcome cannot be forced by
+        // moving the bar mid-flight.
         self.resolver_quorum = quorum;
+    }
+
+    /// Set the challenge window that future policies and observations are sold
+    /// with. Capped so it can never freeze the pool indefinitely, and it is
+    /// recorded per policy/observation at creation, so it never shortens a
+    /// challenge that was already sold.
+    pub fn set_challenge_window(&mut self, secs: u64) {
+        self.assert_owner();
+        ensure!(secs <= CHALLENGE_WINDOW_MAX_SEC, "challenge window above maximum");
+        self.challenge_window_sec = secs;
+        log_event("challenge_window_set", &[("secs", &secs.to_string())]);
     }
 
     pub fn set_dispute_window(&mut self, secs: u64) {
@@ -1003,6 +1077,7 @@ impl Overcover {
             payout,
             premium,
             obs_date,
+            challenge_window_sec: self.challenge_window_sec,
             issued_at: now,
             status: "active".to_string(),
             paid_amount: 0,
@@ -1043,10 +1118,17 @@ impl Overcover {
         format!("{}|{}|{}|{}", metric_id, city, obs_date, operator).into_bytes()
     }
 
-    /// The signed message binds the contract, the metric, the location, the
-    /// date, the value, the report time and the operator's monotonic nonce. This
-    /// is what makes a reading unforgeable and un-replayable: change any field
-    /// and the signature no longer verifies.
+    /// The canonical, domain-separated observation payload each operator signs.
+    ///
+    /// The message binds the domain tag, the schema version, the contract id,
+    /// the metric, the location, the observation date, the value, the report
+    /// time, the expiry, the evidence reference and the operator's monotonic
+    /// nonce. Because every field is inside the signed bytes, a signature cannot
+    /// be replayed as a different reading, for a different contract, or after
+    /// the reading has expired: change any field and verification fails.
+    ///
+    /// The evidence reference is length-prefixed so it cannot be confused with a
+    /// trailing nonce (the classic concatenation ambiguity).
     #[allow(clippy::too_many_arguments)]
     fn reading_message(
         operator: &AccountId,
@@ -1055,20 +1137,31 @@ impl Overcover {
         obs_date: u64,
         value_tenths: u64,
         reported_at: u64,
+        expiry: u64,
+        evidence_hash: &[u8],
         nonce: u64,
     ) -> Vec<u8> {
-        format!(
-            "overcover:v2|{}|{}|{}|{}|{}|{}|{}|{}",
-            operator,
+        let mut m = Vec::with_capacity(READING_DOMAIN.len() + 128 + evidence_hash.len());
+        m.extend_from_slice(READING_DOMAIN);
+        m.push(b'|');
+        m.extend_from_slice(env::current_account_id().as_bytes());
+        for field in [
+            operator.as_str(),
             metric_id,
             city,
-            obs_date,
-            value_tenths,
-            reported_at,
-            nonce,
-            env::current_account_id()
-        )
-        .into_bytes()
+            &obs_date.to_string(),
+            &value_tenths.to_string(),
+            &reported_at.to_string(),
+            &expiry.to_string(),
+            &nonce.to_string(),
+        ] {
+            m.push(b'|');
+            m.extend_from_slice(field.as_bytes());
+        }
+        m.push(b'|');
+        m.extend_from_slice(&(evidence_hash.len() as u32).to_be_bytes());
+        m.extend_from_slice(evidence_hash);
+        m
     }
 
     fn metric_or_fail(&self, metric_id: &str) -> Metric {
@@ -1097,9 +1190,11 @@ impl Overcover {
 
     /// Submit one operator's signed reading. The caller must be the operator,
     /// the signature must verify against that operator's registered key, and the
-    /// value/freshness/range/nonce are all validated. The reading is stored; the
-    /// observation is only finalized (and only becomes settle-able) once
-    /// `quorum` distinct operators agree on a value within tolerance.
+    /// value/freshness/range/expiry/evidence/nonce are all validated. The reading
+    /// is stored; the observation is only finalized (and only becomes
+    /// settle-able) once `quorum` distinct operators agree on a value within
+    /// tolerance.
+    #[allow(clippy::too_many_arguments)]
     pub fn submit_reading(
         &mut self,
         metric_id: String,
@@ -1107,6 +1202,8 @@ impl Overcover {
         obs_date: u64,
         value_tenths: u64,
         reported_at: u64,
+        expiry: u64,
+        evidence_hash: Vec<u8>,
         nonce: u64,
         signature: Vec<u8>,
     ) -> u32 {
@@ -1114,11 +1211,14 @@ impl Overcover {
         let mut op = self.operators.get(&caller).unwrap_or_else(|| fail("caller is not a registered operator"));
         ensure!(op.active, "operator is revoked");
         ensure!(signature.len() == 64, "signature must be 64 bytes");
+        ensure!(evidence_hash.len() <= MAX_EVIDENCE_BYTES, "evidence reference too large");
 
         // Resolve the index's plausibility bound and scale. A legacy (empty)
         // metric id keeps the rainfall spec; a named metric must exist+active.
         let (max_value, _scale, _dir) = self.metric_spec(&metric_id);
-        let msg = Self::reading_message(&caller, &metric_id, &city, obs_date, value_tenths, reported_at, nonce);
+        let msg = Self::reading_message(
+            &caller, &metric_id, &city, obs_date, value_tenths, reported_at, expiry, &evidence_hash, nonce,
+        );
         let sig: [u8; 64] = signature.as_slice().try_into().unwrap_or_else(|_| fail("signature must be 64 bytes"));
         let pk: [u8; 32] = op.public_key.as_slice().try_into().unwrap_or_else(|_| fail("operator key must be 32 bytes"));
         ensure!(env::ed25519_verify(&sig, &msg, &pk), "invalid operator signature");
@@ -1136,6 +1236,13 @@ impl Overcover {
         );
         ensure!(reported_at <= now, "observation reported in the future");
         ensure!(value_tenths <= max_value, "value above metric plausibility bound");
+        // Expiry is a term of the reading: it must be in the future at submission
+        // and may not be absurdly far out (a reading cannot claim validity forever).
+        ensure!(expiry > now, "observation already expired");
+        ensure!(
+            expiry <= reported_at.saturating_add(READING_MAX_VALIDITY_SEC),
+            "expiry too far in the future"
+        );
 
         let okey = Self::obs_key(&metric_id, &city, obs_date);
         let rkey = Self::reading_key(&metric_id, &city, obs_date, &caller);
@@ -1147,6 +1254,8 @@ impl Overcover {
             operator: caller.clone(),
             value_tenths,
             reported_at,
+            expiry,
+            evidence_hash,
             nonce,
         });
         let mut signers = self
@@ -1224,14 +1333,26 @@ impl Overcover {
             return 0; // readings conflict; no quorum on a single value yet
         }
 
-        // reported_at = the latest report time among the supporting readings.
+        // reported_at = the latest report time among the supporting readings;
+        // expiry = the EARLIEST expiry among them (the set is only valid while
+        // every supporting reading is); evidence = the lexicographically smallest
+        // evidence reference among the readings that carry the finalized value
+        // (fully deterministic across nodes).
         let mut reported_at = 0u64;
+        let mut expiry = u64::MAX;
+        let mut evidence_hash: Vec<u8> = Vec::new();
         let mut confirmed: Vec<AccountId> = Vec::new();
         for acct in signers.iter() {
             if let Some(or) = self.readings.get(&Self::reading_key(metric_id, city, obs_date, &acct)) {
                 let diff = if or.value_tenths >= value { or.value_tenths - value } else { value - or.value_tenths };
                 if diff <= tolerance {
                     reported_at = reported_at.max(or.reported_at);
+                    expiry = expiry.min(or.expiry);
+                    if or.value_tenths == value
+                        && (evidence_hash.is_empty() || or.evidence_hash < evidence_hash)
+                    {
+                        evidence_hash = or.evidence_hash.clone();
+                    }
                     confirmed.push(acct.clone());
                 }
             }
@@ -1249,6 +1370,7 @@ impl Overcover {
             challenger: env::current_account_id(),
             counter_value_tenths: 0,
             bond: 0,
+            threshold: self.resolver_quorum,
             resolved_at: DISPUTE_OPEN,
             uphold: false,
             upheld_votes: 0,
@@ -1262,6 +1384,9 @@ impl Overcover {
             obs_date,
             value_tenths: value,
             reported_at,
+            challenge_window_sec: self.challenge_window_sec,
+            expiry,
+            evidence_hash,
             quorum: support,
             dispute_key: dkey,
             disputed: false,
@@ -1311,7 +1436,7 @@ impl Overcover {
         ensure!(!o.nullified, "observation already nullified");
         let now = now_sec();
         ensure!(
-            now < o.reported_at.saturating_add(self.challenge_window_sec),
+            now < o.reported_at.saturating_add(o.challenge_window_sec),
             "challenge window has elapsed"
         );
 
@@ -1336,16 +1461,19 @@ impl Overcover {
     }
 
     /// An independent resolver votes on an open dispute. The operators that
-    /// signed the reading may NOT vote (they cannot decide their own dispute),
-    /// and neither may the challenger. Once `resolver_quorum` distinct active
+    /// signed the reading may NOT vote (they cannot decide their own dispute);
+    /// neither may the challenger, nor the contract owner (ownership confers no
+    /// adjudication power). Once the dispute's FROZEN `threshold` distinct active
     /// resolvers agree, the dispute is decided: upholding keeps the reading and
     /// forfeits the challenger's bond to the pool; nullifying voids the reading
     /// and refunds the bond. Resolvers are independent accounts, so no single
     /// owner can silently override the outcome.
     pub fn resolver_vote(&mut self, metric_id: String, city: String, obs_date: u64, uphold: bool) {
         let caller = env::predecessor_account_id();
+        ensure!(caller != self.owner, "the owner may not vote on a dispute");
         let r = self.resolvers.get(&caller).unwrap_or_else(|| fail("not a registered resolver"));
         ensure!(r.active, "resolver is revoked");
+        ensure!(r.account != self.owner, "the owner may not vote on a dispute");
 
         let okey = Self::obs_key(&metric_id, &city, obs_date);
         let dkey = Self::dispute_key(&okey);
@@ -1380,8 +1508,10 @@ impl Overcover {
             ],
         );
 
-        if d.upheld_votes >= self.resolver_quorum || d.nullified_votes >= self.resolver_quorum {
-            self.finalize_dispute(&okey, &dkey, d.upheld_votes >= self.resolver_quorum);
+        // Decide against the threshold frozen when the dispute opened.
+        let threshold = d.threshold;
+        if d.upheld_votes >= threshold || d.nullified_votes >= threshold {
+            self.finalize_dispute(&okey, &dkey, d.upheld_votes >= threshold);
         } else {
             self.disputes.insert(&dkey, &d);
         }
@@ -1439,7 +1569,18 @@ impl Overcover {
         log_event("dispute_resolved", &[("uphold", if uphold { "true" } else { "false" })]);
     }
 
-    fn observation_valid(&self, metric_id: &str, city: &str, obs_date: u64, at: u64) -> Result<u64, &'static str> {
+    /// Validate an observation for settlement. `window` is the challenge window
+    /// frozen on the POLICY at purchase (not the current global config), so an
+    /// owner cannot shorten a challenge after the fact. A reading past its own
+    /// `expiry` is stale and cannot settle.
+    fn observation_valid(
+        &self,
+        metric_id: &str,
+        city: &str,
+        obs_date: u64,
+        window: u64,
+        at: u64,
+    ) -> Result<u64, &'static str> {
         let o = self
             .observations
             .get(&Self::obs_key(metric_id, city, obs_date))
@@ -1450,8 +1591,11 @@ impl Overcover {
         if o.disputed {
             return Err("observation disputed (unresolved)");
         }
-        if at < o.reported_at.saturating_add(self.challenge_window_sec) {
+        if at < o.reported_at.saturating_add(window) {
             return Err("challenge window not elapsed");
+        }
+        if o.expiry > 0 && at > o.expiry {
+            return Err("observation expired");
         }
         Ok(o.value_tenths)
     }
@@ -1470,7 +1614,7 @@ impl Overcover {
             now >= pol.obs_date.saturating_add(self.settle_delay_sec),
             "too early to settle"
         );
-        let value = match self.observation_valid(&pol.metric_id, &pol.city, pol.obs_date, now) {
+        let value = match self.observation_valid(&pol.metric_id, &pol.city, pol.obs_date, pol.challenge_window_sec, now) {
             Ok(v) => v,
             Err(e) => fail(&format!("cannot settle: {}", e)),
         };

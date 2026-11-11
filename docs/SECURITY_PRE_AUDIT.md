@@ -15,7 +15,7 @@ on-chain/local artefact. Statuses: `FIXED` · `NOT FIXED` · `BLOCKED`.
   wallet module (`ui/wallet.js` / `ui/index.html`), and the service boundary.
 - Reproduce the **exact deployed bytecode** on a local `neard` sandbox (neard 2.14, real JSON-RPC,
   real gas, real signatures) and attack it.
-- Run the pure-model adversarial suite (60 attacks) and the Rust unit tests.
+- Run the pure-model adversarial suite (66 attacks) and the Rust unit tests.
 - Enumerate the 17 live adversarial tests and state, for each, why it is or is not runnable here.
 - Static scans: secret scan over tracked files, dependency audit, "no owner-only method reachable
   from the UI" scan.
@@ -198,7 +198,7 @@ clear need.
 
 | Threat | Control | Evidence |
 | --- | --- | --- |
-| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 60-attack model (60 defended); Rust tests; live `check_invariant` true |
+| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 66-attack model (66 defended); Rust tests; live `check_invariant` true |
 | Withdraw capital backing live policies | `withdraw` refuses unless `capital − amount ≥ reserved` | model A5; live `reconcile` true |
 | Buyer re-prices or underpays | Product owns threshold + premium; deposit must equal `quote` | model A4; Rust tests |
 | Forged / replayed / cross-contract observation | ed25519 signature binds city, date, value, time, nonce **and contract id** | Rust tests; live demo |
@@ -269,7 +269,7 @@ The 17 cases it covers, and where each is independently defended today:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Reference adversarial model | `npm run test:model` | 60 attacks, 60 defended, 0 exploitable |
+| Reference adversarial model | `npm run test:model` | 66 attacks, 66 defended, 0 exploitable |
 | Contract unit tests | `npm run test:contract` | 40 passed (v2, main) |
 | Console + wallet journey | `npm run test:console` | 90 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 51 passed |

@@ -11,13 +11,16 @@ transactions. Nothing is staged.
 > Never present a RECORDED item as if it just happened.
 
 > **Version note.** The live console and `contract.attestor-overcover.testnet` currently run the
-> **v1** product (single attestor, owner-resolved disputes). The branch
-> `feat/decentralized-insurance-lifecycle` upgrades this to a **v2** lifecycle (metric-agnostic
-> products, a multi-operator oracle quorum, independent dispute resolvers) and adds a local-node
-> end-to-end proof (`npm run verify:sandbox`, 21/21). The v2 contract is implemented and proven but
-> **not yet deployed to testnet** (the faucet is rate-limited; see `docs/DEPLOY_RUNBOOK.md`). The
-> demo below runs against whatever is deployed — currently v1. Where a check's numbers differ
-> between the two, both are given.
+> **v1** product (single attestor, owner-resolved disputes). The repository source is now **contract
+> v3** (metric-agnostic products, a domain-separated multi-operator oracle quorum, independent
+> dispute resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, and a
+> state-preserving in-place `migrate`). v3 is implemented and proven end-to-end on a real local
+> `neard` node (`npm run verify:sandbox`, 21/21) and its in-place upgrade is proven state-preserving
+> against the exact live v1 bytecode (`npm run verify:upgrade-preservation`), but it is **not yet
+> deployed to the live address** — closing SEC-1 there needs the operator key (see
+> `docs/DEPLOY_RUNBOOK.md`). The demo below runs against whatever is deployed — currently v1, which
+> the console renders with a version gate. Where a check's numbers differ between the two, both are
+> given.
 
 ---
 
@@ -171,7 +174,7 @@ immediately; a further buy returns `403` with "agent is disabled".
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 31/0, contract 21/0, console 87/0, agent 51/0 | `npm test` |
+| 11 | Tests pass | model 66/0, contract 62/0, console 90/0, agent 51/0, sim 71/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` | `GET /v6/deployments?...&target=production` |
 
 ## Honesty details a judge may probe

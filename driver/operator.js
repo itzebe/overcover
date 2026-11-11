@@ -17,8 +17,12 @@
 import { connectNear, call, view, loadIdentities, txHash } from "./near.js";
 import { KeyPair } from "near-api-js";
 import { observe } from "./adapters.js";
+import { readingMessageV3 } from "./attestor.js";
 
 const CONTRACT = process.env.OVERCOVER_CONTRACT || "contract.attestor-overcover.testnet";
+/// How long the operator asserts its reading stays valid (default 6 h). Must be
+/// inside the contract's 7-day cap and past the challenge window at settle time.
+const READING_VALIDITY_SEC = Number(process.env.OVERCOVER_READING_VALIDITY ?? 6 * 3600);
 
 function parseDateSec(s) {
   const ms = Date.parse(`${s}T00:00:00Z`);
@@ -48,19 +52,24 @@ async function main() {
   // Independent observation of a public index.
   const obs = await observe(metricId, city, obsDate);
   const reportedAt = Math.floor(Date.now() / 1000);
+  const expiry = reportedAt + READING_VALIDITY_SEC;
+  // Evidence reference: a hash of the source bundle the adapter observed. The
+  // contract stores it and binds it into the signed message.
+  const evidenceHash = obs.evidenceHash || [];
 
-  // Canonical message — MUST match Overcover::reading_message byte-for-byte.
-  const msg = Buffer.from(
-    `overcover:v2|${operator}|${metricId}|${city}|${obsDate}|${obs.valueTenths}|${reportedAt}|${nonce}|${CONTRACT}`,
-    "utf8"
-  );
+  // Canonical v3 message — MUST match Overcover::reading_message byte-for-byte.
+  const msg = readingMessageV3({
+    operator, metricId, city, obsDate, valueTenths: obs.valueTenths,
+    reportedAt, expiry, evidenceHash, nonce, contractId: CONTRACT,
+  });
   const kp = KeyPair.fromString(me.secretKey);
   const { signature } = kp.sign(msg);
   const sig = Array.from(signature);
 
   process.stdout.write(
     `operator ${operator}\n  metric=${metricId} city=${city} date=${dateStr}\n` +
-      `  value=${obs.valueTenths} (${obs.unit}) via ${obs.source}\n  nonce=${nonce}\n`
+      `  value=${obs.valueTenths} (${obs.unit}) via ${obs.source}\n  nonce=${nonce}\n` +
+      `  expiry=${expiry} evidence=${evidenceHash.length} bytes\n`
   );
 
   const outcome = await call(near, operator, CONTRACT, "submit_reading", {
@@ -69,6 +78,8 @@ async function main() {
     obs_date: obsDate,
     value_tenths: obs.valueTenths,
     reported_at: reportedAt,
+    expiry,
+    evidence_hash: evidenceHash,
     nonce,
     signature: sig,
   });

@@ -179,13 +179,18 @@ async function main() {
   cmp("products", before.products, after.products);
   cmp("reconcile", before.reconcile, after.reconcile);
 
-  // The v2 records add fields; every v1 field must survive unchanged and the new
-  // fields must take the documented legacy defaults (metric "", direction Above).
-  const stripV2 = (p) => { const { metric_id, direction, ...rest } = p; return rest; };
+  // The v2/v3 records add fields; every v1 field must survive unchanged and the
+  // new fields must take the documented legacy defaults (metric "", direction
+  // Above, and the challenge window that was contract-wide at migration time).
+  const stripNew = (p) => {
+    const { metric_id, direction, challenge_window_sec, ...rest } = p;
+    return rest;
+  };
   const legacyOk = after.policies.length === before.policies.length
-    && before.policies.every((b, i) => JSON.stringify(stripV2(after.policies[i])) === JSON.stringify(b))
-    && after.policies.every((p) => p.metric_id === "" && p.direction === "Above");
-  if (!legacyOk) diffs.push("legacy policy fields were not carried over with the v2 defaults");
+    && before.policies.every((b, i) => JSON.stringify(stripNew(after.policies[i])) === JSON.stringify(b))
+    && after.policies.every((p) => p.metric_id === "" && p.direction === "Above")
+    && after.policies.every((p) => Number(p.challenge_window_sec) === Number(before.config.challenge_window_sec));
+  if (!legacyOk) diffs.push("legacy policy fields were not carried over with the v2/v3 defaults");
 
   console.log("\nDIFFERENCES (before -> after):");
   if (!diffs.length) console.log("  none — state preserved");

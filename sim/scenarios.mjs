@@ -19,6 +19,17 @@ const AGENT = "agent.testnet";
 const WATCHDOG = "watchdog.testnet";
 const RESOLVERS = ["res1.testnet", "res2.testnet", "res3.testnet", "res4.testnet", "res5.testnet"];
 
+/// Deterministic evidence reference for every scenario reading (mirrors the
+/// off-chain bundle hash an operator would sign).
+const EVIDENCE = Buffer.from("scenario-evidence");
+
+/// Build the canonical v3 reading message and the matching submit args.
+function reading(m, operator, metricId, city, date, value, reportedAt, nonce, { expiry, evidence = EVIDENCE } = {}) {
+  const ex = expiry ?? reportedAt + 6 * 3600;
+  const msg = m.readingMessage(operator, metricId, city, BigInt(date), BigInt(value), BigInt(reportedAt), BigInt(ex), evidence, nonce);
+  return { msg, args: { operator, metricId, city, obsDate: date, value, reportedAt, expiry: ex, evidenceHash: evidence, nonce } };
+}
+
 function newBoard({ quorum = 3, resolverQuorum = 3, disputeWindowSec = 3600 } = {}) {
   const m = new Decentralized({
     owner: "owner.testnet",
@@ -55,10 +66,8 @@ function reportQuorum(m, keys, metricId, city, date, value, reportedAt, { report
     const operator = `${acct}.testnet`;
     const kp = keys[acct];
     const nonce = m.operators.get(operator).readings;
-    const msg = m.readingMessage(operator, metricId, city, BigInt(date), BigInt(value), BigInt(reportedAt), nonce);
-    last = m.submitReading({
-      operator, metricId, city, obsDate: date, value, reportedAt, nonce, signature: sign(kp.priv, msg),
-    });
+    const { msg, args } = reading(m, operator, metricId, city, date, value, reportedAt, nonce);
+    last = m.submitReading({ ...args, signature: sign(kp.priv, msg) });
   }
   return last;
 }
@@ -261,8 +270,8 @@ console.log("\n== Adversarial matrix ==");
   expectThrow("A7", "adversarial", "unknown operator is rejected", () => {
     const kp = keyPairFromSeed(99);
     const operator = "unknown.testnet";
-    const msg = m.readingMessage(operator, "rain", "lagos", BigInt(day3), 500n, BigInt(day3 + 60), 0);
-    m.submitReading({ operator, metricId: "rain", city: "lagos", obsDate: day3, value: 500, reportedAt: day3 + 60, nonce: 0, signature: sign(kp.priv, msg) });
+    const { msg, args } = reading(m, operator, "rain", "lagos", day3, 500, day3 + 60, 0);
+    m.submitReading({ ...args, signature: sign(kp.priv, msg) });
   });
 
   // A8: revoked oracle key.
@@ -278,15 +287,16 @@ console.log("\n== Adversarial matrix ==");
   // A9: invalid signature.
   expectThrow("A9", "adversarial", "invalid signature is rejected", () => {
     const operator = "op1.testnet";
-    m.submitReading({ operator, metricId: "rain", city: "lagos", obsDate: day3, value: 500, reportedAt: day3 + 60, nonce: 0, signature: Buffer.alloc(64, 7) });
+    const { args } = reading(m, "op1.testnet", "rain", "lagos", day3, 500, day3 + 60, 0);
+    m.submitReading({ ...args, signature: Buffer.alloc(64, 7) });
   });
 
   // A10: stale observation.
   expectThrow("A10", "adversarial", "stale observation is rejected", () => {
     const operator = "op1.testnet";
     const kp = keys.op1;
-    const msg = m.readingMessage(operator, "rain", "lagos", BigInt(day3), 500n, BigInt(day3 + 40 * 3600), 0);
-    m.submitReading({ operator, metricId: "rain", city: "lagos", obsDate: day3, value: 500, reportedAt: day3 + 40 * 3600, nonce: 0, signature: sign(kp.priv, msg) });
+    const { msg, args } = reading(m, operator, "rain", "lagos", day3, 500, day3 + 40 * 3600, 0);
+    m.submitReading({ ...args, signature: sign(kp.priv, msg) });
   });
 
   // A11: replayed observation (stale nonce).
@@ -295,24 +305,22 @@ console.log("\n== Adversarial matrix ==");
   m3.addMetricProduct("rain", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: DAY, maxTotalCoverage: N(5000) });
   m3.advanceTo(day3);
   m3.advanceTo(day3 + 60);
-  const sig0 = (() => {
-    const operator = "op1.testnet";
-    const msg = m3.readingMessage(operator, "rain", "lagos", BigInt(day3), 500n, BigInt(day3 + 60), 0);
-    return sign(k3.op1.priv, msg);
-  })();
-  m3.submitReading({ operator: "op1.testnet", metricId: "rain", city: "lagos", obsDate: day3, value: 500, reportedAt: day3 + 60, nonce: 0, signature: sig0 });
+  const r11 = reading(m3, "op1.testnet", "rain", "lagos", day3, 500, day3 + 60, 0);
+  const sig0 = sign(k3.op1.priv, r11.msg);
+  m3.submitReading({ ...r11.args, signature: sig0 });
   expectThrow("A11", "adversarial", "replayed reading (stale nonce) is rejected", () => {
-    m3.submitReading({ operator: "op1.testnet", metricId: "rain", city: "lagos", obsDate: day3, value: 500, reportedAt: day3 + 60, nonce: 0, signature: sig0 });
+    m3.submitReading({ ...r11.args, signature: sig0 });
   });
 
   // A12: cross-contract signature replay.
   expectThrow("A12", "adversarial", "signature bound to another contract is rejected", () => {
     const other = new Decentralized({ owner: "o.testnet", quorum: 3, contractId: "other-contract.testnet" });
     other.addOperator("op1.testnet", keys.op1.pub);
-    const msg = other.readingMessage("op1.testnet", "rain", "lagos", BigInt(day3), 500n, BigInt(day3 + 60), 0);
-    const sig = sign(keys.op1.priv, msg);
-    // Submit that signature to THIS contract: the message embeds this account id.
-    m.submitReading({ operator: "op1.testnet", metricId: "rain", city: "lagos", obsDate: day3, value: 500, reportedAt: day3 + 60, nonce: 0, signature: sig });
+    const foreign = reading(other, "op1.testnet", "rain", "lagos", day3, 500, day3 + 60, 0);
+    const sig = sign(keys.op1.priv, foreign.msg);
+    // Submit that signature to THIS contract: the message embeds the other id.
+    const { args } = reading(m, "op1.testnet", "rain", "lagos", day3, 500, day3 + 60, 0);
+    m.submitReading({ ...args, signature: sig });
   });
 
   // A13: cross-product observation replay — a reading for "rain" cannot be used
@@ -324,9 +332,10 @@ console.log("\n== Adversarial matrix ==");
   m4.advanceTo(day3);
   expectThrow("A13", "adversarial", "a reading signed for one metric cannot be replayed for another", () => {
     const operator = "op1.testnet";
-    const msg = m4.readingMessage(operator, "rain", "lagos", BigInt(day3), 500n, BigInt(day3 + 60), 0);
+    const { msg } = reading(m4, operator, "rain", "lagos", day3, 500, day3 + 60, 0);
     const sig = sign(k4.op1.priv, msg);
-    m4.submitReading({ operator, metricId: "drought", city: "lagos", obsDate: day3, value: 500, reportedAt: day3 + 60, nonce: 0, signature: sig });
+    const { args } = reading(m4, operator, "drought", "lagos", day3, 500, day3 + 60, 0);
+    m4.submitReading({ ...args, signature: sig });
   });
 }
 
@@ -505,6 +514,70 @@ console.log("\n== Adversarial matrix ==");
   const history = [{ kind: "buy", atMs: 0, premiumYocto: (ONE_NEAR / 10n).toString(), idempotencyKey: "req-1" }];
   const second = evaluate(proposal, product, { limits, history, nowMs: 120_000 });
   check("A25b", "adversarial", "a repeated idempotency key cannot buy twice", "denied", second.allow ? "allowed" : "denied", second.allow === false);
+}
+
+// A26: a reading that has expired cannot settle (expiry is signed and enforced).
+{
+  const { m, keys } = newBoard();
+  m.deposit("lp.testnet", N(1000));
+  m.addMetricProduct("rain", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: DAY, maxTotalCoverage: N(5000) });
+  const day3 = 3 * DAY;
+  const pol = m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: day3 });
+  m.advanceTo(day3 + 60);
+  // Every operator signs a reading that expires 2 minutes after reporting.
+  for (const acct of ["op1", "op2", "op3"]) {
+    const operator = `${acct}.testnet`;
+    const nonce = m.operators.get(operator).readings;
+    const { msg, args } = reading(m, operator, "rain", "lagos", day3, 900, day3 + 60, nonce, { expiry: day3 + 180 });
+    m.submitReading({ ...args, signature: sign(keys[acct].priv, msg) });
+  }
+  check("A26", "adversarial", "a signed reading with an expiry is accepted", "quorum>=1",
+    `${m.getObservation("rain", "lagos", day3)?.quorum}`, (m.getObservation("rain", "lagos", day3)?.quorum ?? 0) >= 1);
+  m.advanceTo(day3 + 7200); // well past the expiry
+  expectThrow("A26b", "adversarial", "an expired reading cannot settle", () => m.resolve(pol));
+}
+
+// A27: the owner cannot be a resolver, and an owner account cannot vote.
+{
+  const { m } = newBoard();
+  expectThrow("A27", "adversarial", "the owner cannot be registered as a resolver", () => {
+    m.addResolver("owner.testnet");
+  });
+}
+
+// A28: the challenge window is fixed at purchase and cannot be shortened.
+{
+  const { m, keys } = newBoard();
+  m.deposit("lp.testnet", N(1000));
+  m.addMetricProduct("rain", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: DAY, maxTotalCoverage: N(5000) });
+  const day3 = 3 * DAY;
+  m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: day3 });
+  m.advanceTo(day3);
+  reportQuorum(m, keys, "rain", "lagos", day3, 900, day3 + 60); // observation freezes window = 3600
+  // The owner shortens the global window to 1 second after the fact.
+  m.setChallengeWindow(1);
+  m.advanceTo(day3 + 160); // 100 s after the reading: inside the frozen 3600 s window
+  m.challenge({ challenger: WATCHDOG, metricId: "rain", city: "lagos", obsDate: day3, counterValueTenths: 100, bond: ONE_NEAR / 10n });
+  check("A28", "adversarial", "the frozen challenge window still allows the challenge", "disputed",
+    `${m.getObservation("rain", "lagos", day3).disputed}`, m.getObservation("rain", "lagos", day3).disputed === true);
+  expectThrow("A28b", "adversarial", "an unbounded challenge window is refused", () => m.setChallengeWindow(8 * 24 * 3600));
+}
+
+// A29: the dispute decision threshold is frozen when the dispute opens.
+{
+  const { m, keys } = newBoard();
+  m.deposit("lp.testnet", N(1000));
+  m.addMetricProduct("rain", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: DAY, maxTotalCoverage: N(5000) });
+  const day3 = 3 * DAY;
+  const pol = m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: day3 });
+  m.advanceTo(day3);
+  reportQuorum(m, keys, "rain", "lagos", day3, 900, day3 + 60);
+  m.advanceTo(day3 + 120);
+  m.challenge({ challenger: WATCHDOG, metricId: "rain", city: "lagos", obsDate: day3, counterValueTenths: 100, bond: ONE_NEAR / 10n });
+  m.setResolverQuorum(1); // try to lower the bar after the dispute is open
+  m.resolverVote({ resolver: "res1.testnet", metricId: "rain", city: "lagos", obsDate: day3, uphold: false });
+  m.advanceTo(day3 + 7200);
+  expectThrow("A29", "adversarial", "one vote cannot decide a dispute opened with a 3-vote threshold", () => m.resolve(pol));
 }
 
 }

@@ -10,6 +10,15 @@ transactions. Nothing is staged.
 > earlier because it needs a wallet extension or a funded operator account.
 > Never present a RECORDED item as if it just happened.
 
+> **Version note.** The live console and `contract.attestor-overcover.testnet` currently run the
+> **v1** product (single attestor, owner-resolved disputes). The branch
+> `feat/decentralized-insurance-lifecycle` upgrades this to a **v2** lifecycle (metric-agnostic
+> products, a multi-operator oracle quorum, independent dispute resolvers) and adds a local-node
+> end-to-end proof (`npm run verify:sandbox`, 21/21). The v2 contract is implemented and proven but
+> **not yet deployed to testnet** (the faucet is rate-limited; see `docs/DEPLOY_RUNBOOK.md`). The
+> demo below runs against whatever is deployed — currently v1. Where a check's numbers differ
+> between the two, both are given.
+
 ---
 
 ## The opening question (15 s)

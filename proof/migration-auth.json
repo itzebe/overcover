@@ -1,0 +1,40 @@
+{
+  "at": "2026-11-11T14:45:37.006Z",
+  "contract": "contract.attestor-overcover.testnet",
+  "deployed_sha256": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e",
+  "v1_ref": "18ec7f08",
+  "passed": 6,
+  "total": 6,
+  "results": [
+    {
+      "name": "deployed bytecode sha256 matches the recorded deployed build",
+      "ok": true,
+      "detail": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e"
+    },
+    {
+      "name": "v1 source rebuilds to the deployed sha256",
+      "ok": true,
+      "detail": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e"
+    },
+    {
+      "name": "v1 migrate() is #[init(ignore_state)] (runs before state is read)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "v1 migrate() has no authorization guard",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "v2 migrate() enforces the self-call guard",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "v2 guard: third-party migrate() refused, self-call allowed (cargo test sec1_)",
+      "ok": true,
+      "detail": "4 passed"
+    }
+  ]
+}

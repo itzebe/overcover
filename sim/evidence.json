@@ -1,0 +1,554 @@
+{
+  "mode": "SIMULATED",
+  "note": "Deterministic reference-model simulation. NOT on-chain. Do not present as a NEAR transaction.",
+  "generatedAt": "2026-11-11T10:00:24.505Z",
+  "engine": "sim/engine.mjs",
+  "scenarios_source": "sim/scenarios.mjs",
+  "totals": {
+    "scenarios": 60,
+    "passed": 60,
+    "failed": 0
+  },
+  "scenarios": [
+    {
+      "id": "L1",
+      "group": "lifecycle",
+      "desc": "products discoverable across 3 risk categories",
+      "expected": "3",
+      "actual": "3",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L2",
+      "group": "lifecycle",
+      "desc": "contract quotes the premium (human)",
+      "expected": "2500000000000000000000000",
+      "actual": "2500000000000000000000000",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L3",
+      "group": "lifecycle",
+      "desc": "human purchase reserves the payout",
+      "expected": "50000000000000000000000000",
+      "actual": "50000000000000000000000000",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L3b",
+      "group": "lifecycle",
+      "desc": "premium entered the pool",
+      "expected": "1002500000000000000000000000",
+      "actual": "1002500000000000000000000000",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L4",
+      "group": "lifecycle",
+      "desc": "agent purchase issues a policy owned by the agent",
+      "expected": "agent.testnet",
+      "actual": "agent.testnet",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L5",
+      "group": "lifecycle",
+      "desc": "a quorum finalizes the observation",
+      "expected": "3",
+      "actual": "3",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L7",
+      "group": "lifecycle",
+      "desc": "non-breaching heat reading finalizes",
+      "expected": "3",
+      "actual": "3",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L6",
+      "group": "lifecycle",
+      "desc": "breaching policy pays exactly its payout",
+      "expected": "50000000000000000000000000",
+      "actual": "50000000000000000000000000",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L6b",
+      "group": "lifecycle",
+      "desc": "policy status is settled_paid",
+      "expected": "settled_paid",
+      "actual": "settled_paid",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L8",
+      "group": "lifecycle",
+      "desc": "non-breaching policy does not pay",
+      "expected": "0",
+      "actual": "0",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L8b",
+      "group": "lifecycle",
+      "desc": "policy status is settled_no_pay",
+      "expected": "settled_no_pay",
+      "actual": "settled_no_pay",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L9",
+      "group": "lifecycle",
+      "desc": "pool reconciles after settlement",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L10",
+      "group": "lifecycle",
+      "desc": "reserved <= capital invariant holds",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L11",
+      "group": "lifecycle",
+      "desc": "all reservations released",
+      "expected": "0",
+      "actual": "0",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "L12",
+      "group": "lifecycle",
+      "desc": "provider withdraws unencumbered capital",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C1",
+      "group": "categories",
+      "desc": "rain at exactly the threshold pays",
+      "expected": "settled_paid",
+      "actual": "settled_paid",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C2",
+      "group": "categories",
+      "desc": "rain one tenth below the threshold does not pay",
+      "expected": "settled_no_pay",
+      "actual": "settled_no_pay",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C3",
+      "group": "categories",
+      "desc": "drought deficit at/below threshold pays",
+      "expected": "settled_paid",
+      "actual": "settled_paid",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C4",
+      "group": "categories",
+      "desc": "wet reading does not trigger a drought policy",
+      "expected": "settled_no_pay",
+      "actual": "settled_no_pay",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C5",
+      "group": "categories",
+      "desc": "extreme heat above threshold pays",
+      "expected": "settled_paid",
+      "actual": "settled_paid",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C6",
+      "group": "categories",
+      "desc": "wind below threshold does not pay",
+      "expected": "settled_no_pay",
+      "actual": "settled_no_pay",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C7",
+      "group": "categories",
+      "desc": "cross-category observations are isolated",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A3",
+      "group": "adversarial",
+      "desc": "conflicting readings below quorum do not finalize",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A4",
+      "group": "adversarial",
+      "desc": "one malicious oracle cannot force a wrong reading",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": "no value reaches quorum while readings disagree"
+    },
+    {
+      "id": "A4b",
+      "group": "adversarial",
+      "desc": "unfinalized observation cannot settle",
+      "expected": "rejected",
+      "actual": "rejected: cannot settle: no observation",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A5",
+      "group": "adversarial",
+      "desc": "two of three operators is below quorum",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A5b",
+      "group": "adversarial",
+      "desc": "settlement blocked without quorum",
+      "expected": "rejected",
+      "actual": "rejected: cannot settle: no observation",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A6",
+      "group": "adversarial",
+      "desc": "duplicate operator reading is rejected",
+      "expected": "rejected",
+      "actual": "rejected: time cannot go backwards",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A7",
+      "group": "adversarial",
+      "desc": "unknown operator is rejected",
+      "expected": "rejected",
+      "actual": "rejected: caller is not a registered operator",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A8",
+      "group": "adversarial",
+      "desc": "revoked operator is rejected",
+      "expected": "rejected",
+      "actual": "rejected: operator is revoked",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A9",
+      "group": "adversarial",
+      "desc": "invalid signature is rejected",
+      "expected": "rejected",
+      "actual": "rejected: invalid operator signature",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A10",
+      "group": "adversarial",
+      "desc": "stale observation is rejected",
+      "expected": "rejected",
+      "actual": "rejected: observation reported too late (stale)",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A11",
+      "group": "adversarial",
+      "desc": "replayed reading (stale nonce) is rejected",
+      "expected": "rejected",
+      "actual": "rejected: stale operator nonce (replay)",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A12",
+      "group": "adversarial",
+      "desc": "signature bound to another contract is rejected",
+      "expected": "rejected",
+      "actual": "rejected: invalid operator signature",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A13",
+      "group": "adversarial",
+      "desc": "a reading signed for one metric cannot be replayed for another",
+      "expected": "rejected",
+      "actual": "rejected: invalid operator signature",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A14",
+      "group": "adversarial",
+      "desc": "a challenge freezes a compromised reading",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A14b",
+      "group": "adversarial",
+      "desc": "a disputed reading cannot settle",
+      "expected": "rejected",
+      "actual": "rejected: cannot settle: observation disputed (unresolved)",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A14c",
+      "group": "adversarial",
+      "desc": "nullified reading cannot settle",
+      "expected": "rejected",
+      "actual": "rejected: cannot settle: observation nullified",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A15",
+      "group": "adversarial",
+      "desc": "a late challenge is rejected",
+      "expected": "rejected",
+      "actual": "rejected: challenge window has elapsed",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A16",
+      "group": "adversarial",
+      "desc": "a signer cannot resolve its own dispute",
+      "expected": "rejected",
+      "actual": "rejected: an operator that signed the reading may not resolve it",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A16b",
+      "group": "adversarial",
+      "desc": "the owner cannot unilaterally resolve a dispute",
+      "expected": "rejected",
+      "actual": "rejected: not a registered resolver",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A17",
+      "group": "adversarial",
+      "desc": "the challenge bond is held, not counted as capital",
+      "expected": "100000000000000000000000",
+      "actual": "100000000000000000000000",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A17b",
+      "group": "adversarial",
+      "desc": "timeout releases the held bond",
+      "expected": "0",
+      "actual": "0",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A17c",
+      "group": "adversarial",
+      "desc": "a voided reading cannot settle",
+      "expected": "rejected",
+      "actual": "rejected: cannot settle: observation nullified",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A18",
+      "group": "adversarial",
+      "desc": "capacity cap rejects the duplicate beyond the cap",
+      "expected": "rejected",
+      "actual": "rejected: product capacity exceeded",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A18b",
+      "group": "adversarial",
+      "desc": "only the permitted policies exist",
+      "expected": "2",
+      "actual": "2",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A19",
+      "group": "adversarial",
+      "desc": "purchase beyond available capital is refused",
+      "expected": "rejected",
+      "actual": "rejected: insufficient available capital to underwrite",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A20",
+      "group": "adversarial",
+      "desc": "withdrawing reserved capital is refused",
+      "expected": "rejected",
+      "actual": "rejected: withdraw would break solvency (funds reserved)",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A21",
+      "group": "adversarial",
+      "desc": "a policy cannot settle twice",
+      "expected": "rejected",
+      "actual": "rejected: policy not active",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A21b",
+      "group": "adversarial",
+      "desc": "no second payout was made",
+      "expected": "10000000000000000000000000",
+      "actual": "10000000000000000000000000",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A22",
+      "group": "adversarial",
+      "desc": "an over-limit agent proposal is denied before any purchase",
+      "expected": "denied",
+      "actual": "denied",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A22b",
+      "group": "adversarial",
+      "desc": "an in-limit agent proposal is allowed",
+      "expected": "allowed",
+      "actual": "allowed",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A22c",
+      "group": "adversarial",
+      "desc": "the kill switch denies every proposal",
+      "expected": "denied",
+      "actual": "denied",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A23",
+      "group": "adversarial",
+      "desc": "a payout outside product bounds is refused",
+      "expected": "rejected",
+      "actual": "rejected: payout outside product bounds",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A23b",
+      "group": "adversarial",
+      "desc": "an unknown product is refused",
+      "expected": "rejected",
+      "actual": "rejected: no product",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A23c",
+      "group": "adversarial",
+      "desc": "an implausibly large reading is refused",
+      "expected": "rejected",
+      "actual": "rejected: value above metric plausibility bound",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A24",
+      "group": "adversarial",
+      "desc": "a refused purchase changes no state",
+      "expected": "rejected",
+      "actual": "rejected: payout outside product bounds",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A24b",
+      "group": "adversarial",
+      "desc": "capital/reserved/policy count unchanged after a refusal",
+      "expected": "true",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A25",
+      "group": "adversarial",
+      "desc": "the first use of an idempotency key is allowed",
+      "expected": "allowed",
+      "actual": "allowed",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A25b",
+      "group": "adversarial",
+      "desc": "a repeated idempotency key cannot buy twice",
+      "expected": "denied",
+      "actual": "denied",
+      "ok": true,
+      "note": ""
+    }
+  ]
+}

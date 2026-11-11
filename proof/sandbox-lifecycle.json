@@ -1,0 +1,114 @@
+{
+  "mode": "SANDBOX",
+  "nodeUrl": "http://127.0.0.1:3031",
+  "contract": "cover.test.near",
+  "checks": [
+    {
+      "name": "created 9 accounts on the sandbox",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "contract initialised with the owner",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "a temperature metric is registered (no rainfall assumption)",
+      "ok": true,
+      "detail": "heat"
+    },
+    {
+      "name": "the metric product is published",
+      "ok": true,
+      "detail": "heat-lagos/heat"
+    },
+    {
+      "name": "three operators are registered",
+      "ok": true,
+      "detail": "active=3"
+    },
+    {
+      "name": "pool holds the deposit",
+      "ok": true,
+      "detail": "capital=40"
+    },
+    {
+      "name": "buy_cover returns a policy id",
+      "ok": true,
+      "detail": "policy=1"
+    },
+    {
+      "name": "the policy belongs to the buyer",
+      "ok": true,
+      "detail": "buyer=buyer.test.near direction=Above"
+    },
+    {
+      "name": "a deposit that is not the quoted premium is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "a 2-of-3 quorum finalises the observation",
+      "ok": true,
+      "detail": "quorum=2"
+    },
+    {
+      "name": "the finalized value is stored",
+      "ok": true,
+      "detail": "value=450"
+    },
+    {
+      "name": "a replayed operator nonce is rejected",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "a non-operator cannot submit a reading",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "the observation is marked disputed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the reporter cannot vote on its own dispute",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "a resolver quorum upholds the reading",
+      "ok": true,
+      "detail": "disputed=false nullified=false"
+    },
+    {
+      "name": "the policy settled and paid (value above threshold)",
+      "ok": true,
+      "detail": "status=settled_paid paid=1000000000000000000000000"
+    },
+    {
+      "name": "reconcile() holds after settlement",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "check_invariant() holds after settlement",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "the reservation was released (reserved back to 0)",
+      "ok": true,
+      "detail": "reserved=0"
+    },
+    {
+      "name": "a paused contract refuses purchases",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    }
+  ],
+  "passed": 21,
+  "total": 21
+}

@@ -33,8 +33,11 @@ export function saveState(s) {
 }
 
 export function makeKeyStore() {
-  const ids = loadIdentities();
   const ks = new keyStores.InMemoryKeyStore();
+  // Tolerate a missing identities file: driver/keys.js must be able to connect
+  // in order to CREATE that file on a fresh checkout.
+  let ids = {};
+  try { ids = loadIdentities(); } catch { ids = {}; }
   for (const v of Object.values(ids)) {
     if (v.accountId && v.secretKey) ks.setKey("testnet", v.accountId, KeyPair.fromString(v.secretKey));
   }

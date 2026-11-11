@@ -5,11 +5,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { KeyPair } from "near-api-js";
 import { call, view, toYocto, txHash, loadIdentities, loadState } from "./near.js";
-import { signReading } from "./attestor.js";
+import { readingMessageV3 } from "./attestor.js";
 import { observe } from "./adapters.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LOG = path.join(root, "demo-log.json");
+/// Validity window asserted by every reading (must be within the 7-day cap and
+/// outlast the challenge window at settle time).
+const READING_VALIDITY_SEC = Number(process.env.OVERCOVER_READING_VALIDITY ?? 6 * 3600);
 
 export function contractId() {
   return loadState().contractId ?? loadIdentities().owner.accountId;
@@ -132,13 +135,17 @@ export async function submitReading(near, role, { metricId, city, obsDate, value
 
   const obs = valueTenthsOverride === undefined
     ? await observe(metricId, city, obsDate)
-    : { valueTenths: valueTenthsOverride, unit: "?", source: "override" };
+    : { valueTenths: valueTenthsOverride, unit: "?", source: "override", evidenceHash: [] };
   const reportedAt = Math.floor(Date.now() / 1000);
+  const expiry = reportedAt + READING_VALIDITY_SEC;
 
-  const kp = KeyPair.fromString(me.secretKey);
-  const { signature } = signReading(kp, {
-    operator, metricId, city, obsDate, valueTenths: obs.valueTenths, reportedAt, nonce, contractId: c,
+  // Canonical v3 message — MUST match Overcover::reading_message byte-for-byte.
+  const msg = readingMessageV3({
+    operator, metricId, city, obsDate, valueTenths: obs.valueTenths,
+    reportedAt, expiry, evidenceHash: obs.evidenceHash || [], nonce, contractId: c,
   });
+  const kp = KeyPair.fromString(me.secretKey);
+  const { signature } = kp.sign(msg);
 
   const o = await call(near, operator, c, "submit_reading", {
     metric_id: metricId,
@@ -146,8 +153,10 @@ export async function submitReading(near, role, { metricId, city, obsDate, value
     obs_date: obsDate,
     value_tenths: obs.valueTenths,
     reported_at: reportedAt,
+    expiry,
+    evidence_hash: obs.evidenceHash || [],
     nonce,
-    signature,
+    signature: Array.from(signature),
   });
   return { entry: logTx(`submit_reading:${role}:${metricId}:${city}`, o, { valueTenths: obs.valueTenths, reportedAt }), obs, reportedAt, operator };
 }

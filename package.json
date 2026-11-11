@@ -23,7 +23,7 @@
     "test:deploy": "node --test tests/upgrade-guard-refusal.test.mjs",
     "test:model": "node research/model/attacks.mjs",
     "test:onchain": "node --test tests/*.test.js",
-    "test:sim": "node --test tests/model.test.mjs",
+    "test:sim": "node --test tests/model.test.mjs tests/v3-message.test.mjs",
     "ui:qa": "node tests/ui.browser.mjs",
     "upgrade": "node driver/upgrade.js",
     "verify:agent": "node proof/agent-policy.mjs",

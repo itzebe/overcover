@@ -1,12 +1,12 @@
 {
   "mode": "SIMULATED",
   "note": "Deterministic reference-model simulation. NOT on-chain. Do not present as a NEAR transaction.",
-  "generatedAt": "2026-11-11T10:00:24.505Z",
+  "generatedAt": "2026-11-11T18:57:29.643Z",
   "engine": "sim/engine.mjs",
   "scenarios_source": "sim/scenarios.mjs",
   "totals": {
-    "scenarios": 60,
-    "passed": 60,
+    "scenarios": 66,
+    "passed": 66,
     "failed": 0
   },
   "scenarios": [
@@ -375,7 +375,7 @@
       "group": "adversarial",
       "desc": "the owner cannot unilaterally resolve a dispute",
       "expected": "rejected",
-      "actual": "rejected: not a registered resolver",
+      "actual": "rejected: the owner may not vote on a dispute",
       "ok": true,
       "note": ""
     },
@@ -547,6 +547,60 @@
       "desc": "a repeated idempotency key cannot buy twice",
       "expected": "denied",
       "actual": "denied",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A26",
+      "group": "adversarial",
+      "desc": "a signed reading with an expiry is accepted",
+      "expected": "quorum>=1",
+      "actual": "3",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A26b",
+      "group": "adversarial",
+      "desc": "an expired reading cannot settle",
+      "expected": "rejected",
+      "actual": "rejected: cannot settle: observation expired",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A27",
+      "group": "adversarial",
+      "desc": "the owner cannot be registered as a resolver",
+      "expected": "rejected",
+      "actual": "rejected: the owner may not be a dispute resolver",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A28",
+      "group": "adversarial",
+      "desc": "the frozen challenge window still allows the challenge",
+      "expected": "disputed",
+      "actual": "true",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A28b",
+      "group": "adversarial",
+      "desc": "an unbounded challenge window is refused",
+      "expected": "rejected",
+      "actual": "rejected: challenge window above maximum",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "A29",
+      "group": "adversarial",
+      "desc": "one vote cannot decide a dispute opened with a 3-vote threshold",
+      "expected": "rejected",
+      "actual": "rejected: cannot settle: observation disputed (unresolved)",
       "ok": true,
       "note": ""
     }

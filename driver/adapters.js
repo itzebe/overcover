@@ -15,6 +15,7 @@
 // (see docs/ORACLE_OPERATIONS.md).
 
 import { CITIES } from "./cities.js";
+import { createHash } from "node:crypto";
 
 const UA = { "User-Agent": "overcover-oracle/1.0" };
 
@@ -95,5 +96,13 @@ export const ADAPTERS = {
 export async function observe(metricId, cityKey, dateSec) {
   const fn = ADAPTERS[metricId];
   if (!fn) throw new Error(`no adapter for metric ${metricId}`);
-  return fn(cityKey, dateSec);
+  const r = await fn(cityKey, dateSec);
+  // Bind the observation to a hash of its source bundle, so the on-chain reading
+  // commits to the exact evidence the operator saw. The hash is part of the
+  // signed payload (see driver/attestor.js `readingMessageV3`).
+  if (!r.evidenceHash) {
+    const bundle = `${metricId}|${cityKey}|${dateSec}|${r.valueTenths}|${r.source}|${r.raw}`;
+    r.evidenceHash = Array.from(createHash("sha256").update(bundle).digest().subarray(0, 16));
+  }
+  return r;
 }

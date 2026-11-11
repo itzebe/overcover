@@ -18,6 +18,15 @@ import crypto from "node:crypto";
 
 export const ONE_NEAR = 10n ** 24n;
 export const DISPUTE_OPEN = Number.MAX_SAFE_INTEGER;
+/// Canonical domain tag for an oracle reading (mirrors the contract's
+/// `READING_DOMAIN`). Binds the contract, the schema version and the field set.
+export const READING_DOMAIN = "overcover:v3:observation";
+/// Longest validity an operator may claim for a reading (mirrors the contract).
+export const READING_MAX_VALIDITY_SEC = 7 * 24 * 3600;
+/// Cap on the challenge window (mirrors the contract's CHALLENGE_WINDOW_MAX_SEC).
+export const CHALLENGE_WINDOW_MAX_SEC = 7 * 24 * 3600;
+/// Cap on the off-chain evidence reference (mirrors the contract).
+export const MAX_EVIDENCE_BYTES = 128;
 
 export class ContractError extends Error {}
 
@@ -233,8 +242,9 @@ export class Decentralized {
   // ---- resolvers ---------------------------------------------------------
 
   addResolver(account) {
+    if (account === this.owner) throw new ContractError("the owner may not be a dispute resolver");
     if (this.resolvers.has(account)) throw new ContractError("resolver already registered");
-    this.resolvers.set(account, { active: true });
+    this.resolvers.set(account, { active: true, owner: this.owner });
   }
 
   revokeResolver(account) {
@@ -246,6 +256,14 @@ export class Decentralized {
   setResolverQuorum(q) {
     if (q < 1) throw new ContractError("resolver quorum must be >= 1");
     this.resolverQuorum = q;
+  }
+
+  /// Cap mirrors the contract's CHALLENGE_WINDOW_MAX_SEC: an unbounded window
+  /// could freeze a pool forever. Recorded per policy/observation at creation.
+  setChallengeWindow(secs) {
+    secs = BigInt(secs);
+    if (secs > BigInt(CHALLENGE_WINDOW_MAX_SEC)) throw new ContractError("challenge window above maximum");
+    this.challengeWindowSec = secs;
   }
 
   setDisputeWindow(secs) {
@@ -321,6 +339,7 @@ export class Decentralized {
       id, buyer, beneficiary: beneficiary ?? buyer, productId,
       city: p.city, metricId: p.metricId, direction,
       threshold: p.threshold, payout, premium, obsDate,
+      challengeWindowSec: this.challengeWindowSec,
       issuedAt: this.now, status: "active", paidAmount: 0n, observedValue: 0n, settledAt: 0n,
     });
     this.reserved += payout;
@@ -340,39 +359,48 @@ export class Decentralized {
     return `${metricId}|${city}|${BigInt(date)}|${operator}`;
   }
 
-  readingMessage(operator, metricId, city, obsDate, value, reportedAt, nonce) {
-    return Buffer.from(
-      `overcover:v2|${operator}|${metricId}|${city}|${obsDate}|${value}|${reportedAt}|${nonce}|${this.contractId}`,
-      "utf8"
-    );
+  readingMessage(operator, metricId, city, obsDate, value, reportedAt, expiry, evidence, nonce) {
+    const ev = Buffer.isBuffer(evidence) ? evidence : Buffer.from(evidence || []);
+    const head = [
+      READING_DOMAIN, this.contractId, operator, metricId, city,
+      BigInt(obsDate), BigInt(value), BigInt(reportedAt), BigInt(expiry), BigInt(nonce),
+    ].join("|");
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(ev.length, 0);
+    return Buffer.concat([Buffer.from(head, "utf8"), Buffer.from("|", "utf8"), len, ev]);
   }
 
-  submitReading({ operator, metricId, city, obsDate, value, reportedAt, signature, nonce }) {
+  submitReading({ operator, metricId, city, obsDate, value, reportedAt, expiry, evidenceHash, signature, nonce }) {
     const op = this.operators.get(operator);
     if (!op) throw new ContractError("caller is not a registered operator");
     if (!op.active) throw new ContractError("operator is revoked");
     const spec = this.metricSpec(metricId);
     const n = nonce === undefined ? op.readings : Number(nonce);
-    const msg = this.readingMessage(operator, metricId, city, BigInt(obsDate), BigInt(value), BigInt(reportedAt), n);
+    const evidence = Buffer.isBuffer(evidenceHash) ? evidenceHash : Buffer.from(evidenceHash || []);
+    if (evidence.length > MAX_EVIDENCE_BYTES) throw new ContractError("evidence reference too large");
+    const msg = this.readingMessage(operator, metricId, city, BigInt(obsDate), BigInt(value), BigInt(reportedAt), BigInt(expiry), evidence, n);
     if (!signature || signature.length !== 64) throw new ContractError("signature must be 64 bytes");
     if (!verify(op.pub, msg, signature)) throw new ContractError("invalid operator signature");
     if (n !== op.readings) throw new ContractError("stale operator nonce (replay)");
 
     obsDate = BigInt(obsDate);
     reportedAt = BigInt(reportedAt);
+    expiry = BigInt(expiry);
     value = BigInt(value);
     if (obsDate > this.now) throw new ContractError("cannot observe a future date");
     if (reportedAt < obsDate) throw new ContractError("observation predates its date");
     if (reportedAt - obsDate > 86400n) throw new ContractError("observation reported too late (stale)");
     if (reportedAt > this.now) throw new ContractError("observation reported in the future");
     if (value > spec.maxValue) throw new ContractError("value above metric plausibility bound");
+    if (expiry <= this.now) throw new ContractError("observation already expired");
+    if (expiry > reportedAt + BigInt(READING_MAX_VALIDITY_SEC)) throw new ContractError("expiry too far in the future");
 
     const okey = this.obsKey(metricId, city, obsDate);
     const rkey = this.readingKey(metricId, city, obsDate, operator);
     if (this.readings.has(rkey)) throw new ContractError("operator already reported for this date");
 
     op.readings += 1;
-    this.readings.set(rkey, { operator, value, reportedAt, nonce: n });
+    this.readings.set(rkey, { operator, value, reportedAt, expiry, evidence, nonce: n });
     if (!this.signers.has(okey)) this.signers.set(okey, new Set());
     this.signers.get(okey).add(operator);
 
@@ -409,6 +437,8 @@ export class Decentralized {
     if (!best || best.support < this.quorum) return 0;
 
     let reportedAt = 0n;
+    let expiry = null;
+    let evidence = null;
     const confirmed = [];
     for (const acct of signers) {
       const or = this.readings.get(this.readingKey(metricId, city, obsDate, acct));
@@ -416,12 +446,18 @@ export class Decentralized {
       const diff = or.value >= best.value ? or.value - best.value : best.value - or.value;
       if (diff <= tolerance) {
         reportedAt = reportedAt > or.reportedAt ? reportedAt : or.reportedAt;
+        expiry = expiry === null || or.expiry < expiry ? or.expiry : expiry;
+        if (or.value === best.value && (evidence === null || Buffer.compare(or.evidence, evidence) < 0)) {
+          evidence = or.evidence;
+        }
         confirmed.push(acct);
       }
     }
 
     this.observations.set(okey, {
       metricId, city, obsDate, value: best.value, reportedAt,
+      challengeWindowSec: this.challengeWindowSec,
+      expiry: expiry ?? 0n, evidence: evidence ?? Buffer.alloc(0),
       quorum: best.support, signers: confirmed,
       disputed: false, nullified: false, challenger: null, counterValue: 0n, bond: 0n,
     });
@@ -439,7 +475,7 @@ export class Decentralized {
     if (!o) throw new ContractError("no such observation");
     if (o.disputed) throw new ContractError("observation already disputed");
     if (o.nullified) throw new ContractError("observation already nullified");
-    if (this.now >= o.reportedAt + this.challengeWindowSec) throw new ContractError("challenge window has elapsed");
+    if (this.now >= o.reportedAt + o.challengeWindowSec) throw new ContractError("challenge window has elapsed");
 
     o.disputed = true;
     o.challenger = challenger;
@@ -448,6 +484,7 @@ export class Decentralized {
     this.disputes.set(okey, {
       okey, metricId, city, obsDate, value: o.value, signers: o.signers.slice(),
       openedAt: Number(this.now), challenger, counterValue: BigInt(counterValueTenths), bond,
+      threshold: this.resolverQuorum,
       resolvedAt: DISPUTE_OPEN, uphold: false, upheldVotes: 0, nullifiedVotes: 0,
     });
     this.disputeVotes.set(okey, new Map());
@@ -457,9 +494,11 @@ export class Decentralized {
   }
 
   resolverVote({ resolver, metricId, city, obsDate, uphold }) {
+    if (resolver === this.owner) throw new ContractError("the owner may not vote on a dispute");
     const r = this.resolvers.get(resolver);
     if (!r) throw new ContractError("not a registered resolver");
     if (!r.active) throw new ContractError("resolver is revoked");
+    if (r.owner === this.owner && resolver === this.owner) throw new ContractError("the owner may not vote on a dispute");
     const okey = this.obsKey(metricId, city, obsDate);
     const d = this.disputes.get(okey);
     if (!d) throw new ContractError("no dispute slot");
@@ -471,8 +510,9 @@ export class Decentralized {
     votes.set(resolver, !!uphold);
     if (uphold) d.upheldVotes += 1; else d.nullifiedVotes += 1;
     this._log("dispute_vote", { city, date: Number(obsDate), resolver, uphold: !!uphold });
-    if (d.upheldVotes >= this.resolverQuorum || d.nullifiedVotes >= this.resolverQuorum) {
-      this._finalizeDispute(okey, d.upheldVotes >= this.resolverQuorum);
+    // Decide against the threshold frozen when the dispute opened.
+    if (d.upheldVotes >= d.threshold || d.nullifiedVotes >= d.threshold) {
+      this._finalizeDispute(okey, d.upheldVotes >= d.threshold);
     }
   }
 
@@ -508,12 +548,13 @@ export class Decentralized {
     this._log("dispute_resolved", { uphold });
   }
 
-  observationValid(metricId, city, obsDate, at) {
+  observationValid(metricId, city, obsDate, window, at) {
     const o = this.observations.get(this.obsKey(metricId, city, obsDate));
     if (!o) return { ok: false, reason: "no observation" };
     if (o.nullified) return { ok: false, reason: "observation nullified" };
     if (o.disputed) return { ok: false, reason: "observation disputed (unresolved)" };
-    if (BigInt(at) < o.reportedAt + this.challengeWindowSec) return { ok: false, reason: "challenge window not elapsed" };
+    if (BigInt(at) < o.reportedAt + window) return { ok: false, reason: "challenge window not elapsed" };
+    if (o.expiry > 0n && BigInt(at) > o.expiry) return { ok: false, reason: "observation expired" };
     return { ok: true, value: o.value };
   }
 
@@ -525,7 +566,7 @@ export class Decentralized {
     if (pol.status !== "active") throw new ContractError("policy not active");
     const t = atTime === null ? this.now : BigInt(atTime);
     if (t < pol.obsDate + this.settleDelaySec) throw new ContractError("too early to settle");
-    const obs = this.observationValid(pol.metricId, pol.city, pol.obsDate, t);
+    const obs = this.observationValid(pol.metricId, pol.city, pol.obsDate, pol.challengeWindowSec, t);
     if (!obs.ok) throw new ContractError(`cannot settle: ${obs.reason}`);
 
     const triggered = pol.direction === "below" ? obs.value <= pol.threshold : obs.value >= pol.threshold;

@@ -35,4 +35,42 @@ export function signReading(keyPair, fields) {
   return { message: msg, signature: Array.from(sig.signature) };
 }
 
+// --- v3 (domain-separated threshold oracle) --------------------------------
+//
+//   overcover:v3:observation|<contract_id>|<operator>|<metric>|<city>|<date>|
+//     <value>|<reported_at>|<expiry>|<nonce>|<u32be len><evidence bytes>
+//
+// The domain tag and the contract id lead the message, so a signature can never
+// be replayed as another kind of message or against another contract. The
+// evidence reference is length-prefixed so it cannot be confused with a trailing
+// field (the classic concatenation ambiguity). This MUST match
+// `Overcover::reading_message` in contract/src/lib.rs byte-for-byte.
+const READING_DOMAIN_V3 = "overcover:v3:observation";
+
+export function readingMessageV3({ operator, metricId, city, obsDate, valueTenths, reportedAt, expiry, evidenceHash, nonce, contractId }) {
+  const evidence = Buffer.isBuffer(evidenceHash) ? evidenceHash : Buffer.from(evidenceHash || []);
+  const head = [
+    READING_DOMAIN_V3,
+    contractId,
+    operator,
+    metricId,
+    city,
+    obsDate,
+    valueTenths,
+    reportedAt,
+    expiry,
+    nonce,
+  ].join("|");
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(evidence.length, 0);
+  return Buffer.concat([Buffer.from(head, "utf8"), Buffer.from("|", "utf8"), len, evidence]);
+}
+
+/** Sign a v3 reading. Returns the raw message Buffer and the 64-byte signature. */
+export function signReadingV3(keyPair, fields) {
+  const msg = readingMessageV3(fields);
+  const sig = keyPair.sign(msg);
+  return { message: msg, signature: Array.from(sig.signature) };
+}
+
 export { KeyPair };

@@ -178,6 +178,9 @@ hashless wallet result is never presented as a purchase.
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, wallet picker opens in-viewport, dry-run agent round-trip OK** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
 | Console accessibility (axe-core, WCAG 2.2 AA) | `npm run axe` | **0 violations at 320 / 360 / 390 / 768 / 1024 / 1280 / 1440 px (page and wallet dialog)** |
+| One-command independent proof | `npm run verify:proof` | **12/12 checks passed** — deployed bytecode == this source, pool solvent, all 18 demo txs real, the agent's buys real, settled outcomes match |
+| Agent authorization vs the live product | `npm run verify:agent` | **over-limit buy refused, in-limit buy permitted; the shipped `createAgent` path agrees** |
+| Live production URL | `npm run verify:live` | **5 widths (320–1440 px), 0 console errors, 0 horizontal overflow** |
 
 Track ids for the submission form: `business` (primary), `swarms`, `defi`.
 

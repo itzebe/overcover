@@ -1,0 +1,49 @@
+{
+  "contract": "contract.attestor-overcover.testnet",
+  "product": {
+    "id": "p-1794315395272-3",
+    "city": "lagos",
+    "max_payout_yocto": "1000000000000000000000000"
+  },
+  "engine": {
+    "maxPayoutPerPolicy_yocto": "1000000000000000000000000",
+    "maxPremiumPerPolicy_yocto": "50000000000000000000000",
+    "dailyPremiumBudget_yocto": "200000000000000000000000"
+  },
+  "blocked_case": {
+    "proposal": "payout = 5x product max",
+    "allow": false,
+    "reasons": [
+      "premium 250000000000000000000000 exceeds maxPremiumPerPolicy 50000000000000000000000",
+      "payout 5000000000000000000000000 exceeds maxPayoutPerPolicy 1000000000000000000000000",
+      "premium 250000000000000000000000 would exceed dailyPremiumBudget (spent 0 of 200000000000000000000000 in 24h)",
+      "payout 5000000000000000000000000 outside product bounds 50000000000000000000000..1000000000000000000000000"
+    ]
+  },
+  "permitted_case": {
+    "proposal": "payout = product max",
+    "allow": true,
+    "reasons": []
+  },
+  "shipped_createAgent_path": {
+    "blocked_allow": false,
+    "permitted_allow": true,
+    "agrees_with_engine": true
+  },
+  "real_onchain_agent_purchases": [
+    {
+      "productId": "rain-lagos",
+      "payoutYocto": "1000000000000000000000000",
+      "premiumYocto": "50000000000000000000000",
+      "tx": "7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ",
+      "explorer": "https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ"
+    },
+    {
+      "productId": "rain-bergen-dry",
+      "payoutYocto": "500000000000000000000000",
+      "premiumYocto": "25000000000000000000000",
+      "tx": "26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And",
+      "explorer": "https://testnet.nearblocks.io/txns/26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And"
+    }
+  ]
+}

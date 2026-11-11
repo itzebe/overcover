@@ -33,6 +33,9 @@ jobs:
       - name: Console regression tests
         run: npm run test:console
 
+      - name: Agent limits, API and u128-precision tests
+        run: npm run test:agent
+
       - name: Build the contract to wasm
         run: cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
 

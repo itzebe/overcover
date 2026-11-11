@@ -41,19 +41,26 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
 ## 3. Every demo transaction is real
 
 `demo-log.json` holds 18 hashes covering the whole cycle: publish, deposit, buy cover, report,
-settle (paid and no-pay), and both dispute outcomes. Each resolves via RPC:
+settle (paid and no-pay), and both dispute outcomes. Each resolves via RPC. (The `tx` method
+requires a `sender_account_id`; the node rejects an empty value with HTTP 400 but does not check it
+against the transaction, so any valid account id works.)
 
 ```bash
 python3 - <<'PY'
 import json, urllib.request
 for e in json.load(open("demo-log.json")):
     req = urllib.request.Request("https://test.rpc.fastnear.com",
-        data=json.dumps({"jsonrpc":"2.0","id":1,"method":"tx","params":{"tx_hash":e["hash"],"sender_account_id":e.get("sender",""),"wait_until":"FINAL"}}).encode(),
+        data=json.dumps({"jsonrpc":"2.0","id":1,"method":"tx","params":{"tx_hash":e["hash"],"sender_account_id":"contract.attestor-overcover.testnet","wait_until":"FINAL"}}).encode(),
         headers={"Content-Type":"application/json"})
-    ok = "result" in json.load(urllib.request.urlopen(req))
+    r = json.load(urllib.request.urlopen(req))
+    ok = "result" in r and "Failure" not in (r["result"].get("status") or {})
     print(("OK  " if ok else "FAIL"), e["label"])
 PY
 ```
+
+Or run the whole verification in one command — `npm run verify:proof` re-derives every headline
+claim (bytecode, solvency, all 18 hashes, the agent's purchases, the settled outcomes) and exits
+non-zero on any mismatch.
 
 The same hashes are linked from the console's Proof section to `testnet.nearblocks.io`.
 

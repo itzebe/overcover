@@ -189,7 +189,16 @@ npm run test:contract   # 21 Rust unit tests                      (contract logi
 npm run test:console    # 66 regression + live-RPC tests          (browser console)
 npm run test:agent      # 34 limits + API + u128-precision tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
+npm run verify:proof    # one-command independent proof of the headline claims (bytecode,
+                        #   solvency, all 18 demo txs, the agent's buys, settled outcomes)
+npm run verify:agent    # the agent's spend-authorization engine vs the live product definition
+npm run verify:live     # the LIVE production URL at 320–1440 px (needs a Chromium)
 ```
+
+`npm run verify:proof` and `npm run verify:agent` read only the public RPC and the committed
+artefacts; they need no key and write nothing on-chain. `npm run verify:live` loads
+`https://overcover.vercel.app/` (override with `LIVE_URL=…`) at five widths, fails on any console
+error or horizontal overflow, and screenshots each width into `proof/shots/`.
 
 `npm run test:agent` covers the spending-limits policy engine (a denied buy never touches the
 network) and the agent HTTP API (strict field validation, `413` on oversized bodies, idempotent

@@ -719,3 +719,29 @@ fn h1_two_providers_share_one_pool_and_reserved_le_capital() {
     assert!(c.reconcile());
     assert_eq!(c.get_pool().reserved.0, 0);
 }
+
+// --------------------------------------------------------------------------
+// migrate() privilege guard (found in the security pre-audit)
+//
+// `migrate` is `#[init(ignore_state)]`, so it runs before any state is read and
+// cannot consult the stored owner. Without a guard, ANY account can call it and
+// reset the contract with itself as owner — a full unauthenticated takeover.
+// The guard restricts it to the contract account itself (a self-call, which is
+// what a redeploy performs).
+// --------------------------------------------------------------------------
+
+#[test]
+fn migrate_by_a_third_party_is_refused() {
+    ctx("attacker.testnet".parse().unwrap(), 0, 0);
+    let r = std::panic::catch_unwind(|| {
+        Overcover::migrate(owner(), pubkey(1), U128(1), 0, 60)
+    });
+    assert!(r.is_err(), "a third party must not be able to call migrate");
+}
+
+#[test]
+fn migrate_by_the_contract_itself_is_allowed() {
+    ctx(contract_id(), 0, 0);
+    let c = Overcover::migrate(owner(), pubkey(1), U128(1), 0, 60);
+    assert_eq!(c.get_config().owner, owner());
+}

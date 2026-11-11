@@ -390,6 +390,13 @@ impl Overcover {
 
     /// Re-initialize in place (deploy new wasm, then call this). Overwrites any
     /// previous state, so a redeploy never requires deleting the account.
+    ///
+    /// Privilege guard: a `#[init(ignore_state)]` method runs BEFORE any state is
+    /// read, so it cannot check the stored owner. Without a guard, ANY account
+    /// could call `migrate` and reset the contract to itself as owner — an
+    /// unauthenticated full takeover. The only safe authority is the contract
+    /// account itself (a self-call signed by its full-access key), which is what
+    /// a redeploy uses. Third parties are refused.
     #[init(ignore_state)]
     pub fn migrate(
         owner: AccountId,
@@ -398,6 +405,10 @@ impl Overcover {
         settle_delay_sec: u64,
         challenge_window_sec: u64,
     ) -> Self {
+        ensure!(
+            env::predecessor_account_id() == env::current_account_id(),
+            "migrate may only be called by the contract account itself"
+        );
         Self::new(owner, attestor, challenge_bond, settle_delay_sec, challenge_window_sec)
     }
 

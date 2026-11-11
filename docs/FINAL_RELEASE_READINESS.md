@@ -56,7 +56,7 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 40 Rust unit tests pass; 60-attack reference model `60 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
+| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 41 Rust unit tests pass; 60-attack reference model `60 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
 | Product discovery | FIXED AND VERIFIED | `list_products` view; console offers only *sellable* products (named, payable, active) and groups everything else as clearly-labelled fixtures. | Live `list_products` returns 22 products (2 named: `rain-lagos`, `rain-bergen-dry`; 20 demo-generated). `rain-bergen-dry` pins its trigger at the contract's plausible ceiling (500.0 mm), so it can only pay on that single reading — a broken definition shown as a fixture, not offered as cover; `rain-lagos` renders as a coverage card. `tests/console.test.js`; live probe. |
 | Premium calculation | FIXED AND VERIFIED | `quote(product_id, payout) = ceil(payout × premium_bp / 10_000)`, computed in the contract. | `quote` read live (`0.0500 NEAR` for 1 NEAR at 500 bp); console re-reads the contract's quote before buying (`tests/console.test.js`). |
 | Payout calculation | FIXED AND VERIFIED | Payout is the amount reserved at purchase; `resolve` pays iff `value_tenths ≥ threshold_tenths`. | Policy 3 settled `settled_paid` (1 NEAR paid); policy 4 `settled_no_pay` (0). `verify:proof` asserts both. The console's hero and cards state the **≥** direction, derived from `threshold_tenths`. |
@@ -385,6 +385,9 @@ faucet-funded identity graph deployed the compiled v2 wasm to real NEAR testnet 
 - Deployed module sha256 `78ddebb145f88c963ad1c33e22f5a798b0e1777454d9e6edee1cad53532f6471`
   (462,785 bytes) — independently re-read from the chain and byte-identical to the local build.
   `code_hash` `98pC7CzB4tjtNjBpcQNbQRF1PY6q7q1zpxS7LQ5GTND6`.
+  (This deployment predates the state-preserving `migrate` fix — item 28 — so the *current* v2 source
+  builds to sha256 `eb2070d73aebcc53…` / 482,034 bytes. `npm run verify:testnet-deploy` performs a
+  fresh isolated deployment with whatever the local build is.)
 - A real `buy_cover` created policy 1: tx
   `682okkqHhQ6XieGa5MHrAwcRyxhUXn9EsLXRKq8rDHsb` (signer `buyer.ovc-v2-deploy-mwccnjmr.testnet`,
   `SuccessValue`), policy `{"id":1,"buyer":"buyer.ovc-v2-deploy-mwccnjmr.testnet","product_id":"heat-lagos","payout":"300000000000000000000000","premium":"15000000000000000000000","status":"active"}`

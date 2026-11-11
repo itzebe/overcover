@@ -1,0 +1,51 @@
+{
+  "mode": "SANDBOX",
+  "nodeUrl": "http://127.0.0.1:3034",
+  "contract": "cover.test.near",
+  "wasmSha256": "78ddebb145f88c963ad1c33e22f5a798b0e1777454d9e6edee1cad53532f6471",
+  "guardMessage": "migrate may only be called by the contract account itself",
+  "checks": [
+    {
+      "name": "the compiled v2 wasm is deployed on the sandbox",
+      "ok": true,
+      "detail": "462785 bytes, sha256 78ddebb145f88c96…"
+    },
+    {
+      "name": "the contract is initialised with the real owner",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "a third-party migrate() is REFUSED (SEC-1 closed)",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
+    },
+    {
+      "name": "the owner is unchanged after the refused migrate",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "the contract state is unchanged after the refused migrate",
+      "ok": true,
+      "detail": "metrics=rain"
+    },
+    {
+      "name": "a repeated third-party migrate() is still refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
+    },
+    {
+      "name": "the contract account itself may migrate() (self-call)",
+      "ok": true,
+      "detail": "accepted"
+    },
+    {
+      "name": "the self-call migrate re-initialised the contract",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    }
+  ],
+  "passed": 8,
+  "total": 8
+}

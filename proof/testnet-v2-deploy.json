@@ -1,0 +1,63 @@
+{
+  "mode": "TESTNET",
+  "network": "testnet",
+  "contractId": "contract.ovc-v2-deploy-mwccnjmr.testnet",
+  "rootId": "ovc-v2-deploy-mwccnjmr.testnet",
+  "wasmSha256": "78ddebb145f88c963ad1c33e22f5a798b0e1777454d9e6edee1cad53532f6471",
+  "wasmBytes": 462785,
+  "policies": {
+    "1": "buyer.ovc-v2-deploy-mwccnjmr.testnet"
+  },
+  "txs": {
+    "buy_cover": "682okkqHhQ6XieGa5MHrAwcRyxhUXn9EsLXRKq8rDHsb"
+  },
+  "checks": [
+    {
+      "name": "created the funding root from the faucet",
+      "ok": true,
+      "detail": "ovc-v2-deploy-mwccnjmr.testnet"
+    },
+    {
+      "name": "created the identity graph + contract account",
+      "ok": true,
+      "detail": "contract.ovc-v2-deploy-mwccnjmr.testnet"
+    },
+    {
+      "name": "deployed the compiled v2 wasm to real testnet",
+      "ok": true,
+      "detail": "462785 bytes, sha256 78ddebb145f88c96…"
+    },
+    {
+      "name": "initialised with the real owner",
+      "ok": true,
+      "detail": "owner=owner.ovc-v2-deploy-mwccnjmr.testnet"
+    },
+    {
+      "name": "published the metric product",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "registered the 3-operator quorum",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a real buy_cover created policy 1 for the buyer",
+      "ok": true,
+      "detail": "buyer=buyer.ovc-v2-deploy-mwccnjmr.testnet"
+    },
+    {
+      "name": "SEC-1 closed on real testnet: third-party migrate() is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
+    },
+    {
+      "name": "the owner is unchanged after the refused migrate",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "passed": 9,
+  "total": 9
+}

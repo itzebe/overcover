@@ -15,6 +15,9 @@ change is needed for the deploy itself; the UI is already version-aware.
 - `keys/identities.json` present (gitignored) and its `attestor` account funded with **≥ 6 NEAR**
   (the deploy funds the contract sub-account with 4.5 NEAR and pays gas). Check the balance with the
   public RPC; do not paste keys anywhere.
+  **This file is not in the repository** — it is the funded operator identity. Without it neither
+  the fresh deploy nor the in-place upgrade can be signed. The contract's own full-access key is the
+  only thing that can authorise the upgrade, and it is held only by the operator.
 - Rust with the pinned toolchain (`rust-toolchain.toml`, `1.99.1`) and the `wasm32-unknown-unknown`
   target.
 - Node 20+ and `npm ci --ignore-scripts`.
@@ -25,9 +28,15 @@ change is needed for the deploy itself; the UI is already version-aware.
 cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
 npm test                 # model + sim + contract + console + agent
 npm run verify:sandbox   # runs the compiled wasm on a real local neard node — expect 21/21
+npm run verify:upgrade   # proves the SEC-1 guard on the compiled wasm — expect 8/8
 ```
 
-Stop here if `verify:sandbox` is not 21/21.
+Stop here if `verify:sandbox` is not 21/21 or `verify:upgrade` is not 8/8.
+
+**Rebuild before you deploy.** A previously-built `overcover.wasm` may predate the SEC-1 fix. Both
+`driver/deploy.js` and `driver/upgrade.js` refuse to run if the wasm lacks the guard string
+(`migrate may only be called by the contract account itself`), so a stale artifact fails closed
+instead of silently shipping the vulnerability.
 
 ## 2. Record the pre-deploy state
 
@@ -41,6 +50,23 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
 
 ## 3. Deploy
 
+There are two paths. **Prefer the in-place upgrade** when the goal is to close SEC-1 on the existing
+contract: it keeps the address, the pool capital and the policies, and costs only the code stake.
+
+### 3a. In-place upgrade (non-destructive — recommended for the SEC-1 fix)
+
+```bash
+node driver/upgrade.js --plan   # prints the exact operations + costs; sends nothing
+node driver/upgrade.js          # DeployContract + self-call migrate + reconfigure
+```
+
+`driver/upgrade.js` deploys the new wasm to the **existing** account and then calls `migrate` as a
+**self-call** (`predecessor == current_account_id`), which is the only caller the SEC-1 guard permits.
+It then re-applies the owner-side configuration (quorum, resolvers, metrics). It refuses to run if the
+wasm lacks the guard. Code stake for ~450 KB is ~4.63 NEAR, refunded on the next upgrade.
+
+### 3b. Fresh deploy (destructive — resets all state)
+
 ```bash
 node driver/keys.js          # reuses the funded identity; creates any missing role accounts
 OVERCOVER_DEMO_WINDOW=60 npm run deploy
@@ -48,13 +74,12 @@ OVERCOVER_DEMO_WINDOW=60 npm run deploy
 
 `driver/deploy.js` deletes and recreates the contract sub-account (so near-sdk collection storage is
 clean), deploys the new wasm, calls `new(...)`, then registers the metrics, the 3-of-5 operator
-quorum and the 3 independent resolvers. The address `contract.attestor-overcover.testnet` is stable.
+quorum and the 3 independent resolvers. The address `contract.attestor-overcover.testnet` is stable,
+but the pool, policies and providers are wiped — use this only when a clean state is wanted.
 
-**In-place upgrade note.** This runbook recreates the account and calls `new(...)`, so it does not use
-`migrate`. If you instead upgrade the wasm **in place** and call `migrate`, it must be a **self-call
-from the contract account** (`predecessor == current_account_id`): the security pre-audit hardened
-`migrate` so a third party can no longer overwrite all state (see `docs/SECURITY_PRE_AUDIT.md`,
-finding SEC-1). A call from any other account is refused.
+**Why `migrate` is a self-call.** The security pre-audit hardened `migrate` so a third party can no
+longer overwrite all state (see `docs/SECURITY_PRE_AUDIT.md`, finding SEC-1). A call from any account
+other than the contract itself is refused; `proof/upgrade-guard.mjs` proves this on the compiled wasm.
 
 ## 4. Verify the deploy
 

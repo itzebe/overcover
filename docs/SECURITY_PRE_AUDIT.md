@@ -99,6 +99,15 @@ Independent proof: `npm run verify:migration` (6/6) — the deployed module is b
 source (`1f30ccf1…`, rebuilt from `18ec7f08`), v1's `migrate()` has the vulnerable shape
 (`#[init(ignore_state)]`, no guard), v2's carries the guard, and the guard tests pass.
 
+Live guard proof on the compiled wasm: `npm run verify:upgrade` (8/8) runs the built v2 wasm on a real
+local neard node and shows a third-party `migrate()` is refused, the owner and state are untouched, a
+repeat is still refused, and the contract's own self-call `migrate()` (the redeploy path) is accepted.
+
+**Deploy fails closed.** Both `driver/deploy.js` and `driver/upgrade.js` refuse to run unless the wasm
+contains the guard string, so a stale pre-fix artifact cannot be shipped (`npm run test:deploy`). This
+matters: a build of the tree before the fix carries the same v2 exports but no guard — a real
+`npm run deploy` would have left SEC-1 open. Always rebuild with the pinned toolchain before deploying.
+
 **Status: FIXED in source (v2); merged into `main` via PR #9, NOT YET DEPLOYED.** The live v1 contract
 remains vulnerable because patching it requires redeploying the wasm, which needs the operator key
 this environment does not hold (see §4). This is the single most important reason the v2 deploy must
@@ -238,8 +247,12 @@ The 17 cases it covers, and where each is independently defended today:
 ## 5. Residual risk (honest)
 
 - **The live v1 contract is vulnerable to SEC-1 until it is redeployed.** No key material exists in
-  this environment; the operator account `attestor-overcover.testnet` holds 13.31 NEAR (funding is
-  sufficient — the blocker is the key, not the balance). The deploy runbook is `docs/DEPLOY_RUNBOOK.md` on PR #9's branch.
+  this environment; the operator account `attestor-overcover.testnet` holds 13.31 NEAR and the contract
+  account `contract.attestor-overcover.testnet` holds 18.55 NEAR (funding is sufficient — the blocker
+  is the key, not the balance). Closing it needs one in-place upgrade: `node driver/upgrade.js`
+  (DeployContract + self-call `migrate`, ~4.63 NEAR refundable code stake). The runbook is
+  `docs/DEPLOY_RUNBOOK.md`. The upgrade is non-destructive: the address, pool capital and policies
+  survive. It cannot be done from this environment.
 - **Single attestor on v1; owner-resolved disputes** — a centralisation point. v2 (operator quorum +
   independent resolvers) removes it but is not deployed.
 - **No third-party audit; testnet only.** Not for real funds.
@@ -255,11 +268,13 @@ The 17 cases it covers, and where each is independently defended today:
 | Check | Command | Result |
 | --- | --- | --- |
 | Reference adversarial model | `npm run test:model` | 60 attacks, 60 defended, 0 exploitable |
-| Contract unit tests | `npm run test:contract` | 21 passed (v1) / 36 passed (v2, PR #9) |
-| Console + wallet journey | `npm run test:console` | 87 passed |
+| Contract unit tests | `npm run test:contract` | 40 passed (v2, main) |
+| Console + wallet journey | `npm run test:console` | 90 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 51 passed |
 | Product feed + agent eval | `npm run test:agent-eval` | 32 passed |
-| v2 lifecycle (local sandbox) | `npm run verify:sandbox` (PR #9) | 21/21 passed |
+| Deploy fail-closed regression | `npm run test:deploy` | 3 passed |
+| v2 lifecycle (local sandbox) | `npm run verify:sandbox` | 21/21 passed |
+| SEC-1 guard on compiled wasm | `npm run verify:upgrade` | 8/8 passed |
 | SEC-1 reproduction (deployed v1) | local sandbox attack | VULNERABLE (pre-fix) |
 | SEC-1 fix (v2 wasm) | local sandbox attack | SAFE (post-fix) |
 | Secret scan | `git grep -nIE 'ed25519:[0-9A-Za-z]{40,}\|BEGIN .*PRIVATE KEY'` | clean |

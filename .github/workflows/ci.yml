@@ -47,6 +47,9 @@ jobs:
       - name: Product feed + agent-evaluation tests
         run: npm run test:agent-eval
 
+      - name: Deploy fail-closed regression (stale wasm refused)
+        run: npm run test:deploy
+
       - name: Build the contract to wasm
         run: |
           # The wasm embeds the absolute cargo registry path, so a byte-identical
@@ -73,6 +76,14 @@ jobs:
         env:
           REQUIRE_SANDBOX: "1"
         run: npm run verify:sandbox
+
+      # SEC-1 closure on the COMPILED wasm: a third-party migrate() is refused,
+      # the state is untouched, a repeat is refused, and the contract's own
+      # self-call migrate() (the redeploy path) is accepted.
+      - name: SEC-1 migrate() guard on the compiled wasm
+        env:
+          REQUIRE_SANDBOX: "1"
+        run: npm run verify:upgrade
 
       - name: Agent spend-authorization vs the live contract
         run: npm run verify:agent

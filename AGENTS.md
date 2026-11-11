@@ -31,10 +31,12 @@ npm run test:model            # reference model: 66 attacks, 0 exploitable
 npm run test:contract         # cargo test — 62 Rust unit tests
 npm run test:console          # node --test — page regressions + one live RPC read
 npm run test:onchain          # 17 adversarial tests against the LIVE contract (needs fresh deploy)
-npm test                      # model + contract + console
+npm test                      # model + sim + contract + console + agent + deploy
 
 node driver/keys.js           # create the testnet identity graph
 npm run deploy                # deploy (60s challenge window)
+npm run verify:sandbox        # 21/21 — the decentralised lifecycle on a real local neard
+npm run verify:controlled-v3:sandbox  # 29/29 — controlled v3 deploy + SEC-1 closure on a real neard
 npm run demo                  # run the full economic cycle, write demo-log.json
 ```
 

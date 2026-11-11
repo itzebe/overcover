@@ -198,7 +198,7 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 71 regression + live-RPC tests          (browser console)
+npm run test:console    # 77 regression + live-RPC tests          (browser console)
 npm run test:agent      # 36 limits + API + u128-precision + idempotency tests  (autonomous agent)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run verify:proof    # one-command independent proof of the headline claims (bytecode,

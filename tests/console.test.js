@@ -436,11 +436,11 @@ test("product cards read as coverage, with the trigger and honest limitations", 
   assert.ok(SCRIPT.includes('details class="legacy"'), "demo rows must stay foldable and honestly labelled");
   assert.ok(/contract-backed test fixtures/.test(SCRIPT),
     "fixtures (demo cycle + non-triggering definitions) must be labelled as not a current offering");
-  // A definition whose trigger sits at the contract's plausible maximum can never
-  // fire, so it must be flagged rather than offered as real cover.
-  assert.ok(/neverTriggers/.test(SCRIPT) && /PLAUSIBLE_CEILING_TENTHS/.test(SCRIPT),
-    "a product that can never trigger must be detected from contract data");
-  assert.ok(/can never pay out/.test(SCRIPT), "a non-triggering product must be disclosed as such");
+  // A definition whose trigger sits at the contract's plausible ceiling can only
+  // pay on that single reading, so it must be flagged rather than offered as cover.
+  assert.ok(/triggerAtCeiling/.test(SCRIPT) && /PLAUSIBLE_CEILING_TENTHS/.test(SCRIPT),
+    "a ceiling-pinned trigger must be detected from contract data");
+  assert.ok(/only pay on that one reading/.test(SCRIPT), "a ceiling-pinned trigger must be disclosed as such");
 });
 
 test("the quote is real, read-only, and never fakes a purchase", () => {

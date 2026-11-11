@@ -1224,17 +1224,18 @@
       " or more on the observation date.";
   }
 
-  // The contract's own plausibility bound is 500.0 mm (MAX_RAINFALL_TENTHS). A
-  // product whose threshold sits exactly at that ceiling can only ever trigger on
-  // an impossible reading, so it can never pay out. Flag it from contract data
-  // rather than naming ids.
+  // The contract's own plausibility bound is 500.0 mm (MAX_RAINFALL_TENTHS):
+  // report_observation rejects any reading ABOVE it, and resolve pays when
+  // value >= threshold. So a product whose threshold sits exactly at the ceiling
+  // can only ever pay on the single reading 500.0 mm — a definition mistake, not a
+  // real offering. Flag it from contract data rather than naming ids.
   var PLAUSIBLE_CEILING_TENTHS = 5000;
-  function neverTriggers(p) { return Number(p.threshold_tenths) >= PLAUSIBLE_CEILING_TENTHS; }
+  function triggerAtCeiling(p) { return Number(p.threshold_tenths) >= PLAUSIBLE_CEILING_TENTHS; }
   // A named product is a real, contract-backed offering. Machine-generated ids
-  // (p-<ts>-<n>) are demo fixtures from the recorded cycle, and a product that can
-  // never trigger is a test fixture too. Neither is presented as a live offering.
+  // (p-<ts>-<n>) are demo fixtures from the recorded cycle; a trigger pinned at the
+  // plausibility ceiling is a broken definition. Neither is offered as live cover.
   function isNamed(p) { return !MACHINE_ID.test(p.id); }
-  function isFixture(p) { return MACHINE_ID.test(p.id) || neverTriggers(p); }
+  function isFixture(p) { return MACHINE_ID.test(p.id) || triggerAtCeiling(p); }
   function isSellable(p) { return isNamed(p) && !isFixture(p) && p.active !== false; }
 
   function capacityLeft(p) {
@@ -1270,8 +1271,8 @@
         '<div class="row"><span>Reserved ' + fmt(p.reserved, 2) + " NEAR</span><span>" + util.toFixed(0) + "% of capacity</span></div>" +
         '<div class="capbar"><div class="cf" style="width:' + Math.min(100, util).toFixed(1) + '%"></div></div>' +
         '<p class="lim">Parametric: pays on the reading meeting the trigger, not on an assessed loss.</p>' +
-        (neverTriggers(p)
-          ? '<p class="lim warn">Definition problem: the trigger is at the contract\u2019s maximum plausible rainfall, so this product can never pay out. Shown for completeness, not offered as cover.</p>'
+        (triggerAtCeiling(p)
+          ? '<p class="lim warn">Definition problem: the trigger sits at the contract\u2019s maximum plausible rainfall (500.0 mm), so this product can only pay on that one reading. Shown for completeness, not offered as cover.</p>'
           : "") +
         '<p class="lim">Observation date must be in the future (at least ' + Math.max(OBS_DATE_BUFFER_SEC, Number(p.min_lead_sec) || 0) + "s after purchase).</p>" +
       "</div></article>";
@@ -1282,7 +1283,7 @@
     return "<tr>" +
       "<td>" + esc(p.id) +
         (p.active === false ? ' <span class="tag paused">paused</span>' : "") +
-        (neverTriggers(p) ? ' <span class="tag nullified" title="Trigger sits at the contract\'s maximum plausible rainfall, so this product can never pay out">never triggers</span>' : "") +
+        (triggerAtCeiling(p) ? ' <span class="tag nullified" title="Trigger sits at the contract\'s maximum plausible rainfall (500.0 mm), so this product can only pay on that one reading">ceiling trigger</span>' : "") +
       "</td>" +
       '<td class="sub">' + esc(p.city) + "</td>" +
       '<td class="num">' + mm(p.threshold_tenths) + "</td>" +

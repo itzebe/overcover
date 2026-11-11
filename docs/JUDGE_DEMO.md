@@ -74,7 +74,9 @@ signed with the page's exact arguments, not by an extension, if you show it inst
 
 ## 4. The autonomous agent buys cover (40 s) — LIVE with a local service
 
-The agent is a normal NEAR account with its own key. Start its service on your machine:
+The agent is a normal NEAR account with its own key. The public console's **Agent console** panel
+defaults to **Public (read-only)**: it runs the *same* spending-policy engine in the browser and
+signs nothing. To let the agent actually buy, an operator runs its service on their own machine:
 
 ```bash
 export OVERCOVER_AGENT_ACCOUNT=oc-agent-mwb87z4k.testnet
@@ -84,11 +86,15 @@ node agent/server.mjs
 
 Then, in the console's **Agent console** panel:
 
-1. Enter the service URL `http://127.0.0.1:8787` and click **Connect**. The panel shows the agent's
-   account and its **limits** (max 0.05 NEAR premium / 1 NEAR payout per policy, 0.2 NEAR per 24 h,
-   5 policies per 24 h, 60 s cooldown).
+1. Switch the mode to **Local service**, enter the URL `http://127.0.0.1:8787` and click **Connect**.
+   The panel shows the agent's account and its **limits** (max 0.05 NEAR premium / 1 NEAR payout per
+   policy, 0.2 NEAR per 24 h, 5 policies per 24 h, 60 s cooldown).
 2. Let it **evaluate** a product. It reads the live `quote` and shows allow/deny **with reasons**.
 3. A permitted purchase executes and shows the real transaction hash and the resulting policy.
+
+In **Public (read-only)** mode (the default a judge sees), the panel still evaluates the live product
+against the same engine and shows the allow/deny verdict, but there is no key and no buy button —
+that is the honest default for a public page.
 
 **RECORDED:** the agent has already bought cover on the live contract under these limits:
 [tax 11](https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ) →
@@ -131,8 +137,30 @@ immediately; a further buy returns `403` with "agent is disabled".
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 31/0, contract 21/0, console 71/0, agent 36/0 | `npm test` |
-| 12 | Production is the deployed commit | `ee1c46d` | `meta.githubCommitSha` on the production deployment |
+| 11 | Tests pass | model 31/0, contract 21/0, console 77/0, agent 36/0 | `npm test` |
+| 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` | `GET /v6/deployments?...&target=production` |
+
+## Honesty details a judge may probe
+
+These are deliberate, not accidents. If a judge asks, the answers are:
+
+- **The trigger direction is stated correctly.** The contract's `resolve` pays when the reading is
+  **≥** the product threshold. The hero says "at or above", and each product card derives its covered
+  event from the product's own `threshold_tenths` — never a hand-written sentence that could drift.
+- **The observation date must be genuinely in the future.** `min_lead_sec` is 0 for every product
+  currently published and the date is compared in whole seconds, so the page refuses a date that is
+  only seconds ahead *before* it asks the wallet to sign — you cannot sign a `buy_cover` the contract
+  would later refuse.
+- **Policy status is never invented.** The contract stores only `active | settled_paid |
+  settled_no_pay`. A past-due policy the contract has not settled reads **"settlement due — awaiting
+  resolve()"**, derived from the settlement rule — never a fabricated "settled".
+- **A product with a broken definition is disclosed, not sold.** `rain-bergen-dry` sets its trigger at
+  the contract's own maximum plausible rainfall (500.0 mm), which `report_observation` will only ever
+  accept at exactly that value — so it can pay on that single reading and nothing else. It is grouped
+  with the other test fixtures and labelled, not offered as live cover. This is the page refusing to
+  sell you a definition that cannot work as intended.
+- **Wallet errors are actionable.** A cancelled connection, a blocked pop-up, an unreachable wallet
+  service or a wrong network each produce a plain sentence, not a raw `Error`.
 
 ## Backup procedure (if a wallet extension or testnet is unavailable)
 

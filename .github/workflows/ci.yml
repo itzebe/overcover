@@ -53,6 +53,14 @@ jobs:
       - name: Independent proof (deployed bytecode == this source, pool solvent, on-chain evidence)
         run: npm run verify:proof
 
+      # Runs the COMPILED contract through a real neard node (not the in-process
+      # test VM): the full decentralized lifecycle plus the refusals. REQUIRE_SANDBOX
+      # makes a missing neard a failure rather than a silent skip.
+      - name: Contract end-to-end on a local NEAR node
+        env:
+          REQUIRE_SANDBOX: "1"
+        run: npm run verify:sandbox
+
       - name: Agent spend-authorization vs the live contract
         run: npm run verify:agent
 

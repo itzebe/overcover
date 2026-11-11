@@ -175,3 +175,43 @@ step: **BLOCKED BY HUMAN ACTION**.
 - **No professional audit; testnet only.** Not for real funds.
 - **Agent rate limits are per-process**, not a global distributed limit.
 - **Single attestor**; disputes are resolved by the owner (centralisation point, documented).
+
+---
+
+## 7. Decentralized lifecycle upgrade (v2) — branch `feat/decentralized-insurance-lifecycle`
+
+The deployed contract (`contract.attestor-overcover.testnet`) is the **v1** build: a single trusted
+attestor signs each reading, and the owner resolves a dispute. `main` still ships that product. A
+**v2 upgrade** on the branch above removes those two centralisation points. It is fully implemented
+and now proven end to end, but **not yet deployed to testnet** (the testnet faucet is rate-limited;
+see §9).
+
+| Requirement | Status | What exists | How tested / evidence |
+| --- | --- | --- | --- |
+| Metric-agnostic products | FIXED AND VERIFIED | `add_metric(id, category, unit, max_value, scale, direction)` + `add_metric_product(...)`. A product references a metric; the metric owns the unit, plausibility bound and trigger direction, so the model no longer assumes rainfall. Legacy `add_product` is kept for the deployed catalogue. | Sandbox check "a temperature metric is registered (no rainfall assumption)"; Rust `c3`. |
+| Multi-operator oracle quorum | FIXED AND VERIFIED | Operators register with their own key; each submits a signed reading; an observation only finalises at `quorum` distinct operators agreeing within tolerance. Per-operator monotonic nonce blocks replay. | Sandbox: "a 2-of-3 quorum finalises the observation", "a replayed operator nonce is rejected", "a non-operator cannot submit a reading". |
+| Independent dispute resolvers | FIXED AND VERIFIED | `add_resolver` / `resolver_vote`; an open dispute is decided by `resolver_quorum` independent resolvers. Operators that signed the reading may not vote; the challenger may not vote. | Sandbox: "the reporter cannot vote on its own dispute", "a resolver quorum upholds the reading". |
+| Deterministic settlement | FIXED AND VERIFIED | `resolve` reads the finalised (or nullified) observation and pays iff the value meets the trigger in the product's direction (`Above`/`Below`). | Sandbox: "the policy settled and paid (value above threshold)", "reconcile() holds", "the reservation was released". |
+| Accounting invariants | FIXED AND VERIFIED | `reconcile()` and `check_invariant()` hold after a full buy → observe → dispute → resolve cycle. | Sandbox checks after settlement. |
+| Refusals fail closed | FIXED AND VERIFIED | Wrong premium, replayed nonce, non-operator signer, self-vote, and a paused pool are each refused with a human-readable reason. | Sandbox refusal checks. |
+| Console renders v2 state | FIXED AND VERIFIED (unit) | `renderObservations` and the coverage wording are version-aware: metric/quorum columns appear only when the contract exposes them, and a legacy observation never renders "undefined". | 3 new `tests/console.test.js` cases; UI QA 7 viewports, axe 0 violations. |
+
+**Reproduce the v2 proof.** It runs the compiled wasm through a real `neard` node (not the in-process
+`near-sdk` test VM), which needs no testnet funds and no network beyond the one-time binary download:
+
+```bash
+cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
+npm run verify:sandbox     # downloads a pinned, checksummed neard 2.14.0; 21/21 checks pass
+```
+
+Result: **21/21 checks pass.** It is wired into CI (`.github/workflows/ci.yml`) with
+`REQUIRE_SANDBOX=1`, so a missing binary fails the build instead of silently skipping.
+
+## 8. Remaining work on the v2 branch
+
+- **Deploy v2 to testnet.** Needs ~3.5–3.7 NEAR for a fresh contract account; the faucet returns
+  `429 retry in ~11h`. Exact steps are in `docs/DEPLOY_RUNBOOK.md`. Status: BLOCKED BY EXTERNAL SERVICE.
+- **A live HERE/Meteor extension approval** remains uncaptured for both v1 and v2 (needs an interactive
+  browser + funded wallet). Status: BLOCKED BY HUMAN ACTION.
+- **`npm run test:onchain`** still needs the gitignored operator files and a matching deployment.
+  Status: BLOCKED BY HUMAN ACTION.

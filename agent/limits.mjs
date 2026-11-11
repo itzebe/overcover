@@ -72,7 +72,7 @@ const DAY_MS = 24 * 3600 * 1000;
 /**
  * Decide whether the agent may execute a purchase.
  *
- * @param {object} proposal  { productId, city, payoutYocto, premiumYocto, obsDateSec, nowSec }
+ * @param {object} proposal  { productId, city, payoutYocto, premiumYocto, obsDateSec, nowSec, idempotencyKey? }
  * @param {object} product   the contract product { min_payout, max_payout, min_lead_sec, active }
  * @param {object} ctx       { limits, history, nowMs }
  * @returns {{ allow: boolean, reasons: string[] }}
@@ -84,6 +84,14 @@ export function evaluate(proposal, product, ctx) {
   const reasons = [];
 
   if (!limits.enabled) reasons.push("agent is disabled");
+
+  // Idempotency: a key that already produced a buy must never produce another.
+  // This is checked first and regardless of the limits, so a retried request
+  // (a timeout whose transaction actually landed) cannot double-spend.
+  if (proposal.idempotencyKey) {
+    const seen = history.some((h) => h.kind === "buy" && h.idempotencyKey === proposal.idempotencyKey);
+    if (seen) reasons.push(`idempotencyKey ${proposal.idempotencyKey} was already used`);
+  }
 
   const premium = toBig(proposal.premiumYocto, "premium");
   const payout = toBig(proposal.payoutYocto, "payout");

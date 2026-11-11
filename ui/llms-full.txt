@@ -1,0 +1,166 @@
+# Overcover — full product description for language models
+
+Overcover is an open-source, parametric risk mutual that runs on the NEAR testnet.
+It writes capital-backed insurance cover that is defined by a product rather than
+negotiated by an underwriter, and settled by contract rules rather than a claims
+queue. It is a hackathon prototype on NEAR testnet with test funds only.
+
+- Canonical site: https://overcover.vercel.app/
+- Source repository: https://github.com/itzebe/overcover
+- Live contract: contract.attestor-overcover.testnet (NEAR testnet)
+- Block explorer: https://testnet.nearblocks.io/address/contract.attestor-overcover.testnet
+- License: MIT
+- Track: NEAR Hackathon 2026 — Business (primary), Swarms, DeFi
+
+## The problem it addresses
+
+An autonomous business — a fleet, a cold-chain route, a market-making desk, a
+compute broker — can buy, sell and move money without a person in the loop, but it
+cannot easily buy insurance. Traditional insurers underwrite a legal person: an
+application, a signature, an adjuster and a claim queue measured in weeks. An agent
+that loses a shipment at 03:00 cannot wait for a human adjuster, and it has no legal
+identity to sign with, so the loss is absorbed. Overcover explores an alternative:
+cover against an objective public index, settled by contract rules in seconds.
+
+## What Overcover is
+
+An on-chain pool that writes fully-collateralised, machine-readable cover against
+objective public indices and settles it autonomously.
+
+- Risk is defined, not negotiated. A product fixes the city/index, the trigger
+  threshold, the premium rate, the payout bounds, the minimum lead time and a
+  capacity cap. Once published it is immutable, so a buyer cannot be re-priced and
+  there is no discretion at claim time.
+- Cover is a purchase, not an application. `buy_cover(product, payout, obs_date)`
+  charges the premium the product fixes, reserves the payout from the pool
+  immediately, and re-checks the solvency invariant `reserved <= capital`.
+- The index is observed by a signed oracle. An attestor reports (city, date, value)
+  signed with ed25519; the contract verifies the signature, the freshness and a
+  single-use nonce.
+- The oracle's word is challengeable. Anyone can dispute a reading by posting a
+  bond; the owner resolves. The loser's bond is forfeited into the pool.
+- Settlement is deterministic. Once the challenge window has elapsed,
+  `resolve(policy_id)` pays the beneficiary if and only if the validated reading
+  meets the threshold — once, and only once.
+
+## How the economic loop works
+
+1. Liquidity providers deposit capital into the pool.
+2. A policy is bought: the premium is paid, and the policy's maximum payout is
+   reserved from the pool the moment it is written, so it cannot be withdrawn while
+   the policy is live.
+3. An attestor signs a public rainfall reading (index value) for a city and date.
+4. If the reading meets the trigger, the reserved payout settles to the policy
+   holder. The reading can be challenged with a bond during the challenge window,
+   and a disputed reading cannot settle a policy.
+5. The contract refuses any transaction that would leave the pool promising more
+   than it holds (`reserved <= capital` is re-checked on-chain after every state
+   change).
+
+## How a visitor interacts with it
+
+The console is a single static page with no backend and no API key. It reads the
+contract directly over public NEAR testnet JSON-RPC `call_function` views. To buy a
+policy a visitor:
+
+1. Connects a supported NEAR wallet.
+2. Picks a cover product and a payout (the console quotes a live premium from the
+   contract's own `quote` view).
+3. Confirms the purchase; the wallet signs a single `buy_cover` call with the
+   contract's own premium attached. Overcover never sees the key; if the user
+   declines, nothing happens.
+
+The console reports a policy as bought only from the wallet's confirmed outcome — it
+inspects `status.Failure` and requires a real transaction hash — never optimistically.
+If a read fails, the page shows a stale or no-data state instead of a stale number
+presented as live.
+
+## Supported wallets
+
+- HERE Wallet — signs in with email or a social account inside the HERE app; no
+  browser extension is required. https://herewallet.app/
+- Meteor Wallet — a browser extension. https://meteorwallet.app/
+- MyNearWallet — removed. The integration was retired (MyNearWallet no longer accepts
+  new application connections) and is no longer offered.
+
+The site exposes no email/MPC embedded-wallet sign-up of its own. A genuine
+email-based MPC wallet was evaluated (MetaMask Embedded Wallets, formerly Web3Auth)
+and not adopted because a frontend MPC provider hands the user's private key to the
+page and requires a project client ID — both conflict with the site's guarantee that
+no key ever reaches the page. HERE Wallet already provides email onboarding inside
+its own app, which the site offers as the email option. See docs/SECURITY.md.
+
+## Agent architecture
+
+`agent/` is a dependency-free autonomous agent: a pure spending-limits policy engine
+(`limits.mjs`), the agent core (`agent.mjs`), and a small HTTP API (`server.mjs`).
+The agent's key lives in the operator's environment and is never in the browser or
+the repository. It ships in dry-run by default — it decides and reports, but sends
+nothing; a denied decision never reaches the network, so no funds move on a refusal.
+It runs on localhost by default and is not hosted by Overcover: a public endpoint
+that signed with a funded key would let any visitor spend that balance. The console
+states this rather than implying a hosted agent.
+
+## Security model
+
+- No private key, seed phrase or signing secret ever reaches the browser page or the
+  repository. Signing happens inside the user's wallet.
+- The site's wallet function-call access key is scoped to `buy_cover` alone (least
+  privilege), and the console has no other write path.
+- The site never calls an owner-only method: deposit, reset, add_shock,
+  owner_withdraw, set_lifeline_enabled and seed_merchant are not exposed publicly.
+- The contract verifies signed, bound observations (city, date, value, report time,
+  nonce, contract id), enforces freshness and single-use nonces, and fails closed
+  with a human-readable reason.
+- Rate limits and single-flight locks in the agent service are per-instance, not
+  global across processes.
+
+## Current limitations
+
+- Testnet only, with test funds. Not for real money.
+- The contract has not been professionally audited.
+- The index reading is currently signed by a single trusted attestor key, not a
+  decentralised oracle.
+- The contract owner resolves disputes (a human step); the owner cannot move pool
+  capital.
+- The live demonstration uses a 60-second challenge window; production would use a
+  longer one.
+- The live contract carries 22 products, of which 2 are the canonical named products
+  and 20 are demo-generated test rows; the console groups the latter so the real
+  cover stays legible.
+- Parametric, not indemnity: a payout follows the reading meeting the trigger, and a
+  loss that does not meet the trigger is not covered.
+
+## Architecture
+
+- Contract (`contract/`): Rust, near-sdk, LookupMap/UnorderedSet collections.
+  Immutable products; policy issuance with capital reservation; signed-oracle
+  verification; bonded disputes with a challenge window; beneficiary payouts;
+  per-product and pool capacity caps; provider shares; a `reconcile` view for the
+  solvency identity.
+- Oracle (`driver/oracle.js`): reads Open-Meteo current precipitation and cross-checks
+  it against the hourly series; refuses to sign if the two disagree by more than
+  0.5 mm.
+- Console (`ui/index.html`): a single zero-dependency static file that makes direct
+  RPC view calls and renders the pool, products, policies, signed observations and a
+  live quote.
+
+## How to run and test
+
+```bash
+npm ci --ignore-scripts
+npm run test:model      # 31 attacks, 31 defended, 0 exploitable (reference model)
+npm run test:contract   # 21 Rust unit tests
+npm run test:console    # 54 regression + live-RPC tests (browser console)
+npm run test:agent      # 34 limits + API + u128-precision tests
+npm run test:onchain    # 17 adversarial tests against a freshly deployed contract
+```
+
+`npm run ui:qa` is an optional Playwright check of the console at 320–1440 px.
+
+## Public files
+
+- https://overcover.vercel.app/robots.txt
+- https://overcover.vercel.app/sitemap.xml
+- https://overcover.vercel.app/llms.txt
+- https://overcover.vercel.app/llms-full.txt

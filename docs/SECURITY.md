@@ -26,7 +26,31 @@ does not, and the residual risk a reviewer should weigh.
 | An implausible reading | Values above 5000 tenths (500 mm) are rejected at the boundary. |
 | An unauthorised admin action | `add_product`, `set_attestor`, `set_paused` and `resolve_dispute` are owner-only. |
 | Silent failure | Every refusal aborts with a human-readable `panic_utf8` reason, never a bare trap. |
-| Front-end trust | The console holds no key and signs nothing; it is read-only and says so. A failed read is shown as stale or "no data", never as live. |
+| Front-end trust | The console holds no key and signs nothing on its own; a read failure is shown as stale or "no data", never as live. The only write it can create is a single `buy_cover` call the user approves in their own wallet. |
+
+## Browser wallet model
+
+- **The page never holds a key.** `ui/wallet.js` asks the user's wallet to sign one
+  `buy_cover` call; the key stays inside the wallet. There is no key, seed phrase or
+  signing secret in the bundle, the page, or this repository.
+- **Least privilege.** The function-call access key the wallet grants is scoped to
+  `methodNames: ["buy_cover"]` alone, and the console has no other write path.
+- **No owner-only method is reachable from the UI.** `deposit`, `reset`, `add_shock`,
+  `owner_withdraw`, `set_lifeline_enabled` and `seed_merchant` are never referenced by
+  the page or the wallet module; a regression test asserts this.
+- **Retired integration removed.** MyNearWallet no longer accepts new application
+  connections, so it is removed from the picker, the bundle and the dependency tree
+  rather than shown as a working option.
+- **No embedded MPC wallet.** A frontend MPC provider that supports NEAR (evaluated:
+  MetaMask Embedded Wallets, formerly Web3Auth) requires a project `clientId` **and**
+  returns the user's **private key to the page** (`eth_private_key`/`private_key` JSON-RPC
+  methods). Both conflict with the guarantee above, so it was not adopted. Email-based
+  onboarding is provided by **HERE Wallet**, which authenticates the user with email or a
+  social account inside its own app and never exposes a key to this page. No email
+  address is ever turned into a key by this site, and no fake MPC is implemented.
+- **No funded anonymous signer.** The site is read-only plus a user-signed `buy_cover`;
+  it holds no balance and no operator key. The autonomous agent runs on localhost by
+  default, is dry-run by default, and is not hosted publicly.
 
 ## Trust boundary and honest residual risk
 
@@ -54,8 +78,8 @@ does not, and the residual risk a reviewer should weigh.
 - 21 Rust unit tests (`npm run test:contract`).
 - 17 adversarial tests against the **live** contract (`npm run test:onchain`): each attack is refused
   with the expected reason.
-- The console: 18 regression + live-RPC tests, and `axe-core` (WCAG 2.2 AA) with 0 violations at
-  five viewport widths.
+- The console: 66 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
+  violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog.
 
 ## Reporting
 

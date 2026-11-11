@@ -1,0 +1,67 @@
+# Overcover
+
+> Overcover is an open-source, parametric insurance mutual that runs on NEAR
+> testnet. A visitor connects a NEAR wallet and buys a small policy that pays out
+> if a signed public rainfall reading meets a trigger defined in the contract
+> before purchase. Cover terms are fixed in the contract, the payout is reserved
+> from a capital pool, and settlement follows the signed reading — no adjuster,
+> no claims queue. It is a hackathon prototype on testnet with test funds only.
+
+Canonical site: https://overcover.vercel.app/
+Source: https://github.com/itzebe/overcover
+Network: NEAR testnet
+Contract: contract.attestor-overcover.testnet
+License: MIT
+
+## What it is
+
+- A browser console with no backend and no API key. Every figure on the page is a
+  direct read from the NEAR testnet contract via public JSON-RPC `call_function`
+  views. If a read fails, the page says so instead of showing a stale number.
+- Parametric, not indemnity: a payout follows the reading meeting the trigger, and
+  a loss that does not meet the trigger is not covered.
+- Supported wallets: HERE Wallet (sign in with email or a social account inside the
+  HERE app, no extension needed) and Meteor Wallet (a browser extension). The
+  retired MyNearWallet integration has been removed.
+- The only transaction the site can create is a single `buy_cover` call. The
+  wallet's function-call access key is scoped to `buy_cover` alone.
+
+## How the economic loop works
+
+1. Liquidity providers deposit capital into the pool.
+2. A policy is bought: the premium is paid, and the policy's maximum payout is
+   reserved from the pool the moment it is written, so it cannot be withdrawn
+   while the policy is live.
+3. An attestor signs a public rainfall reading (index value) for a city and date.
+4. If the reading meets the trigger, the reserved payout settles to the policy
+   holder; the reading can be challenged with a bond during the challenge window,
+   and a disputed reading cannot settle a policy.
+5. The contract refuses any transaction that would leave the pool promising more
+   than it holds (reserved ≤ capital is re-checked on-chain).
+
+## Wallet and security model
+
+- No private key, seed phrase or signing secret ever reaches the browser page or
+  the repository. Signing happens inside the user's wallet.
+- The site never calls an owner-only method: deposit, reset, add_shock,
+  owner_withdraw, set_lifeline_enabled and seed_merchant are not exposed publicly.
+- The autonomous agent service runs on localhost by default, is dry-run by default,
+  and is not deployed publicly; the site states this rather than implying a hosted
+  agent.
+
+## Known limitations
+
+- Testnet only, with test funds. Not for real money.
+- The contract has not been professionally audited.
+- The index reading is currently signed by a single trusted attestor key, not a
+  decentralised oracle.
+- The contract owner resolves disputes (a human step); the owner cannot move pool
+  capital.
+- The live demonstration uses a 60-second challenge window; production would use a
+  longer one.
+
+## More detail
+
+- [Full description for language models](https://overcover.vercel.app/llms-full.txt)
+- [Source repository and README](https://github.com/itzebe/overcover)
+- [NEAR testnet block explorer for the contract](https://testnet.nearblocks.io/address/contract.attestor-overcover.testnet)

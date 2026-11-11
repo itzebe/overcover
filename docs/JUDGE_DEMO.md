@@ -77,6 +77,12 @@ proven on-chain — tx
 → policy 15 (`rain-lagos`, 1 NEAR payout, 0.05 NEAR premium, `active`). Say plainly that this was
 signed with the page's exact arguments, not by an extension, if you show it instead of doing step 3.
 
+**TESTED OFFLINE:** `tests/wallet-journey.test.mjs` (run by `npm run test:console`) executes the
+page's **real** inline script against a frozen contract snapshot with a mock wallet and asserts the
+exact `buy_cover` shape — one action, deposit equal to the contract's own `quote`, beneficiary
+handling, the future-date clamp, and honest success/failure/no-hash/rejection states. It is the
+strongest evidence short of the live approval, and it broadcasts nothing.
+
 ## 4. The autonomous agent buys cover (40 s) — LIVE with a local service
 
 The agent is a normal NEAR account with its own key. The public console's **Agent console** panel
@@ -116,6 +122,12 @@ Propose a purchase the agent may not make — a payout five times the product's 
 
 > "The refusal happens in the spending engine, before the network. No funds move on a denied
 > proposal. The agent's authority is bounded — and the contract is the final authority regardless."
+
+The same boundary is proven offline: `tests/agent-integration.test.mjs` drives a client that knows
+only the published catalogue, the published schema and the documented API through discover → quote →
+decide → buy (dry run) → over-limit refusal → allow-list refusal → replay → malformed → kill switch.
+A live buy also passes a **balance preflight** before it signs (`tests/agent-funds.test.mjs`), so an
+underfunded agent refuses rather than sending a doomed transaction.
 
 Also show the **kill switch**: `POST /api/v1/agent/control {"enabled":false}` stops all buying
 immediately; a further buy returns `403` with "agent is disabled".

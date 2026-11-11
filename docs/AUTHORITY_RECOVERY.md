@@ -29,11 +29,15 @@ An in-place upgrade of a NEAR contract requires signing a `DeployContract` actio
 account itself**. That signature needs a **FullAccess** key on
 `contract.attestor-overcover.testnet`. The account currently holds exactly one key:
 
-| Account | Access key (public) | Permission | Balance |
+| Account | Access key (public, abbreviated) | Permission | Balance |
 | --- | --- | --- | --- |
-| `contract.attestor-overcover.testnet` | `ed25519:CwZBmKyVjtsUYXfZSWWpedw63MDg2UfngQY7A98eiRre` | FullAccess | 18.547 NEAR |
-| `owner.attestor-overcover.testnet` | `ed25519:3RJTRuypY91YqWySqZdHJeFBYB5ctMrcAihiKfNdyfGD` | FullAccess | 1.963 NEAR |
-| `attestor-overcover.testnet` | `ed25519:4dhxyFrsS8y8HhS2CCFYHRbpjTGRudSqPWoHYCRECTxC` | FullAccess | 13.312 NEAR |
+| `contract.attestor-overcover.testnet` | `ed25519:CwZBmKyV…eiRre` | FullAccess | 18.547 NEAR |
+| `owner.attestor-overcover.testnet` | `ed25519:3RJTRuyp…dyfGD` | FullAccess | 1.963 NEAR |
+| `attestor-overcover.testnet` | `ed25519:4dhxyFrs…ECTxC` | FullAccess | 13.312 NEAR |
+
+The full keys are public (query `view_access_key_list` on the account). They are abbreviated here
+so the repository keeps the CI rule that no `ed25519:`-prefixed key material is ever committed — the
+scan cannot tell a public key from a private one.
 
 The **private** half of `ed25519:CwZBmKyV…` is the only thing that can authorise the upgrade. It is
 not recoverable from the chain, and it is not present in this environment.

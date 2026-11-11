@@ -83,6 +83,10 @@ exact `buy_cover` shape — one action, deposit equal to the contract's own `quo
 handling, the future-date clamp, and honest success/failure/no-hash/rejection states. It is the
 strongest evidence short of the live approval, and it broadcasts nothing.
 
+> **Human approval: status.** The transaction shape is proven on-chain and offline; a **live HERE /
+> Meteor extension approval has not been captured** and needs an interactive browser with a funded
+> account. State that plainly if a judge asks. It is the one acceptance step still open.
+
 ## 4. The autonomous agent buys cover (40 s) — LIVE with a local service
 
 The agent is a normal NEAR account with its own key. The public console's **Agent console** panel
@@ -94,6 +98,10 @@ export OVERCOVER_AGENT_ACCOUNT=oc-agent-mwb87z4k.testnet
 export OVERCOVER_AGENT_SECRET_KEY=ed25519:...        # the agent's own key; never committed
 node agent/server.mjs
 ```
+
+(The service binds `127.0.0.1` by default. Binding it to any other host requires
+`OVERCOVER_AGENT_TOKEN` and refuses to start without one, so an exposed agent endpoint cannot be
+spent by anyone else — a pre-audit hardening. See `docs/SECURITY_PRE_AUDIT.md` SEC-4.)
 
 Then, in the console's **Agent console** panel:
 
@@ -154,7 +162,7 @@ immediately; a further buy returns `403` with "agent is disabled".
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 31/0, contract 21/0, console 77/0, agent 36/0 | `npm test` |
+| 11 | Tests pass | model 31/0, contract 21/0, console 87/0, agent 51/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` | `GET /v6/deployments?...&target=production` |
 
 ## Honesty details a judge may probe
@@ -178,6 +186,13 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   sell you a definition that cannot work as intended.
 - **Wallet errors are actionable.** A cancelled connection, a blocked pop-up, an unreachable wallet
   service or a wrong network each produce a plain sentence, not a raw `Error`.
+- **The deployed contract is v1 and has one known issue.** An internal security pre-audit found that
+  the **deployed v1** contract's `migrate()` is unauthenticated (`#[init(ignore_state)]` cannot check
+  the stored owner), so any account could overwrite all state. It was reproduced against the exact
+  deployed bytecode and **fixed in the v2 source**, verified by the attack being refused and by Rust
+  regression tests. The fix ships with the v2 deploy, which needs the operator key. Do not claim the
+  live contract is hardened until that deploy happens — say this plainly and point to
+  `docs/SECURITY_PRE_AUDIT.md`.
 
 ## Backup procedure (if a wallet extension or testnet is unavailable)
 

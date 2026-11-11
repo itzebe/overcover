@@ -233,7 +233,7 @@ The 17 cases it covers, and where each is independently defended today:
 
 - **The live v1 contract is vulnerable to SEC-1 until it is redeployed.** No key material exists in
   this environment; the operator account `attestor-overcover.testnet` holds 13.31 NEAR (funding is
-  sufficient — the blocker is the key, not the balance). See `docs/DEPLOY_RUNBOOK.md`.
+  sufficient — the blocker is the key, not the balance). The deploy runbook is `docs/DEPLOY_RUNBOOK.md` on PR #9's branch.
 - **Single attestor on v1; owner-resolved disputes** — a centralisation point. v2 (operator quorum +
   independent resolvers) removes it but is not deployed.
 - **No third-party audit; testnet only.** Not for real funds.

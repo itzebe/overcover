@@ -1,0 +1,82 @@
+{
+  "contract": "contract.attestor-overcover.testnet",
+  "at": "2026-11-11T00:52:26.971Z",
+  "pool": {
+    "capital": "14050000000000000000000000",
+    "reserved": "10500000000000000000000000",
+    "available": "3550000000000000000000000",
+    "held_bonds": "0",
+    "premiums_collected": "600000000000000000000000",
+    "total_paid": "1000000000000000000000000",
+    "total_deposited": "21000000000000000000000000",
+    "total_withdrawn": "6650000000000000000000000",
+    "bonds_forfeited": "100000000000000000000000",
+    "policy_count": 15,
+    "solvent": true,
+    "paused": false
+  },
+  "passed": 12,
+  "total": 12,
+  "checks": [
+    {
+      "name": "deployed module matches the published sha256",
+      "ok": true,
+      "detail": "344857 bytes, 1f30ccf1d4c735ad…"
+    },
+    {
+      "name": "deployed code_hash matches SUBMISSION.md",
+      "ok": true,
+      "detail": "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R"
+    },
+    {
+      "name": "deployed bytecode is exactly this repository's source",
+      "ok": true,
+      "detail": "local 1f30ccf1d4c735ad…"
+    },
+    {
+      "name": "pool is solvent (reserved <= capital)",
+      "ok": true,
+      "detail": "capital 14.0500 / reserved 10.5000"
+    },
+    {
+      "name": "reconcile() returns true",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "check_invariant() returns true",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "capital == deposits − withdrawals + premiums + bonds − paid",
+      "ok": true,
+      "detail": "14.0500 NEAR"
+    },
+    {
+      "name": "all demo-log transactions resolve on-chain",
+      "ok": true,
+      "detail": "18/18"
+    },
+    {
+      "name": "autonomous-agent purchases are real buy_cover txs",
+      "ok": true,
+      "detail": "2/2"
+    },
+    {
+      "name": "settled_paid policies paid a positive amount",
+      "ok": true,
+      "detail": "1 paid"
+    },
+    {
+      "name": "settled_no_pay policies paid zero",
+      "ok": true,
+      "detail": "1 no-pay"
+    },
+    {
+      "name": "a challenged reading was nullified on-chain",
+      "ok": true,
+      "detail": "1 nullified"
+    }
+  ]
+}

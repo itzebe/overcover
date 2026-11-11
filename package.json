@@ -16,7 +16,10 @@
     "agent": "node agent/server.mjs",
     "test": "npm run test:model && npm run test:contract && npm run test:console && npm run test:agent",
     "ui:qa": "node tests/ui.browser.mjs",
-    "axe": "node tests/axe.mjs"
+    "axe": "node tests/axe.mjs",
+    "verify:proof": "node proof/verify.mjs",
+    "verify:agent": "node proof/agent-policy.mjs",
+    "verify:live": "node proof/live-check.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { connect, KeyPair, keyStores, utils, transactions, providers } from "near-api-js";
-import { normalizeLimits, evaluate } from "./limits.mjs";
+import { normalizeLimits, evaluate, fundsShortfall } from "./limits.mjs";
 import { parseBigIntJson } from "./json.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -158,6 +158,17 @@ export async function createAgent(opts) {
     if (dryRun) {
       appendAudit({ at: new Date(started).toISOString(), kind: "dry_run", productId, payoutYocto: String(payoutYocto), premiumYocto: decision.premiumYocto });
       return { dryRun: true, premiumYocto: decision.premiumYocto, explorer: null, hash: null };
+    }
+
+    // The policy allows the purchase; now confirm the account can actually pay
+    // for it before signing. An unfunded agent would otherwise build and send a
+    // transaction the network rejects for insufficient balance, spending a
+    // nonce for nothing. A refusal here moves no funds and is audited.
+    const balance = await balanceYocto();
+    const shortfall = fundsShortfall(balance, decision.premiumYocto);
+    if (shortfall) {
+      appendAudit({ at: new Date(started).toISOString(), kind: "denied", productId, payoutYocto: String(payoutYocto), reasons: [shortfall] });
+      throw new AgentError("purchase denied by policy", { code: "denied", reasons: [shortfall] });
     }
 
     const account = await near.account(opts.accountId);

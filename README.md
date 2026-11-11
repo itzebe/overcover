@@ -198,9 +198,9 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests                      (contract logic)
-npm run test:console    # 78 regression + live-RPC tests          (browser console)
-npm run test:agent      # 36 limits + API + u128-precision + idempotency tests  (autonomous agent)
-npm run test:agent-eval # 22 product-feed schema/premium tests + agent-eval boundary and live checks
+npm run test:console    # 87 regression + live-RPC tests          (browser console + end-to-end wallet journey)
+npm run test:agent      # 45 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
+npm run test:agent-eval # 32 product-feed schema/premium + agent-eval boundary + independent-client integration tests
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run products:feed   # regenerate ui/products.json from the live contract
 npm run verify:proof    # one-command independent proof of the headline claims (bytecode,
@@ -323,6 +323,7 @@ is read-only and runs the same policy engine in the browser.
 | [`docs/JUDGE_DEMO.md`](docs/JUDGE_DEMO.md) | 2–3 minute judge demonstration, checklist and backup plan |
 | [`docs/AGENT_INTEGRATION.md`](docs/AGENT_INTEGRATION.md) | How an agent discovers cover, the spending policy, the HTTP API |
 | [`docs/BUSINESS.md`](docs/BUSINESS.md) | Market, model and economics grounded in the real contract rules |
+| [`docs/PITCH.md`](docs/PITCH.md) | Ten-second explanation, investor thesis, target market and an honest proven/not-proven line |
 | [`docs/COMPETITIVE.md`](docs/COMPETITIVE.md) | How Overcover compares with on-chain and parametric incumbents |
 | [`docs/BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) | Ground-truth snapshot of what is deployed, tested and unverified |
 | [`docs/FINAL_RELEASE_READINESS.md`](docs/FINAL_RELEASE_READINESS.md) | Fixed / not-fixed register with evidence and honest gaps |

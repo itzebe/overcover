@@ -70,10 +70,11 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 npm ci --ignore-scripts
 npm run test:model      # 31 attacks, 31 defended, 0 exploitable  (reference model)
 npm run test:contract   # 21 Rust unit tests
-npm run test:console    # 78 regression + live-RPC tests
-npm run test:agent      # 36 limits + API + u128 precision + idempotency tests
-npm run test:agent-eval # 22 product-feed schema/premium + agent boundary + live read
+npm run test:console    # 87 regression + live-RPC tests (page regressions + end-to-end wallet journey)
+npm run test:agent      # 45 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
+npm run test:agent-eval # 32 product-feed schema/premium + agent boundary + independent-client integration
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
+npm run verify:sandbox  # 21/21 on a local neard node (v2 branch: NEAR_SANDBOX_BIN=... node tests/sandbox-lifecycle.mjs)
 ```
 
 `test:onchain` sends real attacks to the deployed contract and asserts each is **refused with the
@@ -83,8 +84,19 @@ clean state and a 60 s challenge window.
 
 `test:agent-eval` validates the shipped `ui/products.json` against its schema offline (money as
 exact yoctoNEAR strings, one real offering, the premium rule `ceil(payout·bp/10000)`), exercises the
-agent's spending-policy boundary cases, and re-reads the live product from the contract. The feed is
-regenerated with `npm run products:feed` from the live contract, never hand-written.
+agent's spending-policy boundary cases, and — in `tests/agent-integration.test.mjs` — drives a client
+that knows **only** the published catalogue, the published schema and the documented HTTP API
+(`agent/sdk.mjs`) through discover → quote → decide → buy (dry run) → over-limit refusal → replay, so
+the integration is proven usable by an outside consumer, not merely present. The feed is regenerated
+with `npm run products:feed` from the live contract, never hand-written.
+
+`tests/wallet-journey.test.mjs` runs the **real** inline `<script>` from `ui/index.html` in a `vm`
+with a DOM shim and a mock wallet, against a frozen contract snapshot
+(`tests/fixtures/contract-snapshot.json`, regenerated with `npm run fixture:capture`). It proves the
+page builds exactly one `buy_cover`, attaches the contract's own premium as the deposit, passes a
+valid beneficiary through, refuses an invalid one before signing, clamps the observation date to the
+future, and classifies success/failure/no-hash/rejection honestly. Nothing is broadcast; the wallet
+is a stub. A real extension approval is still the one human acceptance step.
 
 ## 5. The console is accessible and honest
 

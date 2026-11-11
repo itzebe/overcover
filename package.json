@@ -9,9 +9,9 @@
     "demo": "node driver/demo.js",
     "test:contract": "cargo +stable test --manifest-path contract/Cargo.toml",
     "test:model": "node research/model/attacks.mjs",
-    "test:console": "node --test tests/console.test.js",
-    "test:agent": "node --test tests/agent-limits.test.mjs tests/agent-api.test.mjs tests/json-bigint.test.mjs",
-    "test:agent-eval": "node --test tests/products-feed.test.mjs tests/agent-eval.test.mjs",
+    "test:console": "node --test tests/console.test.js tests/wallet-journey.test.mjs",
+    "test:agent": "node --test tests/agent-limits.test.mjs tests/agent-api.test.mjs tests/json-bigint.test.mjs tests/agent-funds.test.mjs tests/agent-openapi.test.mjs",
+    "test:agent-eval": "node --test tests/products-feed.test.mjs tests/agent-eval.test.mjs tests/agent-integration.test.mjs",
     "products:feed": "node scripts/products-feed.mjs",
     "test:onchain": "node --test tests/*.test.js",
     "build:wallet": "node scripts/build-wallet.mjs",
@@ -22,7 +22,8 @@
     "verify:proof": "node proof/verify.mjs",
     "verify:agent": "node proof/agent-policy.mjs",
     "verify:connectivity": "node proof/connectivity.mjs",
-    "verify:live": "node proof/live-check.mjs"
+    "verify:live": "node proof/live-check.mjs",
+    "fixture:capture": "node scripts/capture-fixture.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

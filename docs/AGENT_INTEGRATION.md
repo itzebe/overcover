@@ -86,6 +86,13 @@ override and no `force` flag.
 | `allowedCities` | allow-list; empty = any city |
 | `minLeadSec` | extra lead time the agent demands on top of the product's |
 
+A live (non-dry-run) buy also passes a **funds preflight** before it signs: the
+agent reads its own account balance and refuses if it cannot cover the premium
+**plus a gas buffer** (`GAS_BUFFER_YOCTO`, 0.05 NEAR). An unfunded agent therefore
+refuses with `403` and a `balance … below premium + gas buffer` reason rather than
+building a transaction the network rejects. The check is pure
+(`fundsShortfall` in `agent/limits.mjs`) and is covered by tests.
+
 ## 4. Decide, then buy
 
 ```js
@@ -121,6 +128,10 @@ again.
 Errors: `403` policy denial (with `reasons`), `400` bad request, `413` oversized
 body, `502` chain error. The service never returns `ok:true` for a purchase that
 did not settle.
+
+The same interface is described as an OpenAPI 3.1 document at
+[`agent/openapi.json`](../agent/openapi.json); `tests/agent-openapi.test.mjs`
+fails the build if the spec and the running routes ever disagree.
 
 ## 6. Verify a purchase independently
 

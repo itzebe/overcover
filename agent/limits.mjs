@@ -69,6 +69,26 @@ export function lastBuyAtMs(history) {
 
 const DAY_MS = 24 * 3600 * 1000;
 
+/** Extra NEAR the agent keeps above the premium so the transaction's gas and
+ *  storage are covered even after the deposit leaves the account. A buy whose
+ *  deposit would spend the account down to (or below) this margin is refused
+ *  before it is signed, so the agent never sends a transaction it cannot pay
+ *  for. 0.05 NEAR is far above the real cost of a `buy_cover` call. */
+export const GAS_BUFFER_YOCTO = "50000000000000000000000";
+
+/** Return a human-readable reason if `balanceYocto` cannot cover `premiumYocto`
+ *  plus `bufferYocto`, or null if it can. Pure: no network, so it is asserted
+ *  directly in the tests. */
+export function fundsShortfall(balanceYocto, premiumYocto, bufferYocto = GAS_BUFFER_YOCTO) {
+  if (balanceYocto === null || balanceYocto === undefined) return "agent account balance is unknown";
+  const required = BigInt(premiumYocto) + BigInt(bufferYocto);
+  const balance = BigInt(balanceYocto);
+  if (balance < required) {
+    return `agent balance ${balance} is below premium + gas buffer ${required}`;
+  }
+  return null;
+}
+
 /**
  * Decide whether the agent may execute a purchase.
  *

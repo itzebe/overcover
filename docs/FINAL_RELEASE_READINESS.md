@@ -15,14 +15,30 @@ Reproduce the whole thing:
 ```bash
 npm ci --ignore-scripts
 npm run test:model && npm run test:contract && npm run test:console && npm run test:agent
-npm run test:agent-eval     # 22 — product-feed schema/premium + agent boundary (offline) + live read
+npm run test:agent-eval     # 32 — product-feed schema/premium + agent boundary (offline) + independent-client integration
 npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
 npm run verify:agent        # limits engine vs the live product
 npm run verify:connectivity # 12/12 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
 npm run axe                 # 0 violations, page + dialog
 npm run ui:qa               # 7 viewports, real agent round-trip
+npm run fixture:capture     # refresh tests/fixtures/contract-snapshot.json from the live contract
 ```
+
+**End-to-end wallet journey (no broadcast).** `tests/wallet-journey.test.mjs` (run by `test:console`)
+executes the **real** inline `<script>` of `ui/index.html` in a `node:vm` with a DOM shim and a mock
+wallet, against the frozen snapshot. It is the strongest available proof of the human purchase path
+short of a real extension approval: the page builds exactly one `buy_cover`, the deposit equals the
+contract's own `quote` (not a client recompute), a valid beneficiary passes through, an invalid one is
+refused before signing, the observation date is clamped to the future, and success / no-hash /
+contract-failure / wallet-rejection are each classified honestly.
+
+**Funds preflight.** A live agent buy now checks its own balance for the premium **plus a gas buffer**
+before it signs (`fundsShortfall` in `agent/limits.mjs`; `tests/agent-funds.test.mjs` drives the real
+agent against live RPC with an unfunded account and asserts a `denied` refusal, not a chain error).
+
+**Agent API contract.** `agent/openapi.json` documents the service; `tests/agent-openapi.test.mjs`
+fails the build if the spec and the running routes ever disagree.
 
 **Machine-readable catalogue.** `npm run products:feed` regenerates `ui/products.json` from the live
 contract (`scripts/products-feed.mjs`); `ui/products.schema.json` is its JSON Schema and
@@ -238,6 +254,30 @@ upgrade for judge, investor and agent readiness:
     (12 tests) proves the boundary cases and re-reads the live product. CI now runs `test:agent-eval`.
 
 Console tests went 77 → 78.
+
+## Defects fixed in this mission (2026-11-11, branch `mission/complete-before-acceptance`)
+
+17. **The agent's live buy path never checked the balance before signing.** Root cause: `agent.buy`
+    evaluated the spending policy and then built and sent the transaction unconditionally; an
+    unfunded account would spend a nonce on a transaction the network rejects for insufficient
+    balance. Fix: a pure `fundsShortfall(balance, premium, buffer)` in `agent/limits.mjs` and a
+    preflight in `agent.mjs` that refuses (403 `denied`, audited) when the balance cannot cover the
+    premium **plus a 0.05 NEAR gas buffer**. Regression: `tests/agent-limits.test.mjs` (4 pure cases)
+    and `tests/agent-funds.test.mjs` (the real agent against live RPC with an unfunded account → a
+    `denied` refusal, never a chain error; no funds move).
+18. **The human purchase path had no end-to-end test.** Root cause: page logic was only unit-tested in
+    pieces. Fix: `tests/wallet-journey.test.mjs` runs the shipped inline script in a `vm` with a DOM
+    shim and a mock wallet against a frozen contract snapshot (`tests/fixtures/contract-snapshot.json`,
+    captured by `scripts/capture-fixture.mjs`), proving the whole journey's shapes and honest states.
+19. **The agent's HTTP API was undocumented as a contract.** Fix: `agent/openapi.json` (OpenAPI 3.1)
+    plus `tests/agent-openapi.test.mjs`, which fails if the spec and the running routes disagree.
+20. **The agent integration was only asserted, not demonstrated for an outside consumer.** Fix:
+    `tests/agent-integration.test.mjs` drives a client that knows only the published catalogue, the
+    published schema and the documented API through discover → quote → decide → buy (dry run) →
+    over-limit refusal → allow-list refusal → replay → malformed → kill switch.
+
+Console tests went 78 → 87; agent tests 36 → 45; agent-eval 22 → 32.
+
 
 ## Not fixed / not verified (honest list)
 

@@ -1,7 +1,7 @@
 // Tests for the agent spending policy. Pure logic, no network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeLimits, evaluate, premiumSpentWithin, policiesWithin, DEFAULT_LIMITS } from "../agent/limits.mjs";
+import { normalizeLimits, evaluate, premiumSpentWithin, policiesWithin, DEFAULT_LIMITS, fundsShortfall } from "../agent/limits.mjs";
 
 const NEAR = 10n ** 24n;
 const product = {
@@ -153,4 +153,27 @@ test("limits combine: several breaches are all reported", () => {
   const v = evaluate(proposal(), product, ctx);
   assert.equal(v.allow, false);
   assert.ok(v.reasons.length >= 2);
+});
+
+// Funds preflight: the agent must refuse a purchase its account cannot pay for
+// BEFORE it signs anything. This guards the live send path (agent.mjs), which
+// otherwise builds a transaction the network rejects for insufficient balance.
+test("fundsShortfall: a balance that covers premium + buffer is allowed", () => {
+  const N = 10n ** 24n;
+  assert.equal(fundsShortfall(N.toString(), (N / 100n).toString()), null);
+});
+
+test("fundsShortfall: a balance below premium + buffer is refused with a reason", () => {
+  const N = 10n ** 24n;
+  assert.match(fundsShortfall((N / 1000n).toString(), (N / 10n).toString()), /below premium \+ gas buffer/);
+});
+
+test("fundsShortfall: covering the premium but not the gas buffer is refused", () => {
+  const N = 10n ** 24n;
+  assert.match(fundsShortfall((N / 10n).toString(), (N / 10n).toString()), /below premium \+ gas buffer/);
+});
+
+test("fundsShortfall: an unknown balance is refused, never treated as unlimited", () => {
+  assert.match(fundsShortfall(null, "1"), /unknown/);
+  assert.match(fundsShortfall(undefined, "1"), /unknown/);
 });

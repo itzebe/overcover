@@ -170,6 +170,81 @@ test("the payout argument stays an exact string for a u128 beyond Number.MAX_SAF
   assert.equal(typeof args.payout, "string");
 });
 
+// The observation date must be genuinely in the future. min_lead_sec is 0 for
+// every product currently published, and the contract compares whole seconds, so
+// the page must reject a date that is only seconds ahead instead of letting the
+// wallet sign a transaction the contract would later refuse ("observation date too soon").
+const floorSrc = extractFunction(SCRIPT, "obsDateFloorSec");
+const errSrc = extractFunction(SCRIPT, "obsDateError");
+const obsDateError = new Function(`var OBS_DATE_BUFFER_SEC = 120; ${floorSrc}; ${errSrc}; return obsDateError;`)();
+
+test("a zero-lead product still requires a future observation date", () => {
+  const now = Math.floor(Date.now() / 1000);
+  const p = { min_lead_sec: 0 };
+  assert.ok(obsDateError(p, now) !== null, "now must be rejected");
+  assert.ok(obsDateError(p, now + 1) !== null, "one second ahead must be rejected");
+  assert.ok(obsDateError(p, now + 121) === null, "a comfortably future date must be accepted");
+  assert.ok(obsDateError(p, null) !== null, "an empty date must be rejected");
+});
+
+test("a product's own min_lead_sec raises the floor when it is larger than the buffer", () => {
+  const now = Math.floor(Date.now() / 1000);
+  const p = { min_lead_sec: 3600 };
+  assert.ok(obsDateError(p, now + 121) !== null, "the product lead must win over the buffer");
+  assert.ok(obsDateError(p, now + 3601) === null, "past the product lead is accepted");
+});
+
+// The contract stores only "active" | "settled_paid" | "settled_no_pay". A past-due
+// policy the contract has not settled must be shown as awaiting settlement, never
+// as settled — the page must not invent an outcome.
+const polSrc = extractFunction(SCRIPT, "policyDisplayStatus");
+const policyDisplayStatus = new Function(`${polSrc}; return policyDisplayStatus;`)();
+
+test("a past-due active policy is shown as awaiting settlement, never settled", () => {
+  const now = Math.floor(Date.now() / 1000);
+  const cfg = { settle_delay_sec: 0 };
+  const due = policyDisplayStatus({ status: "active", obs_date: now - 10 }, cfg);
+  assert.match(due.label, /settlement due/i);
+  assert.match(due.label, /awaiting resolve/i);
+  assert.ok(!/settled/i.test(due.label), "must not claim a settlement the contract did not record");
+  const future = policyDisplayStatus({ status: "active", obs_date: now + 3600 }, cfg);
+  assert.match(future.label, /active/i);
+  assert.match(future.label, /awaiting observation/i);
+});
+
+test("a settled policy shows the contract's own terminal status verbatim", () => {
+  const paid = policyDisplayStatus({ status: "settled_paid", obs_date: 1 }, {});
+  assert.equal(paid.label, "settled paid");
+  assert.equal(paid.derived, false);
+  const noPay = policyDisplayStatus({ status: "settled_no_pay", obs_date: 1 }, {});
+  assert.equal(noPay.label, "settled no pay");
+});
+
+test("settle_delay_sec is honoured when deciding settlement eligibility", () => {
+  const now = Math.floor(Date.now() / 1000);
+  const pol = { status: "active", obs_date: now - 10 };
+  assert.match(policyDisplayStatus(pol, { settle_delay_sec: 3600 }).label, /awaiting observation/);
+  assert.match(policyDisplayStatus(pol, { settle_delay_sec: 0 }).label, /settlement due/);
+});
+
+// The wallet connect errors must be actionable, not a raw "Error".
+const walletSrc = fs.readFileSync(path.join(root, "ui", "wallet.js"), "utf8");
+const msgFn = walletSrc.slice(walletSrc.indexOf("function connectErrorMessage("));
+const connectErrorMessage = new Function(
+  `${msgFn.slice(0, msgFn.indexOf("\n}\n") + 2)}; return connectErrorMessage;`
+)();
+
+test("wallet connect errors are turned into actionable sentences", () => {
+  assert.match(connectErrorMessage(new Error("User rejected the request"), "Meteor Wallet"), /cancelled the Meteor Wallet connection/i);
+  assert.match(connectErrorMessage(new Error("Failed to fetch"), "Here Wallet"), /could not reach the Here Wallet service/i);
+  assert.match(connectErrorMessage(new Error("mainnet mismatch"), "Here Wallet"), /testnet/i);
+  assert.match(connectErrorMessage(new Error("popup blocked"), "Meteor Wallet"), /pop-ups/i);
+  // An unclassified error keeps its raw text rather than being swallowed.
+  assert.match(connectErrorMessage(new Error("weird failure"), "Meteor Wallet"), /weird failure/);
+  // The page must never prefix a bare "Could not connect:" with no detail again.
+  assert.ok(!/Could not connect: " \+ msg/.test(HTML), "the generic 'Could not connect:' prefix must be gone");
+});
+
 test("the failover list excludes the CORS-blocked, deprecated public endpoint", () => {
   const m = SCRIPT.match(/var RPC = \[([\s\S]*?)\];/);
   assert.ok(m, "RPC endpoint list not found");
@@ -322,7 +397,8 @@ test("the first screen answers what/risk/who/how/trust, not chain metrics", () =
   assert.ok(start !== -1 && end > start, "hero markup must be found");
   const hero = HTML.slice(start, end);
   assert.match(hero, /Insurance for businesses that[\s\S]*cannot afford to wait/, "hero must state the product");
-  assert.match(hero, /rainfall below a set level, in a named city, on a named date/, "hero must name the covered event");
+  assert.match(hero, /rainfall reading meeting a set trigger, in a named city, on a named date/, "hero must name the covered event");
+  assert.match(hero, /at or above/, "the hero must state the trigger direction the contract enforces");
   assert.match(hero, /no adjuster, no queue/, "hero must say how protection is received");
   // The chain belongs to the proof, not the promise.
   assert.ok(!/blockchain|smart contract|on-chain/i.test(hero), "the hero must not lead with blockchain jargon");
@@ -358,8 +434,13 @@ test("product cards read as coverage, with the trigger and honest limitations", 
   assert.ok(SCRIPT.includes("Capacity left"), "remaining capacity must be shown");
   assert.ok(/not on an assessed loss/.test(SCRIPT), "cards must state the parametric limitation");
   assert.ok(SCRIPT.includes('details class="legacy"'), "demo rows must stay foldable and honestly labelled");
-  assert.ok(/test state, not a current customer offering/.test(SCRIPT),
-    "demo products must be labelled as not a current offering");
+  assert.ok(/contract-backed test fixtures/.test(SCRIPT),
+    "fixtures (demo cycle + non-triggering definitions) must be labelled as not a current offering");
+  // A definition whose trigger sits at the contract's plausible ceiling can only
+  // pay on that single reading, so it must be flagged rather than offered as cover.
+  assert.ok(/triggerAtCeiling/.test(SCRIPT) && /PLAUSIBLE_CEILING_TENTHS/.test(SCRIPT),
+    "a ceiling-pinned trigger must be detected from contract data");
+  assert.ok(/only pay on that one reading/.test(SCRIPT), "a ceiling-pinned trigger must be disclosed as such");
 });
 
 test("the quote is real, read-only, and never fakes a purchase", () => {

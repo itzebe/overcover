@@ -56,6 +56,7 @@ function status() {
     contractId: CONTRACT_ID,
     connected: !!currentAccountId,
     accountId: currentAccountId,
+    networkMismatch: networkMismatch(),
     available: selector ? selector.store.getState().modules.map((m) => ({
       id: m.id,
       name: m.metadata.name,
@@ -67,6 +68,17 @@ function status() {
       extensionOnly: !!EXTENSION_ONLY[m.id],
     })) : [],
   };
+}
+
+/** Report whether the active account looks like it is on a different network.
+ *  HERE/Meteor sign-in binds the account to the network the wallet is on; we can
+ *  only observe the account id shape and the selector's own network, so this is a
+ *  best-effort signal, surfaced (never hidden) rather than enforced. */
+function networkMismatch() {
+  try {
+    const net = selector && selector.options && selector.options.network;
+    return net ? net.networkId !== NETWORK_ID : false;
+  } catch (e) { return false; }
 }
 
 async function setup() {
@@ -104,29 +116,66 @@ function withTimeout(promise, ms, message) {
   ]).finally(() => clearTimeout(timer));
 }
 
+/** Turn whatever a wallet throws into a message a person can act on. The
+ *  selector and the wallets underneath throw raw strings ("User rejected the
+ *  request", "Failed to fetch", …) that mean nothing to a first-time visitor.
+ *  Map the common cases to a plain sentence; keep the raw text when we cannot
+ *  classify it so nothing is hidden. `name` is the wallet's display name. */
+function connectErrorMessage(e, name) {
+  const raw = e && e.message ? String(e.message) : String(e || "");
+  const l = raw.toLowerCase();
+  if (l.includes("did not respond")) return raw; // our own timeout text is already actionable
+  if (l.includes("not installed")) return raw;
+  if (l.includes("reject") || l.includes("denied") || l.includes("cancel") || l.includes("user closed") || l.includes("closed the")) {
+    return "You cancelled the " + name + " connection. Nothing was signed and nothing was charged.";
+  }
+  if (l.includes("blocked") || l.includes("popup") || l.includes("pop-up")) {
+    return name + " could not open a window — your browser may be blocking pop-ups. Allow pop-ups for this site and try again.";
+  }
+  if (l.includes("network") || l.includes("chain") || l.includes("mainnet")) {
+    return "Wrong network: " + name + " is not on NEAR testnet. Switch the wallet to testnet and try again.";
+  }
+  if (l.includes("no account")) return "No account was selected in " + name + ".";
+  if (l.includes("failed to fetch") || l.includes("networkerror") || l.includes("load failed")) {
+    return "Could not reach the " + name + " service. Check your connection and try again.";
+  }
+  return name + " could not connect: " + raw;
+}
+
 /** Connect a named wallet module. `walletId` is one of here-wallet,
  *  meteor-wallet. Throws with a human-readable reason. */
 async function connect(walletId) {
   await setup();
   const module = selector.store.getState().modules.find((m) => m.id === walletId);
   if (!module) throw new Error(`wallet "${walletId}" is not available`);
+  const name = module.metadata.name;
   if (EXTENSION_ONLY[walletId] && !injectedPresent(walletId)) {
-    throw new Error(`${module.metadata.name} is not installed in this browser`);
+    throw new Error(`${name} is not installed in this browser`);
   }
-  const w = await selector.wallet(walletId);
+  let w;
+  try {
+    w = await selector.wallet(walletId);
+  } catch (e) {
+    throw new Error(connectErrorMessage(e, name));
+  }
   // signIn returns the accounts; HERE/Meteor are injected wallets that open their
   // own UI. No private key ever reaches this page. The function-call access key is
   // scoped to buy_cover alone (least privilege) — the console has no other write
   // path, and owner-only methods are guarded on-chain regardless. The timeout
   // guards against a wallet that never opens or never resolves, which would
   // otherwise hang the button with no feedback at all.
-  const accounts = await withTimeout(
-    w.signIn({ contractId: CONTRACT_ID, methodNames: ["buy_cover"] }),
-    CONNECT_TIMEOUT_MS,
-    `${module.metadata.name} did not respond. If a wallet window opened, finish there; otherwise install the wallet and try again.`,
-  );
+  let accounts;
+  try {
+    accounts = await withTimeout(
+      w.signIn({ contractId: CONTRACT_ID, methodNames: ["buy_cover"] }),
+      CONNECT_TIMEOUT_MS,
+      `${name} did not respond. If a wallet window opened, finish there; otherwise install the wallet and try again.`,
+    );
+  } catch (e) {
+    throw new Error(connectErrorMessage(e, name));
+  }
   const accountId = accounts?.[0]?.accountId ?? null;
-  if (!accountId) throw new Error("the wallet returned no account");
+  if (!accountId) throw new Error("No account was selected in " + name + ".");
   wallet = w;
   currentAccountId = accountId;
   emit();

@@ -803,3 +803,96 @@ fn sec1_the_contract_account_itself_may_migrate() {
     let c = Overcover::migrate(owner(), pubkey(9), U128(ONE / 10), 0, 3600);
     assert_eq!(c.get_config().owner, owner(), "self-migration restores the owner");
 }
+
+// ---------------------------------------------------------------------------
+// In-place upgrade MUST preserve state (the runbook's "keeps the pool capital
+// and the policies" claim). A v1-shaped state blob is written, then `migrate`
+// runs and every carried field is checked. Regression for the destructive
+// migrate that reset capital/reserved to zero and re-keyed nothing.
+// ---------------------------------------------------------------------------
+#[test]
+fn migrate_preserves_legacy_state() {
+    ctx(contract_id(), 0, 0);
+
+    // Build a v1-shaped state blob directly, as the deployed v1 contract would
+    // have written it.
+    let owner_acct = owner();
+    let mut legacy_products: LookupMap<String, LegacyProduct> = LookupMap::new(StorageKey::Products);
+    let mut legacy_product_ids: UnorderedSet<String> = UnorderedSet::new(StorageKey::ProductIds);
+    let mut legacy_policies: LookupMap<u64, LegacyPolicy> = LookupMap::new(StorageKey::Policies);
+    let mut legacy_policy_ids: UnorderedSet<u64> = UnorderedSet::new(StorageKey::PolicyIds);
+    let legacy_providers: LookupMap<AccountId, Provider> = LookupMap::new(StorageKey::Providers);
+    let mut legacy_observations: LookupMap<Vec<u8>, LegacyObservation> = LookupMap::new(StorageKey::Observations);
+    let mut legacy_observation_ids: UnorderedSet<Vec<u8>> = UnorderedSet::new(StorageKey::ObservationIds);
+
+    let prod = "rain-lagos".to_string();
+    legacy_products.insert(&prod, &LegacyProduct {
+        id: prod.clone(), city: "lagos".to_string(), threshold_tenths: 400, premium_bp: 1000,
+        min_payout: 3 * ONE / 10, max_payout: 3 * ONE / 10, min_lead_sec: 0,
+        max_total_coverage: 3 * ONE, reserved: 3 * ONE / 10, active: true,
+    });
+    legacy_product_ids.insert(&prod);
+
+    let pol = LegacyPolicy {
+        id: 1, buyer: owner_acct.clone(), beneficiary: owner_acct.clone(),
+        product_id: prod.clone(), city: "lagos".to_string(), threshold_tenths: 400,
+        payout: 3 * ONE / 10, premium: 3 * ONE / 100, obs_date: 1_000, issued_at: 1,
+        status: "active".to_string(), paid_amount: 0, observed_value: 0, settled_at: 0,
+    };
+    legacy_policies.insert(&1, &pol);
+    legacy_policy_ids.insert(&1);
+
+    let obs_key = format!("lagos|1000").into_bytes();
+    legacy_observations.insert(&obs_key, &LegacyObservation {
+        city: "lagos".to_string(), obs_date: 1_000, value_tenths: 1_000, reported_at: 1_000,
+        nonce: 0, disputed: false, nullified: false, challenger: None,
+        counter_value_tenths: 0, bond: 0,
+    });
+    legacy_observation_ids.insert(&obs_key);
+
+    let legacy = LegacyState {
+        owner: owner_acct.clone(), attestor: pubkey(1), paused: false,
+        challenge_bond: ONE / 10, settle_delay_sec: 0, challenge_window_sec: 1,
+        products: legacy_products, product_ids: legacy_product_ids,
+        policies: legacy_policies, policy_ids: legacy_policy_ids,
+        providers: legacy_providers,
+        observations: legacy_observations, observation_ids: legacy_observation_ids,
+        capital: 5 * ONE, reserved: 3 * ONE / 10, held_bonds: 0,
+        total_deposited: 5 * ONE, total_withdrawn: 0, premiums_collected: 3 * ONE / 100,
+        total_paid: 0, bonds_forfeited: 0, next_policy_id: 2,
+    };
+    env::state_write(&legacy);
+
+    // The contract account migrates itself.
+    ctx(contract_id(), 0, 0);
+    let mut c = Overcover::migrate(owner_acct.clone(), pubkey(1), U128(ONE / 10), 0, 1);
+
+    // Pool accounting survives.
+    assert_eq!(c.get_pool().capital.0, 5 * ONE, "capital must survive the upgrade");
+    assert_eq!(c.get_pool().reserved.0, 3 * ONE / 10, "reserved must survive the upgrade");
+    assert_eq!(c.get_config().owner, owner_acct, "owner must survive the upgrade");
+
+    // The catalog and the policies survive, re-encoded in the v2 shape.
+    let products = c.list_products();
+    assert_eq!(products.len(), 1, "the legacy product must survive");
+    assert_eq!(products[0].id, "rain-lagos");
+    assert_eq!(products[0].metric_id, "", "legacy products keep the rainfall metric");
+    assert_eq!(products[0].reserved, 3 * ONE / 10, "product reservation survives");
+
+    let policies = c.list_policies();
+    assert_eq!(policies.len(), 1, "the legacy policy must survive");
+    assert_eq!(policies[0].status, "active");
+    assert_eq!(policies[0].payout, 3 * ONE / 10);
+    assert_eq!(policies[0].direction, Direction::Above, "legacy policies settle Above");
+    assert_eq!(policies[0].metric_id, "");
+
+    // The observation is re-keyed to the v2 format so `resolve` can find it.
+    let o = c.get_observation("".to_string(), "lagos".to_string(), 1_000);
+    assert!(o.is_some(), "the observation must be re-keyed to metric|city|date");
+    assert_eq!(o.unwrap().value_tenths, 1_000);
+    assert_eq!(c.list_observations().len(), 1, "the observation set must survive");
+
+    // And the migrated policy settles end to end.
+    ctx(owner_acct, 0, 1_001 + 1); // past obs_date + settle_delay + challenge_window
+    assert!(c.resolve(1), "a migrated policy must still settle");
+}

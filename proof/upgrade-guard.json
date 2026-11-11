@@ -2,13 +2,13 @@
   "mode": "SANDBOX",
   "nodeUrl": "http://127.0.0.1:3034",
   "contract": "cover.test.near",
-  "wasmSha256": "78ddebb145f88c963ad1c33e22f5a798b0e1777454d9e6edee1cad53532f6471",
+  "wasmSha256": "eb2070d73aebcc53fc98779938c7a06c877fc080a17693bd2a553b109c129fd2",
   "guardMessage": "migrate may only be called by the contract account itself",
   "checks": [
     {
       "name": "the compiled v2 wasm is deployed on the sandbox",
       "ok": true,
-      "detail": "462785 bytes, sha256 78ddebb145f88c96…"
+      "detail": "482034 bytes, sha256 eb2070d73aebcc53…"
     },
     {
       "name": "the contract is initialised with the real owner",
@@ -36,14 +36,14 @@
       "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
     },
     {
-      "name": "the contract account itself may migrate() (self-call)",
+      "name": "a self-call migrate() with no legacy state FAILS CLOSED",
       "ok": true,
-      "detail": "accepted"
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
     },
     {
-      "name": "the self-call migrate re-initialised the contract",
+      "name": "the contract state is unchanged after the failed self-call",
       "ok": true,
-      "detail": "owner=owner.test.near"
+      "detail": "owner=owner.test.near, metrics=1"
     }
   ],
   "passed": 8,

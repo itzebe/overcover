@@ -35,10 +35,18 @@ method runs before any state is read, it cannot consult the stored owner, so **a
 it and overwrite all state** (become owner, install its own attestor, then forge an observation and
 drain the pool). This was **reproduced on a local `neard` sandbox against the exact deployed
 bytecode** and is fixed in the v2 source (`ensure!(predecessor == current_account_id)`), verified by
-the same attack being refused and by two Rust regression tests.
+the same attack being refused and by Rust regression tests.
+
+The v2 `migrate` also **preserves the live state** instead of resetting it. It reads the v1 blob and
+re-encodes it in the v2 shape — pool accounting, `next_policy_id`, the owner/config, and every
+product, policy, provider and observation survive; legacy records take `metric_id = ""` /
+`direction = "Above"` and observations are re-keyed from `city|date` to `metric|city|date`.
+`proof/upgrade-state-preservation.mjs` proves this against the exact live v1 bytecode: capital and
+reserved are unchanged, the policy and product are still listed, and the migrated policy still
+settles. A self-call on a non-v1 state fails closed with a readable reason rather than trapping.
 
 **The live v1 contract is still vulnerable** until it is redeployed, which needs the operator key
-that this environment does not hold. The v2 deploy is the fix (its runbook is `docs/DEPLOY_RUNBOOK.md` on PR #9's branch). Full
+that this environment does not hold. The v2 deploy is the fix (its runbook is `docs/DEPLOY_RUNBOOK.md`). Full
 detail, reproduction and the other pre-audit findings (agent idempotency and limit races, service
 auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 

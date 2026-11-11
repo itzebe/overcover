@@ -30,10 +30,11 @@
     "verify:connectivity": "node proof/connectivity.mjs",
     "verify:live": "node proof/live-check.mjs",
     "verify:migration": "node proof/migration-auth.mjs",
+    "verify:upgrade": "node proof/upgrade-guard.mjs",
+    "verify:upgrade-preservation": "node proof/upgrade-state-preservation.mjs",
     "verify:proof": "node proof/verify.mjs",
     "verify:sandbox": "node tests/sandbox-lifecycle.mjs",
-    "verify:testnet-deploy": "node proof/testnet-v2-deploy.mjs",
-    "verify:upgrade": "node proof/upgrade-guard.mjs"
+    "verify:testnet-deploy": "node proof/testnet-v2-deploy.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

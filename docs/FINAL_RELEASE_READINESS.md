@@ -102,7 +102,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Authorization | FIXED AND VERIFIED | `limits.mjs` `evaluate` is the single allow/deny point; a denial returns before any RPC. | `verify:agent`: over-limit refused, in-limit permitted, the shipped path agrees. |
 | Spending limits | FIXED AND VERIFIED | Per-policy premium/payout caps, rolling 24 h premium budget and policy count, cooldown, allow-lists. | `tests/agent-limits.test.mjs`; `verify:connectivity` check 9 (403 with reasons). |
 | Balance checks | FIXED AND VERIFIED | `balanceYocto()`; an unfunded account reads as "no balance", not an error. | `GET /api/v1/agent` returns `balanceYocto`; the agent account reads 0.844 NEAR. |
-| Idempotency | FIXED AND VERIFIED | Same `Idempotency-Key` returns the original result; the buy is not re-executed. | **New regression test** `tests/agent-api.test.mjs`: a replayed key appends no second audit entry and returns the original premium. |
+| Idempotency | FIXED AND VERIFIED | Same `Idempotency-Key` returns the original result; the buy is not re-executed, **including when two identical-key requests arrive concurrently**. | `tests/agent-api.test.mjs`: a replayed key appends no second audit entry; the concurrent test proves exactly one execution. |
 | Transaction verification | FIXED AND VERIFIED | `buy` inspects the outcome status; a `Failure` throws `AgentError("chain")`. | `agent.mjs` `failureMessage`; agent txs resolve with `SuccessValue`. |
 | Policy retrieval | FIXED AND VERIFIED | Policy ids 11, 12 read back with the agent as buyer. | `verify:proof` ties each agent tx to its policy. |
 | Audit records | FIXED AND VERIFIED | Every decision/refusal/dry-run/buy appended to a JSONL audit log (no key material). | `tests/agent-api.test.mjs` idempotency tests read the audit log. |
@@ -118,8 +118,8 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Unauthorized spending | FIXED AND VERIFIED | `limits.mjs` denies before any RPC; the contract is the final authority. | `verify:agent`; `tests/agent-limits.test.mjs`; `verify:connectivity` check 9. |
 | Request validation | FIXED AND VERIFIED | 8 KB body cap, JSON-only, known-fields-only, integer-string money. | `tests/agent-api.test.mjs`: 413 / 400 / unknown-field / non-integer. |
 | Replay protection | FIXED AND VERIFIED | Oracle signatures bind city, date, value, `reported_at`, a single-use nonce, **and the contract id**; idempotency keys for buys. | Rust `b6`/`b7`; adversarial "replayed nonce" and "cross-contract" cases; the new idempotency tests. |
-| API authentication | NOT APPLICABLE (by design) | The agent service binds to `127.0.0.1` by default and is dry-run by default; a public endpoint that signs with a funded key would let any visitor spend it. | `agent/server.mjs`; `agent/README.md` states the honest configuration. |
-| Rate limits | PARTIALLY WORKING | Cooldown + rolling budgets are per-process, not a distributed limit. | Documented in `agent/README.md` "What is *not* claimed". |
+| API authentication | FIXED AND VERIFIED | The service binds loopback by default; binding a non-loopback host **requires** `OVERCOVER_AGENT_TOKEN` and refuses to start without it; a configured token is enforced on every route (constant-time). | `tests/agent-api.test.mjs`: no token → 401, wrong token → 401, correct token → 200. `tests/agent-openapi.test.mjs` checks the spec declares `bearerAuth` and the 401. |
+| Rate limits | PARTIALLY WORKING | Cooldown + rolling budgets are per-process, not a distributed limit; the agent serializes concurrent buys so limits cannot be bypassed by overlap. | Documented in `agent/README.md` "What is *not* claimed"; `tests/agent-limits.test.mjs` serializer + race tests. |
 | Denial-of-service exposure | FIXED AND VERIFIED | Body cap with a drain (the socket is not destroyed, so the client still gets a 413). | `tests/agent-api.test.mjs` oversized-body test. |
 | Error handling | FIXED AND VERIFIED | Contract refusals carry a human-readable `panic_utf8` reason; the agent surfaces it. | Rust tests; adversarial tests assert the expected reason; `failureMessage`. |
 | Logging and audit integrity | FIXED AND VERIFIED | Audit log holds no key material; a write failure is surfaced on stderr, never silently dropped. | `agent.mjs` `appendAudit`; `tests/agent-api.test.mjs`. |
@@ -138,7 +138,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Production configuration | FIXED AND VERIFIED | `vercel.json`, root-dir output `ui`, no build step; `ui/vendor/*` bundles are tracked. | Deployed HTML hash == local; a clean clone runs with no build step. |
 
 **Contract version.** The deployed contract is **v1** (`contract.attestor-overcover.testnet`, code hash
-`36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2rK`, wasm sha256 `1f30ccf1…`). The console reads v1 and
+`36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, wasm sha256 `1f30ccf1…`). The console reads v1 and
 renders v1 semantics; it is also compatible with the v2 contract in PR #9 via a version gate
 (`CONTRACT_V2`). **v2 is implemented and proven in a local sandbox but not deployed** (see the honest
 list below).
@@ -279,6 +279,32 @@ Console tests went 77 → 78.
 Console tests went 78 → 87; agent tests 36 → 45; agent-eval 22 → 32.
 
 
+## Defects fixed in this mission (2026-11-11, branch `fix/agent-concurrency-limits`, PR #14)
+
+21. **CRITICAL — the deployed contract's `migrate()` is unauthenticated (pre-audit SEC-1).** `migrate`
+    is `#[init(ignore_state)]`, which runs before state is read, so it could not check the stored
+    owner: **any** account could call it and overwrite all state (become owner, install its own
+    attestor, forge an observation, drain the pool). Reproduced on a local `neard` sandbox against
+    the exact deployed bytecode (`attacker became owner via migrate()`); fixed in the v2 source with
+    `ensure!(predecessor == current_account_id)` and verified by the attack being refused
+    (`cargo test` → 36 passed; sandbox → SAFE). The fix is on PR #9's branch because it belongs with
+    the contract. **The live v1 contract remains vulnerable until redeployed** (blocked on the
+    operator key). Full detail: `docs/SECURITY_PRE_AUDIT.md`.
+22. **HIGH — agent idempotency was not safe under concurrency (SEC-2).** The buy route checked the
+    key, awaited the buy, then stored the result; two identical-key requests arriving together both
+    executed. Fixed by reserving the key (a promise) before the first `await`. Regression:
+    `tests/agent-api.test.mjs` "concurrent buys … execute exactly once" (fails on the old code).
+23. **HIGH — agent spending limits could be bypassed by overlapping buys (SEC-3).** The limits read
+    `history`, decide, then record; two overlapping buys with different keys both passed the same
+    check. Fixed with a `createSerializer()` that runs buys one at a time. Regressions:
+    `tests/agent-limits.test.mjs` (serializer order + the race it closes).
+24. **MEDIUM — the agent service had no authentication (SEC-4).** An exposed service could be spent
+    by any caller. Fixed: a non-loopback bind now requires `OVERCOVER_AGENT_TOKEN` and refuses to
+    start without it; the token is enforced on every route. Regressions: `tests/agent-api.test.mjs`
+    (401/401/200) and `tests/agent-openapi.test.mjs` (spec documents `bearerAuth` + 401).
+
+Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SECURITY_PRE_AUDIT.md`**.
+
 ## Not fixed / not verified (honest list)
 
 - **A live HERE/Meteor extension approval is not captured** — it needs an interactive browser with the
@@ -299,7 +325,15 @@ Console tests went 78 → 87; agent tests 36 → 45; agent-eval 22 → 32.
   public console therefore reads the live **v1** contract; its v2 rendering path is present but gated
   (`CONTRACT_V2`), and the v1 path is the one exercised. Status: IMPLEMENTED AND VERIFIED IN SANDBOX,
   NOT DEPLOYED.
-- **No professional audit; testnet only.** Not for real funds.
-- **Agent rate limits are per-process**, not a global distributed limit.
+- **No professional audit; testnet only.** Not for real funds. An internal pre-audit
+  (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
+  not a substitute for a third-party audit.
+- **Wallet-stack dependency advisories remain (pre-audit SEC-5).** `npm audit --omit=dev` reports
+  9 high / 2 moderate / 13 low, all transitive through the wallet libraries (`@here-wallet/core`,
+  `@meteorwallet/sdk`, `bs58`/`base-x`, `nanoid`, `query-string`). The fixes need a breaking wallet
+  downgrade; no exploit path was found in the shipped static page, so they are accepted and tracked.
+- **Agent rate limits and idempotency are per-process**, not a global distributed limit. Buys are
+  serialized within one process, so a single service instance cannot be raced; a multi-instance
+  deployment must centralise spend state.
 - **Single attestor** on the deployed v1 contract; disputes are resolved by the owner (centralisation
   point, documented). v2 replaces this with an operator quorum + resolver, but is not deployed.

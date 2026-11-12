@@ -9,7 +9,9 @@ cover against objective public indices and settles it autonomously. It is a comp
 for NEAR Hackathon 2026 (tracks: Business · Swarms · DeFi) and is deployed to NEAR **testnet**.
 
 - Live console: https://itzebe.github.io/overcover/
-- Live contract: `contract.attestor-overcover.testnet`
+- Live contract (hardened v3, default for new cover): `contract.ovc-v3-ctl-2f6c4c.testnet`
+- Legacy address (original v1 module, readable in the console, not a purchase destination):
+  `contract.attestor-overcover.testnet`
 
 ## Layout
 

@@ -1,7 +1,15 @@
 # Final release readiness register
 
-**As of:** 2026-11-12 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (HEAD `5e84ef7e1d32dfe4396b980f11e99c871c551622` + this mission's fixes)
-**Live contract:** `contract.attestor-overcover.testnet` (v1) · **Controlled v3 contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (v3, NEAR testnet) · **Production:** https://overcover.vercel.app/
+**As of:** 2026-11-12 (V3-default + final-closure session) · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main`
+**Default contract (hardened v3):** `contract.ovc-v3-ctl-2f6c4c.testnet` · **Legacy address (v1, readable, not a purchase destination):** `contract.attestor-overcover.testnet` · **Production:** https://overcover.vercel.app/
+
+The console now reads **and signs against the hardened v3 contract by default**. v3 is metric-agnostic
+(rainfall *and* temperature), with a domain-separated multi-operator oracle quorum, independent dispute
+resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, a permissionless
+product factory, and a state-preserving in-place `migrate`. Its deployed bytes are **byte-identical to
+this repository's source** (sha256 `a97034e65fb0c53f…`, 500023 bytes; `npm run verify:proof`). The
+legacy address still runs the original v1 module and is disclosed as such (the console labels it
+*Legacy build* and disables buying there).
 
 This register states, for every requirement, exactly what exists, what was tested, the evidence, and
 whether it needs fixing. A status is only **FIXED AND VERIFIED** when there is a reproducible command
@@ -15,15 +23,15 @@ Reproduce the whole thing:
 ```bash
 npm ci --ignore-scripts
 npm run test:model && npm run test:contract && npm run test:console && npm run test:agent
-npm run test:agent-eval     # 32 — product-feed schema/premium + agent boundary (offline) + independent-client integration
+npm run test:agent-eval     # 33 — product-feed schema/premium/metric + agent boundary (offline) + independent-client integration
 npm run test:factory        # 11 — discovery agent: deterministic rule, evidence hash, forecast labelling
 npm run test:deploy         # 21 — the deploy/upgrade paths refuse a stale (guard-less) wasm
-npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
+npm run verify:proof        # 13/13 — needs cargo build for the two bytecode checks (legacy v1 + hardened v3)
 npm run verify:agent        # limits engine vs the live product
 npm run verify:upgrade      # 8/8 — the SEC-1 guard on the compiled wasm (real neard node)
 npm run verify:upgrade-preservation  # state PRESERVED + the migrated policy still settles (real v1 bytecode)
 npm run verify:factory      # 22/22 — permissionless factory on the COMPILED wasm (real neard node)
-npm run verify:connectivity # 12/12 — public console needs no local agent
+npm run verify:connectivity # 13/13 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
 npm run verify:sandbox               # 21/21 — the decentralised lifecycle on a real neard
 npm run verify:controlled-v3:plan    # prints the controlled v3 deployment plan; sends nothing
@@ -61,6 +69,14 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 ## 1. Product
 
+> **Which contract the rows below describe.** The console's **default** contract is the hardened v3
+> `contract.ovc-v3-ctl-2f6c4c.testnet`. The rows in this table quote the **legacy v1** address
+> `contract.attestor-overcover.testnet`, because that address carries the recorded demo cycle
+> (22 products, 15 policies, 18 txs, a nullified reading) and the human-purchase evidence. The same
+> code paths run against v3, which is the default; §1c gives the v3 live state and the v3 agent
+> purchase. Both addresses are readable from the console; only the hardened one is a purchase
+> destination.
+
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
 | Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 76 Rust unit tests pass; 66-attack reference model `66 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
@@ -89,6 +105,28 @@ owner transaction**. This is the difference between an operated product and a pe
 | Discovery agent finds real emerging risk | FIXED AND VERIFIED | `agent/discovery.mjs` reads a real Open-Meteo forecast and applies a deterministic rule. | `npm run test:factory` (11/11): determinism, threshold crossing, evidence hash reproducibility, forecast (not observation) labelling; one live read of the real API. |
 | Console shows the proposal honestly | FIXED AND VERIFIED | A proposal is shown **PROPOSED** until the contract returns a product whose `evidence_hash` matches; never ACTIVE on the page's own word. | 7 `renderFactory` regression tests in `tests/console.test.js`; rendered live at 390/768/1280 px with 0 axe violations and 0 console errors. |
 | Factory deployed and proven on testnet | FIXED AND VERIFIED | The compiled v3 factory is deployed to `contract.ovc-v3-ctl-2f6c4c.testnet` and exercised end-to-end on-chain. | `npm run verify:controlled-v3` 40/40 (2026-11-12): a non-owner `propose_product` activates a product with no owner transaction, an invalid proposal is refused on-chain, and a buyer purchases cover on the factory product (policy 2). The legacy live address `contract.attestor-overcover.testnet` remains v1 (SEC-1 closure there needs the operator key). |
+
+## 1c. Hardened v3 contract — the console's default (live testnet state)
+
+The console reads and signs against `contract.ovc-v3-ctl-2f6c4c.testnet` by default. Its live state
+(read via public RPC, 2026-11-11):
+
+| Item | Value |
+| --- | --- |
+| code_hash | `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL` |
+| Deployed wasm sha256 | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` (500023 bytes) — **byte-identical to this repository's source** (`npm run verify:proof`) |
+| Pool | capital 1.4250 NEAR, reserved 0.2000 NEAR, solvent, 3 policies |
+| Products | `heat-lagos`, `heat-lagos-factory` — both **temperature** (`degC`), trigger `at or above 40.0 °C` |
+| Policies | 1 `heat-lagos` settled_paid · 2 `heat-lagos-factory` active · 3 `heat-lagos` active |
+| Observations | 1 |
+
+| Requirement | Status | Evidence |
+| --- | --- | --- |
+| Deployed v3 == this source | FIXED AND VERIFIED | `npm run verify:proof` — "hardened v3 deployed module is exactly this repository's source" (sha256 `a97034e6…`). |
+| Metric-agnostic product rendering | FIXED AND VERIFIED | The live product is **temperature**; the console derives the covered event, unit and direction from the contract's metric, and `products.json` carries `temperature`/`degC` (not a hardcoded "rainfall mm"). `tests/products-feed.test.mjs`; `tests/console.test.js`. |
+| A real agent purchase on v3 | FIXED AND VERIFIED | tx `45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn` → policy 3 (`heat-lagos`, 0.1 NEAR payout, 0.005 NEAR premium), signer `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet`; re-derived from the chain by `npm run verify:proof` (evidence `proof/agent-purchases-v3.json`). |
+| Over-limit refusal on the live v3 path | FIXED AND VERIFIED | The shipped engine (`agent/limits.mjs`) refuses a 1 NEAR payout against the live v3 `heat-lagos` product with explicit reasons ("payout … exceeds maxPayoutPerPolicy …"), before any network. `npm run verify:connectivity` check 9. |
+| Permissionless factory on v3 | FIXED AND VERIFIED | `npm run verify:controlled-v3` 40/40: a non-owner `propose_product` activated `heat-lagos-factory`; a buyer purchased cover on it (policy 2). |
 
 ## 2. Human wallet
 
@@ -123,14 +161,14 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Independent NEAR account | FIXED AND VERIFIED | `oc-agent-mwb87z4k.testnet`, its own ed25519 key. | On-chain: signer of txs `7iG4WWy1…` and `26UvFN3A…`; holds 0.844 NEAR. |
+| Independent NEAR account | FIXED AND VERIFIED | The agent has its own account and ed25519 key on each contract it buys from: `oc-agent-mwb87z4k.testnet` (legacy v1) and `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet` (hardened v3, the default). | On-chain: signer of v1 txs `7iG4WWy1…` / `26UvFN3A…` and the v3 tx `45A1s3hz…`; the v3 account holds its own balance. |
 | Secure signing | FIXED AND VERIFIED | Key read from `OVERCOVER_AGENT_SECRET_KEY` at start-up; never written, logged or returned. | `verify:connectivity` check 7 (no key in shipped assets/tracked files); `tests/agent-api.test.mjs` (health carries no key). |
-| Product discovery | FIXED AND VERIFIED | `agent.decide` reads `get_product` from the contract. | `verify:agent` runs the shipped `createAgent/decide` path against the live product. |
+| Product discovery | FIXED AND VERIFIED | `agent.decide` reads `get_product` from the contract. | `verify:agent` runs the shipped `createAgent/decide` path against the live product (the live default product is the v3 temperature product `heat-lagos`). |
 | Quote evaluation | FIXED AND VERIFIED | `agent.quote` reads the contract `quote`. | `verify:agent`; `tests/agent-limits.test.mjs`. |
-| Autonomous purchase | FIXED AND VERIFIED | `agent.buy` signs exactly one `buy_cover`, deposit = the contract quote. | On-chain: policies 11 (rain-lagos, 1 NEAR) and 12 (rain-bergen-dry, 0.5 NEAR). |
-| Authorization | FIXED AND VERIFIED | `limits.mjs` `evaluate` is the single allow/deny point; a denial returns before any RPC. | `verify:agent`: over-limit refused, in-limit permitted, the shipped path agrees. |
+| Autonomous purchase | FIXED AND VERIFIED | `agent.buy` signs exactly one `buy_cover`, deposit = the contract quote. | On-chain: policies 11 (`rain-lagos`, 1 NEAR) and 12 (`rain-bergen-dry`, 0.5 NEAR) on v1, and **policy 3** (`heat-lagos`, 0.1 NEAR) on the default v3 contract (`45A1s3hz…`). |
+| Authorization | FIXED AND VERIFIED | `limits.mjs` `evaluate` is the single allow/deny point; a denial returns before any RPC. | `verify:agent`: over-limit refused, in-limit permitted, the shipped path agrees; `verify:connectivity` check 9 (over-limit refused against the live v3 product). |
 | Spending limits | FIXED AND VERIFIED | Per-policy premium/payout caps, rolling 24 h premium budget and policy count, cooldown, allow-lists. | `tests/agent-limits.test.mjs`; `verify:connectivity` check 9 (403 with reasons). |
-| Balance checks | FIXED AND VERIFIED | `balanceYocto()`; an unfunded account reads as "no balance", not an error. | `GET /api/v1/agent` returns `balanceYocto`; the agent account reads 0.844 NEAR. |
+| Balance checks | FIXED AND VERIFIED | `readBalanceYocto()` reads `view_account` directly (one RPC, no stderr noise on a missing account); an unfunded account reads as "no balance", never a chain error. | `GET /api/v1/agent` returns `balanceYocto`; `tests/agent-funds.test.mjs` asserts a missing account reads `null` and a funded one reads a positive digit string; `npm run ui:qa` emits no `AccountDoesNotExist` lines. |
 | Idempotency | FIXED AND VERIFIED | Same `Idempotency-Key` returns the original result; the buy is not re-executed, **including when two identical-key requests arrive concurrently**. | `tests/agent-api.test.mjs`: a replayed key appends no second audit entry; the concurrent test proves exactly one execution. |
 | Transaction verification | FIXED AND VERIFIED | `buy` inspects the outcome status; a `Failure` throws `AgentError("chain")`. | `agent.mjs` `failureMessage`; agent txs resolve with `SuccessValue`. |
 | Policy retrieval | FIXED AND VERIFIED | Policy ids 11, 12 read back with the agent as buyer. | `verify:proof` ties each agent tx to its policy. |
@@ -167,15 +205,15 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Console errors | FIXED AND VERIFIED | Zero across widths. | `verify:live`, `ui:qa`. |
 | Production configuration | FIXED AND VERIFIED | `vercel.json`, root-dir output `ui`, no build step; `ui/vendor/*` bundles are tracked. | Deployed HTML hash == local; a clean clone runs with no build step. |
 
-**Contract version.** The deployed contract is **v1** (`contract.attestor-overcover.testnet`, code hash
-`36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, wasm sha256 `1f30ccf1…`, 344857 bytes). The console
-reads v1 and renders v1 semantics; it is also compatible with the **v2/v3** contract via a version
-gate (`CONTRACT_V2`, keyed on `list_metrics` + `config.resolver_quorum`). The repository source is now
-**contract v3** (`contract/VERSION` = 3), which the state-preserving `migrate` upgrades v1 to in place.
-**v3 is implemented and proven in a local sandbox and against the exact live v1 bytecode but not
-deployed to the live address** (see the honest list below).
+**Contract version.** The console's **default** contract is the hardened **v3**
+`contract.ovc-v3-ctl-2f6c4c.testnet` (code hash `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`, wasm
+sha256 `a97034e6…`, 500023 bytes — byte-identical to this source). The console reads and signs against
+it; the legacy address `contract.attestor-overcover.testnet` still runs the original **v1** module
+(code hash `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, wasm sha256 `1f30ccf1…`, 344857 bytes) and
+is disclosed as *Legacy build* with buying disabled. The repository source is **contract v3**
+(`contract/VERSION` = 3), which a state-preserving `migrate` upgrades v1 to in place.
 
-What v3 adds over the deployed v1 (all in `contract/src/lib.rs`):
+What v3 adds over v1 (all in `contract/src/lib.rs`):
 - a **domain-separated, length-prefixed observation message** (`overcover:v3:observation|…`, binds the
   contract id, expiry and an evidence reference) so a signature cannot be replayed as a different
   reading, for a different contract, or after expiry;
@@ -183,7 +221,10 @@ What v3 adds over the deployed v1 (all in `contract/src/lib.rs`):
 - a **per-policy challenge window** and a **per-dispute frozen resolver threshold**, so an owner can
   never shorten a challenge or move the decision bar mid-flight;
 - **owner-excluded resolvers** (the owner may not be a resolver nor vote on a dispute);
-- a **capped reading validity** (≤ 7 days) and an evidence-size cap.
+- a **capped reading validity** (≤ 7 days) and an evidence-size cap;
+- a **metric model** (per-metric unit, scale, ceiling and direction), so products are not limited to a
+  single rainfall index;
+- a **hardened `migrate`** (SEC-1): `migrate()` is refused unless the caller is the contract itself.
 
 ## 6. Hackathon readiness
 
@@ -192,13 +233,88 @@ What v3 adds over the deployed v1 (all in `contract/src/lib.rs`):
 | Product explanation | FIXED AND VERIFIED | `README.md`, `SUBMISSION.md`, console hero and sections. | Reviewed; claims traced to contract state. |
 | Problem and solution clarity | FIXED AND VERIFIED | Problem → solution → tracks → why NEAR, in `SUBMISSION.md` §1–4. | Reviewed. |
 | Technical differentiation | FIXED AND VERIFIED | Immutable products, reserved capital, challengeable oracle, on-chain reasons. | `SUBMISSION.md` §8; Rust + model tests. |
-| Real working demonstration | FIXED AND VERIFIED | Live console + `demo-log.json` (18 real txs) + agent purchases. | `verify:proof` 12/12. |
+| Real working demonstration | FIXED AND VERIFIED | Live console + `demo-log.json` (18 real txs) + agent purchases on v1 and v3. | `verify:proof` 13/13. |
 | Demo reliability | FIXED AND VERIFIED | The console reads live and degrades to stale/"no data"; a backup procedure is in `docs/JUDGE_DEMO.md`. | Honest read states tested (`tests/console.test.js`). |
 | Documentation | FIXED AND VERIFIED | `README`, `SUBMISSION`, `docs/*`, `proof/README`, `agent/README`. | Counts corrected to the real values. |
 | Submission accuracy | FIXED AND VERIFIED | The human-path section now states the programmatic-vs-extension distinction plainly. | This register; `SUBMISSION.md` §6. |
 | Judge-facing evidence | FIXED AND VERIFIED | `docs/JUDGE_DEMO.md` (script, checklist, backup) + `proof/` + explorer links. | This mission. |
 
 ---
+
+## Defects found and fixed in this mission (2026-11-12, final closure session)
+
+1. **The agent's balance read threw on an unfunded account, and its failover provider logged the
+   error to stderr.** Root cause: `balanceYocto()` called `near.account().getAccountBalance()`, whose
+   `AccountDoesNotExist` error was caught in the agent but **first logged to `console.error` by
+   `@near-js/providers` `FailoverRpcProvider.withBackoff`** (every provider failure is logged before
+   the failover). The buy path then read the balance through a second wrapper, so a not-yet-funded
+   agent produced a wall of stack traces — alarming noise for an ordinary "no balance" state. Impact:
+   an operator watching the service sees fake-looking errors; the JSON-RPC cost was also two requests
+   (the helper also fetched the protocol config). Fix: a single `readBalanceYocto()` queries
+   `view_account` directly per endpoint, returns `null` for `AccountDoesNotExist`, falls through on a
+   provider error, and returns `null` (unknown) only if every endpoint fails — which the funds guard
+   treats as a refusal (the safe direction). Regression: `tests/agent-funds.test.mjs` gained
+   "balanceYocto() reads a missing account as null, without throwing" and "reads a funded account's
+   total as a digit string". Verified: `npm run test:agent` 51/51; `npm run ui:qa` now emits **0**
+   `AccountDoesNotExist` lines (was a wall of them).
+
+2. **Documentation still described the product as rainfall-only after the default flipped to the
+   temperature product.** Root cause: `README.md` (22 products, no v3 mention), `docs/BUSINESS.md`,
+   `docs/FAQ.md`, `docs/COMPETITIVE.md` and `SUBMISSION.md` predated the v3-default flip and the
+   metric-agnostic contract. Impact: a judge reading the docs would think the shipped product is
+   rainfall in mm when the live default is a Lagos **temperature** trigger (40.0 °C). Fix: those
+   documents now state the metric-agnostic model and name the live default product; `README.md`
+   states the real product counts on each contract (legacy 22 / v3 2), and `SUBMISSION.md` adds the
+   v3 agent purchase (`45A1s3hz…` → policy 3) alongside the legacy human/agent evidence. No claim
+   was invented: every number is re-read from the chain.
+
+---
+
+## Defects found and fixed in this mission (2026-11-11, V3 default + metric integrity)
+
+1. **The machine-readable product feed described a temperature product as rainfall.** Root cause:
+   `scripts/products-feed.mjs` hardcoded `metric: { name: "rainfall", unit: "mm" }` and a
+   `threshold_mm` field, even though the live default contract's product `heat-lagos` is a
+   **temperature** product (`list_metrics` → `unit: "degC/10"`, `category: "temperature"`,
+   `max_value: 700`). A machine reader therefore saw "lagos rainfall at or above 40.0 mm" for a
+   `40.0 °C` trigger — a wrong unit and a wrong index, in the one artifact meant for agents. Fix: the
+   feed now reads `list_metrics`, derives `metric.name`/`metric.unit`/`metric.metric_id` and the
+   trigger `direction`/`threshold_value`/`unit` from the product's own metric, and computes the
+   plausibility ceiling from the **metric's** `max_value` (falling back to the v1 rainfall bound only
+   for legacy products with no metric). The schema (`ui/products.schema.json`) was updated to match
+   (`threshold_value` + `unit` replace `threshold_mm`; `direction` is an enum). Regression:
+   `tests/products-feed.test.mjs` — a new test asserts `heat-lagos` is `temperature`/`degC` and its
+   statement contains neither `rainfall` nor `mm`; the classification test now passes a metric and
+   checks the ceiling is the metric's. Feed regenerated from live state (`npm run products:feed`).
+
+2. **The console's ceiling disclosure hardcoded "500.0 mm rainfall".** Root cause: the same
+   rainfall assumption in `ui/index.html` (`triggerAtCeiling` used a fixed rainfall ceiling and the
+   warning/title text said "maximum plausible rainfall (500.0 mm)"). Fix: `triggerAtCeiling` uses the
+   product's metric `max_value` when present, and a new `ceilingLabel(p)` renders the ceiling in the
+   product's own unit/category, so a temperature product is never described in millimetres. Regression:
+   `tests/console.test.js` (existing ceiling assertions, plus the metric-direction assertions).
+
+3. **The hero and product copy claimed a single "rainfall" index.** Root cause: the hero, the
+   "risk it covers" paragraph and the JSON-LD description said "rainfall reading" while the live
+   default product is temperature. Fix: the copy is now metric-neutral ("a public index reading —
+   rainfall or temperature … each product states its own trigger and direction") and the JSON-LD
+   description says "parametric index insurance cover (rainfall or temperature)". Regression:
+   `tests/console.test.js` hero assertions updated to the metric-neutral wording and to require the
+   hero not hardcode one index or direction.
+
+4. **The AI-crawler docs (`ui/llms.txt`, `ui/llms-full.txt`) and `SUBMISSION.md` still named the
+   legacy v1 contract as the live one.** Root cause: the V3-default rollout updated `README.md`,
+   `docs/CONTRACT.md`, `docs/AGENT_INTEGRATION.md` and `docs/DEMO.md` but missed the served
+   `llms*.txt` files and `SUBMISSION.md`. Fix: both `llms*.txt` files and `SUBMISSION.md` now name
+   `contract.ovc-v3-ctl-2f6c4c.testnet` as the hardened default (with the legacy address disclosed as
+   legacy), give the v3 code hash / wasm sha256, and state the current live v3 counts. Regression:
+   `tests/console.test.js` now asserts the `llms*.txt` files name the hardened contract **and** still
+   disclose the legacy address.
+
+5. **`verify:proof` did not assert the deployed v3 module equals this source.** Root cause: the
+   bytecode check only compared the legacy v1 module to a pinned sha256. Fix: `proof/verify.mjs` now
+   also fetches the v3 module and, when the local build is present, asserts it is **byte-identical to
+   this repository's source** (`a97034e6…`, 500023 bytes). `verify:proof` is now **13/13**.
 
 ## Defects found and fixed in this mission (2026-11-12, SEC-1 disclosure + SEC-5 remediation)
 
@@ -583,11 +699,20 @@ still serves v1: `code_hash` `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, mod
 `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e`. Closing SEC-1 there needs the
 operator key (see below).
 
-**Live-contract evidence (unchanged, re-verified).** `npm run verify:proof` → 12/12: the deployed v1
-module is byte-identical to the v1 source (`18ec7f08`); the pool is solvent (capital 14.05 / reserved
+**Live-contract evidence (unchanged, re-verified).** `npm run verify:proof` → **13/13**: the deployed
+legacy v1 module matches its published sha256 and the **deployed v3 module is byte-identical to this
+repository's source** (`a97034e6…`, 500023 bytes); the legacy pool is solvent (capital 14.05 / reserved
 10.50 NEAR) and reconciles; all 18 `demo-log.json` transactions resolve on-chain; the two autonomous
-agent purchases are real `buy_cover` calls each tied to its policy; the settled policies paid as
-shown. `npm run verify:agent` confirms the spend engine against the live product definition.
+agent purchases on v1 **and the one on v3** are real `buy_cover` calls each tied to its policy; the
+settled policies paid as shown. `npm run verify:agent` confirms the spend engine against the live
+product definition.
+
+**Hardened v3 agent purchase (2026-11-11).** The shipped agent (`agent/agent.mjs`, non-dry-run) bought
+cover on the console's default contract: tx
+`45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn` → **policy 3** (`heat-lagos`, payout 0.1 NEAR, premium
+0.005 NEAR), signer `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet`. `npm run verify:proof` re-derives the
+signer, the method (`buy_cover`), the deposit and the resulting policy's buyer/product/payout/premium
+from the chain (evidence `proof/agent-purchases-v3.json`). The agent key is not committed.
 
 ## Not fixed / not verified (honest list)
 
@@ -603,26 +728,28 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
   contract, tied to source by the wasm sha256 (`1f30ccf1…`, rebuilt locally and matched). In a
   container where the faucet is available, `proof/testnet-v2-deploy.mjs` performs a real, isolated v2
   deployment (see §"Blockchain evidence").
-- **The v3 contract (with the SEC-1 fix) is deployed to a fresh testnet account and fully verified there;
-  it is NOT on the live address.** The controlled v3 deployment (`npm run verify:controlled-v3`, **40/40**
-  on 2026-11-12) stood up `contract.ovc-v3-ctl-2f6c4c.testnet` and exercised the whole decentralised
-  design against the real deployed module: permissionless (non-owner) product activation, adversarial
-  proposal refusal, a factory-product purchase (policy 2), a settled-and-paid policy (policy 1),
-  pool solvency, `reconcile() == true`, `check_invariant() == true`, and SEC-1 closure on the deployed
-  bytes. See §"Blockchain evidence". The v3 build (domain-separated length-prefixed observation message,
+- **The v3 contract (with the SEC-1 fix) is deployed to a fresh testnet account, fully verified there,
+  and is now the console's DEFAULT; the legacy address is NOT upgraded.** The controlled v3 deployment
+  (`npm run verify:controlled-v3`, **40/40** on 2026-11-12) stood up `contract.ovc-v3-ctl-2f6c4c.testnet`
+  and exercised the whole decentralised design against the real deployed module: permissionless
+  (non-owner) product activation, adversarial proposal refusal, a factory-product purchase (policy 2), a
+  settled-and-paid policy (policy 1), pool solvency, `reconcile() == true`, `check_invariant() == true`,
+  and SEC-1 closure on the deployed bytes. The console reads and signs against this contract by default.
+  See §"Blockchain evidence". The v3 build (domain-separated length-prefixed observation message,
   multi-operator oracle quorum, per-policy challenge window, frozen per-dispute resolver threshold,
   owner-excluded resolvers, generic metric model, hardened `migrate`) is proven end-to-end on a **local
   sandbox** (`npm run verify:sandbox` = 21/21; `npm run verify:controlled-v3:sandbox` = 39/39) and the
   in-place `migrate` is proven **state-preserving** against the exact live v1 bytecode
-  (`npm run verify:upgrade-preservation`). It is **not** on the live address
+  (`npm run verify:upgrade-preservation`). It is **not** on the legacy address
   `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the contract's full-access
   key (`ed25519:CwZBmKyV…`), which this environment does not hold and which is **not recoverable from
-  the chain** — see `docs/AUTHORITY_RECOVERY.md`. The public console therefore reads the live **v1**
-  contract; its v2/v3 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1 vulnerability
-  remains live on the legacy address** until either the operator runs `node driver/upgrade.js`
-  (non-destructive, ~4.63 NEAR refundable stake) or the controlled deployment in §5 of that document is
-  run. Status: **FIXED AND VERIFIED on a fresh controlled testnet contract (40/40)**; on the legacy live
-  address it remains BLOCKED BY HUMAN ACTION (the operator's key).
+  the chain** — see `docs/AUTHORITY_RECOVERY.md`. The public console therefore reads and signs against
+  the hardened v3 contract **by default**, and can still render the legacy **v1** address (labelled
+  *Legacy build*, buying disabled). The **SEC-1 vulnerability remains live on the legacy address** until
+  the operator runs `node driver/upgrade.js` (non-destructive, ~4.63 NEAR refundable stake) or the
+  controlled deployment in §5 of that document is run (already run once, to the v3 default address).
+  Status: **FIXED AND VERIFIED on the fresh controlled testnet contract (40/40), which is the console
+  default**; on the legacy address it remains BLOCKED BY HUMAN ACTION (the operator's key).
 - **The controlled v3 testnet deployment is complete (2026-11-12).** The funded-root harness
   (`npm run verify:controlled-v3`) ran the full lifecycle to **40/40** against
   `contract.ovc-v3-ctl-2f6c4c.testnet`: deploy + init, the 3-of-5 operator and resolver quorums, the
@@ -643,5 +770,6 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
 - **Agent rate limits and idempotency are per-process**, not a global distributed limit. Buys are
   serialized within one process, so a single service instance cannot be raced; a multi-instance
   deployment must centralise spend state.
-- **Single attestor** on the deployed v1 contract; disputes are resolved by the owner (centralisation
-  point, documented). v2 replaces this with an operator quorum + resolver, but is not deployed.
+- **Single attestor** on the legacy v1 contract; disputes are resolved by the owner (centralisation
+  point, documented). The hardened v3 contract — the console default — replaces this with an
+  operator quorum + independent resolvers.

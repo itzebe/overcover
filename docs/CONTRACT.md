@@ -1,8 +1,10 @@
 # Contract interface and state model
 
-`contract/src/lib.rs` — Rust, `near-sdk` 5. Money is **yoctoNEAR** (`u128`), rainfall is **tenths of
-a millimetre** (`u64`), time is **unix seconds** (`u64`). Deployed as
-`contract.attestor-overcover.testnet`.
+`contract/src/lib.rs` — Rust, `near-sdk` 5. Money is **yoctoNEAR** (`u128`), an index reading is
+stored in **tenths of the metric's unit** (`u64`, e.g. tenths of a millimetre or tenths of a degree
+Celsius), time is **unix seconds** (`u64`). Deployed as
+`contract.ovc-v3-ctl-2f6c4c.testnet` (the hardened default). The original v1 module at
+`contract.attestor-overcover.testnet` is still readable but is no longer a purchase destination.
 
 ## State
 

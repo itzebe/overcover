@@ -52,11 +52,11 @@ UMA is *"an optimistic oracle that resolves wide-ranging requests for informatio
 in a scalable and reliable way"*, with *"two components: the optimistic oracle and
 a dispute [resolution mechanism]"* ([docs.uma.xyz](https://docs.uma.xyz/protocol-overview/how-does-uma-work)).
 It is general-purpose dispute infrastructure. Overcover does not try to be an
-oracle for everything; it uses a **narrow, typed metric** (rainfall in mm, for a
-named city and date) with a plausibility bound, which makes the reading cheap to
-verify and hard to game, and reserves the dispute machinery for the rare
-challenge. Overcover could adopt an oracle like UMA for the reading; today it
-uses a bonded attestor.
+oracle for everything; it uses a **narrow, typed metric** (an index with a unit
+and a trigger direction — the shipped default is a temperature trigger) with a
+plausibility bound, which makes the reading cheap to verify and hard to game, and
+reserves the dispute machinery for the rare challenge. Overcover could adopt an
+oracle like UMA for the reading; today it uses a bonded attestor.
 
 ### Agent payment rails (e.g. x402)
 
@@ -100,8 +100,8 @@ a policy that pays out on an objective event.
   real capital; Overcover is a testnet prototype with test funds.
 - **Oracle decentralisation.** v1 has a single attestor. v2 (operator quorum,
   independent resolvers) is built and locally proven but not deployed.
-- **Breadth.** One metric (rainfall) in one shape; competitors cover many peril
-  types and jurisdictions.
+- **Breadth.** A narrow catalogue (one typed metric in one shape; the shipped default is a single
+  temperature product) where competitors cover many peril types and jurisdictions.
 - **Regulatory posture.** None. It is not an insurance product and says so.
 
 ## What the research changes about positioning

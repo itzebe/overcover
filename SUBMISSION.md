@@ -4,9 +4,10 @@
 verifiable, instant-paying cover against objective public indices, and lets anyone underwrite it
 with guaranteed solvency.
 
-**Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
+**Live contract (hardened, default for new cover):** `contract.ovc-v3-ctl-2f6c4c.testnet` (NEAR testnet)
+**Legacy address (original v1 module, readable in the console, not a purchase destination):** `contract.attestor-overcover.testnet`
 **Live console:** https://overcover.vercel.app/ · https://itzebe.github.io/overcover/
-**Deployed code hash:** `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`
+**Deployed code hash (hardened v3):** `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`
 **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
 **X demo post:** see [`docs/DEMO_POST.md`](docs/DEMO_POST.md)
 
@@ -15,17 +16,20 @@ Verify the deployed bytecode is exactly this source:
 ```bash
 cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
 sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm
-# expected: 1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e
+# expected: a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1
 ```
 
-The RPC returns the same 344857-byte module for `contract.attestor-overcover.testnet`.
+The RPC returns the same 500023-byte module for `contract.ovc-v3-ctl-2f6c4c.testnet`. The legacy
+address `contract.attestor-overcover.testnet` runs the original v1 module (sha256 `1f30ccf1…`,
+344857 bytes); the console can still read it, labelled *legacy*.
 
 **Try it without installing anything.** Open `ui/index.html` (or the hosted console). It reads the
 contract directly from your browser over public testnet RPC and shows, right now: capital backing
-cover, payouts promised, both invariants (`reserved ≤ capital`, `reconcile`), 22 products, 15
-policies and 16 observations — including one **nullified** reading that was successfully challenged
-on-chain. Open the Proof panel, copy the `curl`, run it, and you get the same JSON. Nothing on the
-page has to be taken on trust.
+cover, payouts promised, both invariants (`reserved ≤ capital`, `reconcile`), the live product
+catalogue and the policies written. On the hardened default `contract.ovc-v3-ctl-2f6c4c.testnet`
+that is currently **2 products, 3 policies, 1 observation** (capital 1.4250 NEAR, reserved 0.2000
+NEAR); the legacy address serves the original 22-product cycle. Open the Proof panel, copy the
+`curl`, run it, and you get the same JSON. Nothing on the page has to be taken on trust.
 
 ---
 
@@ -65,6 +69,11 @@ the pool) and, if it qualifies, activates an immutable product **with no owner t
 proposer and the evidence hash are recorded on-chain. This is the difference between an operated
 product and a permissionless one: the owner cannot silently gate or re-price what the contract will
 accept.
+
+Products are **metric-agnostic**: a product fixes its own index, unit, trigger direction and
+plausibility ceiling, so the same contract writes cover against rainfall *or* temperature (the live
+default product is a Lagos **temperature** trigger at 40.0 °C). The console derives the covered event,
+the unit and the direction from the product's own metric — never a hardcoded sentence.
 
 Two actors can drive that flow. A **person** connects their own NEAR wallet and signs a single
 `buy_cover` call — the console re-reads the premium from the contract and attaches exactly that, and
@@ -153,19 +162,22 @@ All 18 hashes resolve on-chain via the `tx` RPC method.
 
 ### Autonomous-agent purchases (independent agent account)
 
-An agent with its own NEAR testnet account (`oc-agent-mwb87z4k.testnet`) and its own key bought
-cover on the live contract, gated by the spending-limits engine. Each hash resolves via the `tx` RPC
-method; each emitted a `policy_issued` event.
+An agent with its own NEAR testnet account and its own key bought cover, gated by the spending-limits
+engine. Each hash resolves via the `tx` RPC method; each emitted a `policy_issued` event.
 
 | Step | Transaction |
 | --- | --- |
-| agent buy_cover (rain-lagos, 1 NEAR payout = product max) → policy 11 | https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ |
-| agent buy_cover via the HTTP API (rain-bergen-dry, 0.5 NEAR payout) → policy 12 | https://testnet.nearblocks.io/txns/26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And |
+| agent buy_cover on the **hardened default** `contract.ovc-v3-ctl-2f6c4c.testnet` (heat-lagos, 0.1 NEAR payout) → policy 3 | https://testnet.nearblocks.io/txns/45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn |
+| agent buy_cover on legacy v1 (rain-lagos, 1 NEAR payout = product max) → policy 11 | https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ |
+| agent buy_cover via the HTTP API on legacy v1 (rain-bergen-dry, 0.5 NEAR payout) → policy 12 | https://testnet.nearblocks.io/txns/26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And |
 
-The first purchase is the regression that proved the u128 precision fix: before the fix the agent's
-exact bounds check rejected a payout equal to the product's true maximum (`max_payout` came back
-from `JSON.parse` as `999999999999999983222784`). The over-limit case (a 5 NEAR payout against a
-1 NEAR cap) is refused by the policy engine before any RPC call, so no funds move.
+The v3 purchase is signed by `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet` and is re-derived from the
+chain by `npm run verify:proof` (evidence `proof/agent-purchases-v3.json`). The two v1 purchases are
+signed by `oc-agent-mwb87z4k.testnet`. The first v1 purchase is the regression that proved the u128
+precision fix: before the fix the agent's exact bounds check rejected a payout equal to the product's
+true maximum (`max_payout` came back from `JSON.parse` as `999999999999999983222784`). The over-limit
+case (a payout above the product cap) is refused by the policy engine before any RPC call, so no
+funds move — `npm run verify:connectivity` check 9 re-checks that against the live v3 product.
 
 ### Human wallet purchase (independent account)
 
@@ -201,9 +213,9 @@ captured in this environment. A judge can complete it in two minutes by followin
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **66 attacks, 0 exploitable, 66 defended** |
 | Contract unit tests | `npm run test:contract` | **76 passed, 0 failed** (includes 14 permissionless-factory tests, 4 SEC-1 migrate-authorization regressions and the v3 reading-message layout pin) |
-| Console regression + live RPC | `npm run test:console` | **101 passed, 0 failed** |
-| Agent limits + API + u128 precision | `npm run test:agent` | **51 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
-| Product feed + agent evaluation | `npm run test:agent-eval` | **32 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
+| Console regression + live RPC | `npm run test:console` | **105 passed, 0 failed** |
+| Agent limits + API + u128 precision |  `npm run test:agent` | **53 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
+| Product feed + agent evaluation | `npm run test:agent-eval` | **33 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
 | Discovery agent | `npm run test:factory` | **11 passed, 0 failed** — deterministic risk rule, evidence-hash reproducibility, forecast (not observation) labelling, one live API read |
 | Permissionless factory (compiled wasm) | `npm run verify:factory` | **22/22 passed** — a NON-OWNER proposal activates a product with no owner tx, every rule refuses, the stake enters the pool, and a buyer buys on the permissionlessly-created product (real `neard` node) |
 | Deploy fail-closed regression | `npm run test:deploy` | **21 passed, 0 failed** — both deploy paths refuse a stale (guard-less) wasm |
@@ -218,7 +230,7 @@ captured in this environment. A judge can complete it in two minutes by followin
 | Console accessibility (axe-core, WCAG 2.2 AA) | `npm run axe` | **0 violations at 320 / 360 / 390 / 768 / 1024 / 1280 / 1440 px (page and wallet dialog)** |
 | One-command independent proof | `npm run verify:proof` | **12/12 checks passed on a clean clone** — deployed bytecode == this source, pool solvent, all 18 demo txs real, the agent's buys real (each tied to its on-chain policy), settled outcomes match |
 | Agent authorization vs the live product | `npm run verify:agent` | **over-limit buy refused, in-limit buy permitted; the shipped `createAgent` path agrees** |
-| Public console needs no local agent | `npm run verify:connectivity` | **12/12 checks passed** — no localhost default, read-only verdict == shared engine on the live quote, invalid bodies rejected, limits enforced, no owner-only method reachable, buy_cover the only signing path |
+| Public console needs no local agent | `npm run verify:connectivity` | **13/13 checks passed** — no localhost default, read-only verdict == shared engine on the live quote, invalid bodies rejected, limits enforced, no owner-only method reachable, buy_cover the only signing path |
 | Live production URL | `npm run verify:live` | **5 widths (320–1440 px), 0 console errors, 0 horizontal overflow** |
 
 Track ids for the submission form: `business` (primary), `swarms`, `defi`.

@@ -30,8 +30,10 @@ spending is bounded by hard, human-set limits.
 ## The product
 
 A single pool writes fully-collateralised cover against an objective public index
-and settles it without a claim. In the shipped product the index is **rainfall in
-a named city on a named date**:
+and settles it without a claim. Products are **metric-agnostic**: a product fixes
+its own index, unit, trigger direction and plausibility ceiling. In the shipped
+default the live product is a **temperature** trigger (Lagos, at or above 40.0 °C);
+the same contract writes rainfall cover too.
 
 - The contract computes the premium: `ceil(payout × premium_bp / 10 000)`.
 - On purchase it **reserves the payout** in the pool, so a promise is always
@@ -75,9 +77,10 @@ for.
 
 ## Go-to-market
 
-1. **Prove the loop in public (now).** One real product, real policies, a
-   one-command independent proof. Done: `rain-lagos` is live, policies 13 and 15
-   exist on testnet, `npm run verify:proof` re-derives every headline claim.
+1. **Prove the loop in public (now).** Real products, real policies, a
+   one-command independent proof. Done: `heat-lagos` is live on the hardened
+   default, `rain-lagos` on the legacy address, policies exist on testnet,
+   `npm run verify:proof` re-derives every headline claim.
 2. **Publish the feed (this release).** `products.json` + schema make Overcover
    readable by an agent without a browser. This is the distribution surface.
 3. **Land agent builders.** The value to an agent builder is the *authorization*

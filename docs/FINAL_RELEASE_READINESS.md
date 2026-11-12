@@ -440,6 +440,14 @@ Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SE
     **fails closed** if the wasm lacks the SEC-1 guard. Evidence: `proof/controlled-v3-sandbox.json`
     (29/29, mode `SANDBOX`). Testnet mode creates a real account from the free faucet and writes
     `proof/controlled-v3-deploy.json`; it SKIPs cleanly when the faucet is rate-limited (as it was).
+34. **The docs pinned a literal production commit SHA that went stale on every merge.** Root cause:
+    Vercel auto-deploys on every `main` push, so any frozen `githubCommitSha` in a doc is wrong as
+    soon as the next PR merges — this chased `6d28aeaef5fe` → `48b216c6d581` → `aec55dd2…` across
+    PRs #21–#23. Fix (PR #24): `docs/AUTHORITY_RECOVERY.md`, `docs/FINAL_RELEASE_READINESS.md` and
+    `docs/JUDGE_DEMO.md` now assert the *invariant* — production's `meta.githubCommitSha` equals the
+    tip of `main` — which is what they always meant and never needs a follow-up. Verified against
+    `GET /v6/deployments?…&target=production` and by comparing the served `index.html` sha256 with the
+    working-tree file.
 
 ## Blockchain evidence (real testnet)
 

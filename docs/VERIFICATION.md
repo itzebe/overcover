@@ -87,7 +87,7 @@ npm run test:onchain    # 17 adversarial tests against the LIVE contract
 #   npm run verify:sandbox                # 21/21 (compiled v3 wasm, real neard)
 #   npm run verify:upgrade-preservation   # in-place upgrade of the live v1 bytecode preserves state
 #   npm run verify:controlled-v3:plan     # the controlled v3 testnet deployment plan (sends nothing)
-#   npm run verify:controlled-v3:sandbox  # 29/29 — controlled v3 deploy + SEC-1 closure on a real neard
+#   npm run verify:controlled-v3:sandbox  # 39/39 — controlled v3 deploy + SEC-1 closure on a real neard
 #   npm run verify:factory                # 22/22 — permissionless factory on the COMPILED wasm + a real neard
 ```
 
@@ -151,7 +151,7 @@ development still works. Run it against production with
 - **Single attestor on the deployed v1 contract.** The oracle on the live address is not
   decentralised; the dispute path mitigates but does not remove that. The merged **v3** source
   replaces it with a 3-of-5 operator quorum and independent resolvers, proven on a fresh deployment
-  by `npm run verify:controlled-v3:sandbox` (29/29) — but v3 is not on the live address (see below).
+  by `npm run verify:controlled-v3:sandbox` (39/39) — but v3 is not on the live address (see below).
 - **The v3 contract is not deployed to the live address, and the legacy key is unrecoverable.** The
   live `contract.attestor-overcover.testnet` runs **v1**, whose `migrate()` is unauthenticated
   (**SEC-1**). Closing it on that address needs the account's FullAccess private key
@@ -161,11 +161,15 @@ development still works. Run it against production with
   the state-preserving in-place upgrade (`node driver/upgrade.js`), or the controlled v3 deployment
   (`node proof/controlled-v3-deploy.mjs`) stands up a fresh, SEC-1-closed contract. **Do not claim the
   live address is hardened until one of those has run.**
-- **The controlled v3 testnet deployment did not run this session.** The free testnet faucet
-  (`helper.testnet.near.org`) returned HTTP 429 on every probe. The identical harness was run against
-  the identical compiled wasm on a local `neard` node (29/29, mode `SANDBOX`); the only untested part
-  of the testnet path is the faucet account-creation step. Re-run `node proof/controlled-v3-deploy.mjs`
-  when the faucet recovers.
+- **The controlled v3 testnet deployment has not run in this environment (needs a funded root).** The
+  free testnet faucet (`helper.testnet.near.org`) returns HTTP 429 here. The identical harness — now
+  including the permissionless factory path (a NON-OWNER `propose_product` activation and a `buy_cover`
+  on the resulting product) — was run against the identical compiled wasm on a local `neard` node
+  (39/39, mode `SANDBOX`). The harness takes an **operator-supplied funded root account** (env
+  `OVERCOVER_ROOT_ACCOUNT_ID`/`OVERCOVER_ROOT_SECRET_KEY` or the gitignored
+  `keys/controlled-v3-root.json`); the only untested part of the testnet path is that the human funds
+  the root. Re-run `node proof/controlled-v3-deploy.mjs` once the root is funded. See
+  [`FACTORY_TESTNET_PREFLIGHT.md`](FACTORY_TESTNET_PREFLIGHT.md).
 - **`npm run test:onchain` is not run in this environment.** The 17 live adversarial tests need the
   gitignored operator identities (`keys/identities.json`, `keys/state.json`) and a fresh deploy, so
   they cannot run without a funded operator key. The suite exists and fails cleanly with an

@@ -2,37 +2,39 @@
   "mode": "SANDBOX",
   "network": "local",
   "rootId": "test.near",
-  "wasmSha256": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57",
-  "wasmBytes": 489602,
+  "wasmSha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1",
+  "wasmBytes": 500023,
   "txs": {
-    "create:owner": "72hMAYfC4WF7hmyrmxYNpfWgCKgrfVKNxFHiNG5NvFDR",
-    "create:buyer": "GbhHSVqCsFrN8JtYntWtdXx3MgDJtmqNB7iXY27iPjJN",
-    "create:attacker": "8HT2EcPvpwUTPLnnsZHwoRm96ZN8HABep3b7oFuzg6TK",
-    "create:op1": "GFgZLMVocKV8XZEkpVPHcNdatWqSd5VnfePqJBc44aFb",
-    "create:op2": "FxqW3GzzUG1cAW3nNZmnUe5q6hMyYAUn9dCiD7RwXekL",
-    "create:op3": "9fVWUMv9T48itxm1iYHhze3psUMsQBXrBY6TrMYoFcPk",
-    "create:op4": "G3u4ct5U6Us8eurxtfxsAQ8ywxG9WmzLJgi1AeBQmmxk",
-    "create:op5": "7tEnqMhmJEcwDxwFQ3FVghmuT1LAMxaV3ELit6A2RxC",
-    "create:res1": "8T1CcX5d1sgbb4pSaHJBuE49P18gs6mhH5tSg7uioE8M",
-    "create:res2": "6fTBqxf6QTx2UgEWLhxzY5xphGHYTMK2BZLPPyoPt6UX",
-    "create:res3": "HEj4UTaVQeEvoB37F4vVtM8M54jS9QLeJCyZom9QGEVc",
-    "create:res4": "E8UrmWjyweC6F6a29xAvFdFztmg8wR57AwL4fhSmupay",
-    "create:res5": "C6iGiy8KBq7EHrxm5rAmkH4oG1j5G4YK11DNRAm1Qw74",
-    "create:contract": "6zNRVXRxi7eCw1EtBafPZ5cYLetUDfG3M9wntXqWWkPB",
-    "deploy": "ApLbhyuZoUzg978RSAZXjHG38XNhfmT2bJGgh931oULe",
-    "new": "9GV1YGVjEqkrPELn6zgiskpAN6y3aWiXTfLHvy8jmxZ4",
-    "set_quorum": "AeTmvM7iAnHsJP9fboxgvHcdJAWtEi4PpnigD2th9RyB",
-    "set_resolver_quorum": "G9Rm3aPeDMmVTkSwWuFyd8A6rWnkSyG7bebmvUkgjagV",
-    "set_dispute_window": "6PEFSk8SmQLo6tfP2Tcj5izjNtT4WTKtFE42QG1NsWd5",
-    "deposit": "oKmZ2NNPDQmCBcwiLPeFZ3CDqsxB6Lbfw2j4H9Jn2AC",
-    "challenge": "3dZJ9M1dZByxpkehXrS2Eg9FPiJYXdoKEFcKBKpyZw2X",
-    "resolver_vote": "9mWW11fb9ffzeDuBjeeK4yRKchmcyPu4JAvPCY518QoB",
-    "resolve": "9fngoNuE9WS1KSdjLm2TGRgFsUorB6EKbm2xTEhBVsqv",
-    "set_prod_window": "CNc3NexwfzqFJVjtXQA1jFd5KwbC9cnM7YBKnQvbjNGA"
+    "create:owner": "6me6R7XEfHxj5awANQu3fFGTsZyH9NMHZzCquWhamzZv",
+    "create:buyer": "6KkKfuLGqgppYNRBCbeHW2YeSB2KzvYSwGVqMwJoKs7n",
+    "create:attacker": "4xCtywHq6dW4w6iEy6C58qrUHXQtBa4cskNAFygm8MS7",
+    "create:proposer": "EkdKetctV5jt3P1WStdSSqXas7UTmi2rD2uFKvWsPwSr",
+    "create:op1": "3oPes3B2FRNySYsg2NwpUPVu4j554dVc7E56bykBrdAi",
+    "create:op2": "FKwR49W6ENcVK2XfqXLsioZD2G1aJrkZ7ZbszYPcTnmM",
+    "create:op3": "EFCRt3bGG5uXNnxg3qZ6izEULvwnzewtN66pcgZFR8rc",
+    "create:op4": "3PupKkL5ADCrTa88LqaFyYL6kBQibcuzMrg7mr9SJUuJ",
+    "create:op5": "AwtHjx99FckKrk7K1R7NhTFj7cHSDEWFiH93RAEWgJ98",
+    "create:res1": "Cx9UssUqhdCtwQ1DfH15cUV1kvHYMUAphgzzDex5St9g",
+    "create:res2": "8qkss1rkyYGQPCJoNQz1BHLWMCLkspyeNv5YeDHkB2td",
+    "create:res3": "GdTNyA2aA7TSd3xzfJxHshRUkoav7hwFhS4AKCLWDkND",
+    "create:res4": "a2hidRvWQhXMw6VajwpoXX3anzFVCiVuPB9puYfCMjy",
+    "create:res5": "64AVkRF3zsgBP92o4UWBDW12XL89N1QcdyZ7KWCVXqRa",
+    "create:contract": "BFMgMKkLWwk3sBDABZaUWwCq3oQYxkApkHenhn2umrqp",
+    "deploy": "CzQY38Bf78JHVeaXyD1HRKsxtNiY8cLXfGh6RdwHL5FZ",
+    "new": "5LRQewFW2b1CQ66Zw9aLVDxzyrASSAUirLrwKZYqJpvE",
+    "set_quorum": "2EA9vu3pEhqT77ZmE4x2Fq1P5SsFjFhLj6vtY11MDkaM",
+    "set_resolver_quorum": "9ZG2HutezmbG5WY7Do7xGhkWrbWLCgW3ZMyWT6DScYfd",
+    "set_dispute_window": "9cMyrNpgZQjBUrarTxB1QZf5xfrw5XXC78j67Jvhvby1",
+    "deposit": "EPeAubsViqrtZnBjNJVho1c5421EsCKrBgpCE84FNzLQ",
+    "challenge": "2LHLBPCRRMh7ynmvosJ6mNPffzdUEku3LqcLe6nyUptZ",
+    "resolver_vote": "4pHqz42Vp5YyikQgChFuMgQcFvmxmBretCBdEwB7NdFh",
+    "resolve": "7cowGSXEPA9d6rE2w3nGTYT268YLVtavhqXXB6gqrmo6",
+    "propose_product": "5BHM9PBL8FZ9BBhrRfA6vkYMSjwRjabuXmaZ5ZqMBxiQ",
+    "set_prod_window": "8oziEDqFLZCABUTHcjnrqbXR4VncMewunyfqfqsDhCep"
   },
   "checks": [
     {
-      "name": "created the funding root (local)",
+      "name": "resolved the funding root (local)",
       "ok": true,
       "detail": "test.near"
     },
@@ -42,9 +44,14 @@
       "detail": "contract.test.near"
     },
     {
+      "name": "the proposer is a distinct account from the owner",
+      "ok": true,
+      "detail": "owner=owner.test.near proposer=proposer.test.near"
+    },
+    {
       "name": "deployed the compiled v3 wasm",
       "ok": true,
-      "detail": "489602 bytes, sha256 52c11c22fe52bd26…"
+      "detail": "500023 bytes, sha256 a97034e65fb0c53f…"
     },
     {
       "name": "initialised with the controlled owner",
@@ -89,7 +96,7 @@
     {
       "name": "the pool holds the deposit",
       "ok": true,
-      "detail": "capital=500000000000000000000000"
+      "detail": "capital=1500000000000000000000000"
     },
     {
       "name": "buy_cover returns a policy id",
@@ -162,6 +169,51 @@
       "detail": "reserved=0 solvent=true"
     },
     {
+      "name": "a NON-OWNER proposal activates a product with no owner transaction",
+      "ok": true,
+      "detail": "active=true"
+    },
+    {
+      "name": "the activated product records the proposer (not the owner)",
+      "ok": true,
+      "detail": "proposed_by=proposer.test.near"
+    },
+    {
+      "name": "the activated product carries the immutable evidence hash",
+      "ok": true,
+      "detail": "evidence=sha256:open-meteo-heat-lagos-factory"
+    },
+    {
+      "name": "the activated product appears in the public product list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the proposal stake entered the pool",
+      "ok": true,
+      "detail": "delta=100000000000000000000000"
+    },
+    {
+      "name": "the factory refuses a proposal on an unregistered metric",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "a buyer purchases cover on the factory-created product",
+      "ok": true,
+      "detail": "policy=2 product=heat-lagos-factory"
+    },
+    {
+      "name": "the factory product's payout is reserved and the pool stays solvent",
+      "ok": true,
+      "detail": "reserved=100000000000000000000000 solvent=true"
+    },
+    {
+      "name": "the pool reconciles after the factory purchase",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "name": "SEC-1 closed on the new module: third-party migrate() is refused",
       "ok": true,
       "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
@@ -179,6 +231,7 @@
   ],
   "contractId": "contract.test.near",
   "ownerId": "owner.test.near",
+  "proposerId": "proposer.test.near",
   "operatorIds": [
     "op1.test.near",
     "op2.test.near",
@@ -193,12 +246,14 @@
     "res4.test.near",
     "res5.test.near"
   ],
+  "obsDate": 1794472024,
   "policyId": 1,
-  "passed": 29,
-  "total": 29,
+  "factoryPolicyId": 2,
+  "passed": 39,
+  "total": 39,
   "config": {
     "owner": "owner.test.near",
-    "attestor": "DFyuHpPTWUhTzqiz938czj5ZYDJrmXKn4B3CwRuU7qFU",
+    "attestor": "6GcJ1DgS8FEZXC7ZofXwL1zPdvFKupbY8JoGcKDUYsdv",
     "challenge_bond": "100000000000000000000000",
     "challenge_window_sec": 20,
     "settle_delay_sec": 0,

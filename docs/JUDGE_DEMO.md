@@ -233,9 +233,10 @@ without the contract — is regression-tested (`npm run test:console`).
 | 6 | Agent has an independent account | Signer is `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet` (v3) / `oc-agent-mwb87z4k.testnet` (v1) | Open tx 45A1s3 / tx 11–12 on the explorer |
 | 7 | Spending limits enforced | Over-limit buy refused with reasons, before the network | `npm run verify:agent`; the agent panel |
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
+| 8b | Wrong-network wallet refused | Buy disabled + reason; no call built | `npm run test:console` (wrong-network cases) |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed v3 code == this source | `a97034e6…` (500023 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 66/0, contract 76/0, console 105/0, agent 51/0, sim 71/0, agent-eval 33/0, factory 11/0, deploy 21/0 | `npm test` |
+| 11 | Tests pass | model 66/0, contract 76/0, console 108/0, agent 53/0, sim 71/0, agent-eval 33/0, factory 11/0, deploy 21/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
 | 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 39/39 sandbox · **40/40 live testnet** | `npm run verify:controlled-v3:sandbox`; `npm run verify:controlled-v3` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |
@@ -276,8 +277,11 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   and its coverage start is prospective. It motivates a product whose cover begins in the future; it
   never claims an event already occurred. An event that has occurred is an *observation*, and only a
   signed operator quorum can create one.
-- **Wallet errors are actionable.** A cancelled connection, a blocked pop-up, an unreachable wallet
-  service or a wrong network each produce a plain sentence, not a raw `Error`.
+- **Wallet errors are actionable, and a wrong network is refused.** A cancelled connection, a blocked
+  pop-up, an unreachable wallet service or a wrong network each produce a plain sentence, not a raw
+  `Error`. A wallet on the **wrong network** is not merely warned about: the console detects it (a
+  mainnet `.near` account can never sign a testnet transaction), disables **Buy**, explains why, and
+  refuses in `doBuy` before any call is built — regression-tested in `tests/wallet-journey.test.mjs`.
 - **The default contract is hardened v3; the legacy address is disclosed, not hidden.** An internal
   security pre-audit found that the **legacy v1** contract's `migrate()` is unauthenticated
   (`#[init(ignore_state)]` cannot check the stored owner), so any account could overwrite all state on

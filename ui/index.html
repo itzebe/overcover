@@ -1743,7 +1743,7 @@
   // Bind the wallet to the contract this page is actually reading, so a
   // signature can never target a different contract than the one shown.
   if (WALLET && typeof WALLET.configure === "function") WALLET.configure(CONTRACT);
-  var walletState = { connected: false, accountId: null };
+  var walletState = { connected: false, accountId: null, networkMismatch: false };
 
   function accountChip(a) {
     return '<span class="acct" title="' + esc(a) + '">signed in as <b>' + esc(shortAcct(a)) + "</b></span>";
@@ -1844,11 +1844,12 @@
     WALLET.connect(id).then(function (accountId) {
       walletState.connected = true;
       walletState.accountId = accountId;
-      renderWallet();
       var st = WALLET.status();
-      if (st.networkMismatch) {
-        setWalletPickerStatus("Connected as " + accountId + " — but this wallet may not be on NEAR testnet. Overcover settles on testnet only.", "err");
-        setBuyStatus("Connected as " + accountId + ". Confirm the wallet is on NEAR testnet before buying.", true);
+      walletState.networkMismatch = !!(st && st.networkMismatch);
+      renderWallet();
+      if (walletState.networkMismatch) {
+        setWalletPickerStatus("Connected as " + accountId + " — but this wallet is not on NEAR testnet. Overcover settles on testnet only.", "err");
+        setBuyStatus("Connected as " + accountId + ", but this wallet is not on NEAR testnet. Buying is disabled until you switch the wallet to testnet.", true);
       } else {
         setWalletPickerStatus("Connected as " + accountId + ".", "ok");
         setBuyStatus("Connected as " + accountId + ". Set the cover terms below, then press Buy cover.", false, true);
@@ -1904,12 +1905,14 @@
     WALLET.subscribe(function (st) {
       walletState.connected = !!st.connected;
       walletState.accountId = st.accountId || null;
+      walletState.networkMismatch = !!st.networkMismatch;
       renderWallet();
     });
     WALLET.status && WALLET.setup && WALLET.setup().then(function () {
       var st = WALLET.status();
       walletState.connected = !!st.connected;
       walletState.accountId = st.accountId || null;
+      walletState.networkMismatch = !!(st && st.networkMismatch);
       renderWallet();
     }).catch(function () {});
   }
@@ -1930,7 +1933,7 @@
     // Buying is offered only when the contract being read is a VERIFIED hardened
     // build. A legacy, untrusted, or not-yet-verified contract disables the
     // control entirely — the security banner explains why.
-    var allowed = trust.state === "hardened";
+    var allowed = trust.state === "hardened" && !walletState.networkMismatch;
     b.disabled = buyState.busy || !walletState.connected || !quoteState.selected || !allowed;
     b.textContent = buyState.busy ? "Waiting for your wallet…" : "Buy cover";
     // Show the exact address the wallet will sign against, from the same value
@@ -1947,6 +1950,7 @@
     var h = el("b-hint");
     if (!h) return;
     if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
+    else if (walletState.networkMismatch) h.textContent = "This wallet is not on NEAR testnet. Switch it to testnet to buy — Overcover settles on testnet only.";
     else if (!allowed) h.textContent = trust.state === "legacy"
       ? "New purchases are disabled on this legacy address. Read or buy on the hardened build — it is the default."
       : "Buying is disabled until the contract's deployed module is verified as an approved build.";
@@ -2025,6 +2029,12 @@
     var p = quoteState.selected;
     if (!p) { setBuyStatus("Choose a product to price first.", true); return; }
     if (!WALLET || !walletState.connected) { setBuyStatus("Connect a wallet first.", true); return; }
+    // Fail closed on a network mismatch: a wallet that is not on NEAR testnet
+    // can never produce a testnet signature, so refuse before building the call.
+    if (walletState.networkMismatch) {
+      setBuyStatus("This wallet is not on NEAR testnet. Switch it to testnet and try again — Overcover settles on testnet only.", true);
+      return;
+    }
     // Fail closed before anything else: only a verified hardened build may be
     // signed against. This is the same gate the button uses, re-checked here so
     // a programmatic call cannot bypass it.

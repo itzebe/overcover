@@ -1,0 +1,1075 @@
+{
+  "note": "Public, independently re-derivable evidence for the controlled v3 testnet deployments. No private keys. Regenerate with `node proof/controlled-v3-evidence.mjs`.",
+  "mode": "TESTNET",
+  "generatedAt": "2026-11-12T05:51:21.962Z",
+  "wasm": {
+    "path": "contract/target/wasm32-unknown-unknown/release/overcover.wasm",
+    "bytes": 489602,
+    "sha256": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57"
+  },
+  "contracts": [
+    {
+      "label": "run 1 (pre-fix harness; buy_cover reached via a separate probe)",
+      "account": "contract.ovc-v3-ctl-mwd32f3w.testnet",
+      "exists": true,
+      "codeHashBase58": "6a3DgNG2zWewchXpjpCx4YzuohA9D7asBwbCf9gwWRMg",
+      "codeHashHex": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57",
+      "deployedCode": {
+        "bytes": 489602,
+        "sha256": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57",
+        "hasSec1Guard": true
+      },
+      "wasmSha256MatchesDeployedCode": true,
+      "balanceYocto": "6511243703444679400000000",
+      "storageUsage": 494605,
+      "accessKeys": [
+        {
+          "curve": "ed25519",
+          "keyHex": "10fa1fbc51f144d452e42e5ef140e8420326809d613395997625cb536453264720",
+          "permission": "FullAccess"
+        }
+      ],
+      "config": {
+        "owner": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+        "attestor": "Gybhb5YKxBmireGwSvBC68gWPzH2A5rrkt76KHtgNCa6",
+        "challenge_bond": "100000000000000000000000",
+        "challenge_window_sec": 60,
+        "settle_delay_sec": 0,
+        "quorum": 3,
+        "resolver_quorum": 3,
+        "dispute_window_sec": 3600
+      },
+      "operators": [
+        {
+          "account": "op1.ovc-v3-ctl-mwd32f3w.testnet",
+          "public_key": [
+            71,
+            247,
+            235,
+            137,
+            226,
+            201,
+            80,
+            80,
+            159,
+            116,
+            246,
+            159,
+            154,
+            40,
+            23,
+            195,
+            177,
+            173,
+            115,
+            35,
+            172,
+            101,
+            214,
+            108,
+            160,
+            12,
+            86,
+            239,
+            151,
+            67,
+            218,
+            127
+          ],
+          "active": true,
+          "registered_at": 1794459915,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op2.ovc-v3-ctl-mwd32f3w.testnet",
+          "public_key": [
+            130,
+            24,
+            7,
+            117,
+            177,
+            218,
+            52,
+            62,
+            106,
+            34,
+            223,
+            29,
+            217,
+            35,
+            184,
+            69,
+            179,
+            179,
+            46,
+            99,
+            158,
+            103,
+            25,
+            70,
+            45,
+            102,
+            200,
+            63,
+            179,
+            97,
+            94,
+            66
+          ],
+          "active": true,
+          "registered_at": 1794459917,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op3.ovc-v3-ctl-mwd32f3w.testnet",
+          "public_key": [
+            66,
+            71,
+            169,
+            40,
+            189,
+            10,
+            127,
+            103,
+            158,
+            65,
+            176,
+            160,
+            169,
+            77,
+            10,
+            216,
+            24,
+            77,
+            180,
+            26,
+            113,
+            242,
+            179,
+            202,
+            250,
+            221,
+            109,
+            133,
+            235,
+            145,
+            224,
+            111
+          ],
+          "active": true,
+          "registered_at": 1794459920,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op4.ovc-v3-ctl-mwd32f3w.testnet",
+          "public_key": [
+            131,
+            177,
+            232,
+            36,
+            116,
+            159,
+            109,
+            2,
+            227,
+            128,
+            225,
+            165,
+            63,
+            126,
+            228,
+            69,
+            35,
+            157,
+            187,
+            51,
+            37,
+            116,
+            29,
+            49,
+            145,
+            155,
+            1,
+            39,
+            80,
+            168,
+            236,
+            178
+          ],
+          "active": true,
+          "registered_at": 1794459922,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op5.ovc-v3-ctl-mwd32f3w.testnet",
+          "public_key": [
+            211,
+            26,
+            136,
+            141,
+            51,
+            168,
+            50,
+            164,
+            95,
+            11,
+            97,
+            54,
+            84,
+            149,
+            141,
+            40,
+            82,
+            243,
+            147,
+            203,
+            119,
+            109,
+            163,
+            116,
+            35,
+            225,
+            237,
+            153,
+            214,
+            28,
+            219,
+            22
+          ],
+          "active": true,
+          "registered_at": 1794459924,
+          "revoked_at": 0,
+          "readings": 0
+        }
+      ],
+      "resolvers": [
+        {
+          "account": "res1.ovc-v3-ctl-mwd32f3w.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd32f3w.testnet"
+        },
+        {
+          "account": "res2.ovc-v3-ctl-mwd32f3w.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd32f3w.testnet"
+        },
+        {
+          "account": "res3.ovc-v3-ctl-mwd32f3w.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd32f3w.testnet"
+        },
+        {
+          "account": "res4.ovc-v3-ctl-mwd32f3w.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd32f3w.testnet"
+        },
+        {
+          "account": "res5.ovc-v3-ctl-mwd32f3w.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd32f3w.testnet"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "heat",
+          "category": "temperature",
+          "unit": "degC/10",
+          "max_value": 700,
+          "scale": 10,
+          "direction": "Above",
+          "active": true
+        }
+      ],
+      "products": [
+        {
+          "id": "heat-lagos",
+          "city": "lagos",
+          "metric_id": "heat",
+          "category": "temperature",
+          "threshold_tenths": 400,
+          "premium_bp": 500,
+          "min_payout": 1e+23,
+          "max_payout": 2e+24,
+          "min_lead_sec": 0,
+          "max_total_coverage": 2e+25,
+          "reserved": 3e+23,
+          "active": true
+        }
+      ],
+      "pool": {
+        "capital": "515000000000000000000000",
+        "reserved": "300000000000000000000000",
+        "available": "215000000000000000000000",
+        "held_bonds": "0",
+        "premiums_collected": "15000000000000000000000",
+        "total_paid": "0",
+        "total_deposited": "500000000000000000000000",
+        "total_withdrawn": "0",
+        "bonds_forfeited": "0",
+        "policy_count": 1,
+        "solvent": true,
+        "paused": false
+      },
+      "policies": [
+        {
+          "id": 1,
+          "buyer": "probemwd37fax.testnet",
+          "beneficiary": "probemwd37fax.testnet",
+          "product_id": "heat-lagos",
+          "city": "lagos",
+          "metric_id": "heat",
+          "direction": "Above",
+          "threshold_tenths": 400,
+          "payout": 3e+23,
+          "premium": 1.5e+22,
+          "obs_date": 1794460098,
+          "challenge_window_sec": 60,
+          "issued_at": 1794460094,
+          "status": "active",
+          "paid_amount": 0,
+          "observed_value": 0,
+          "settled_at": 0
+        }
+      ],
+      "txns": [
+        {
+          "tx": "Dx5nymCYpRBxyQvfZiTu8evoApXU7XWA2PWsLm8mRUQq",
+          "block": 277317978,
+          "signer": "targetmwd3dnsi7840.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "quote",
+          "success": true
+        },
+        {
+          "tx": "ASxsnLBVJ2EUMJivyxzRByaL9fjZFFgrU6sx8coBE2ef",
+          "block": 277317973,
+          "signer": "targetmwd3dnsi7840.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "quote",
+          "success": true
+        },
+        {
+          "tx": "FCq1GHHJcKLKk1RrgKzPNbv1S9wHDRA9HieUQwsEdtvv",
+          "block": 277317473,
+          "signer": "probemwd37fax.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "buy_cover",
+          "success": true
+        },
+        {
+          "tx": "DGC9VyU1k5mCnodM2kAWH7pZiAB3gtkvMdrHQgxV6u43",
+          "block": 277317204,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "deposit",
+          "success": true
+        },
+        {
+          "tx": "HsLsAzbrQqtKsR2n67sk5b5NV2Jb9zeGbnHqYd8tLvzp",
+          "block": 277317199,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "G6TGE3XjkNLGv2rg3f6Q39HkGAx2DN3dyWytktodxGo2",
+          "block": 277317195,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "6vdQAyKQ7gPGuunWGfQY6RY7cN8Ztc6vwXWUWTEWCRbB",
+          "block": 277317191,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "HswYqeCii3zwoNm9GzhA8M4a4dyvEJ2rJm1psa1BsGy5",
+          "block": 277317187,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "A12hewbqaApRymwN2g2DW8sdboLHjiTwFUykFpMsJbaP",
+          "block": 277317183,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "7HfTFUs1aiiYg6e5KLCkBuPjmSdT1mAbxRFu6zj7c4GU",
+          "block": 277317178,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "GzEjySiEtTjbBaPCW9QYMhoQUWHpAGXZBwUzrVdvTtNy",
+          "block": 277317174,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "9V7Grh9gFqd5Mt5PYv8kvJdZqqHeuJq1z6YdZoUnMGYS",
+          "block": 277317170,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "CTrpNof8Z7jgYre7XmFVSGPoa9ePUenTXGGrS6QurLoi",
+          "block": 277317166,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "6cwymP3WXWc3XrYC6i5ZCYxbE89aQWEYQDrghGMkjC38",
+          "block": 277317162,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "DPHqsuAQ2W9YAJT9Uj6vWjNUGU8MZzZ83xbUJKn9gKcF",
+          "block": 277317158,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_metric_product",
+          "success": true
+        },
+        {
+          "tx": "B8r16smcZGWkYPmjY8NxdzJqVpbrTcmrDGQfqx6cr3xF",
+          "block": 277317154,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_metric",
+          "success": true
+        },
+        {
+          "tx": "7SX1dNXZBUJLT3vctw3rSLjUyTXBpgBmE2seS4h4pYu8",
+          "block": 277317150,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "set_dispute_window",
+          "success": true
+        },
+        {
+          "tx": "rh2hAk4H7xLQy3R4yPDuPYSMgaDVZmWdV9m7NXQPViv",
+          "block": 277317146,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "set_resolver_quorum",
+          "success": true
+        },
+        {
+          "tx": "GvVVviYgnM5eW4NN3yycftPUcVrv7DQccGpaYx9zwaoQ",
+          "block": 277317142,
+          "signer": "owner.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "set_quorum",
+          "success": true
+        },
+        {
+          "tx": "7u6uWSja3u53BXXmMsS61EowtT6zV9NEg8bVBYzTRPt5",
+          "block": 277317139,
+          "signer": "contract.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "new",
+          "success": true
+        },
+        {
+          "tx": "3ErjDnh4XK9eAa7sTiLmfpDayzRSh7E74QKLo2o7HT69",
+          "block": 277317136,
+          "signer": "contract.ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "DEPLOY_CONTRACT"
+          ],
+          "method": null,
+          "success": true
+        },
+        {
+          "tx": "63GiDuNUDQ3a7E4Pm1giT7oRx4mZV7NzkFykXbV9RyzG",
+          "block": 277317126,
+          "signer": "ovc-v3-ctl-mwd32f3w.testnet",
+          "actions": [
+            "CREATE_ACCOUNT",
+            "TRANSFER",
+            "ADD_KEY"
+          ],
+          "method": null,
+          "success": true
+        }
+      ]
+    },
+    {
+      "label": "run 2 (post gas/funding fix; full lifecycle to buy_cover)",
+      "account": "contract.ovc-v3-ctl-mwd3judn.testnet",
+      "exists": true,
+      "codeHashBase58": "6a3DgNG2zWewchXpjpCx4YzuohA9D7asBwbCf9gwWRMg",
+      "codeHashHex": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57",
+      "deployedCode": {
+        "bytes": 489602,
+        "sha256": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57",
+        "hasSec1Guard": true
+      },
+      "wasmSha256MatchesDeployedCode": true,
+      "balanceYocto": "6496243228049758200000000",
+      "storageUsage": 494244,
+      "accessKeys": [
+        {
+          "curve": "ed25519",
+          "keyHex": "eedaac4fcf6103685c035bcf72a987307b27b80afa7e0b2baa15583ee02f93730d",
+          "permission": "FullAccess"
+        }
+      ],
+      "config": {
+        "owner": "owner.ovc-v3-ctl-mwd3judn.testnet",
+        "attestor": "6NrD6md6aJvUFQLdNi7jcv5AtPJHoDmB8YLPkapSzzJg",
+        "challenge_bond": "100000000000000000000000",
+        "challenge_window_sec": 60,
+        "settle_delay_sec": 0,
+        "quorum": 3,
+        "resolver_quorum": 3,
+        "dispute_window_sec": 3600
+      },
+      "operators": [
+        {
+          "account": "op1.ovc-v3-ctl-mwd3judn.testnet",
+          "public_key": [
+            75,
+            207,
+            162,
+            201,
+            131,
+            15,
+            217,
+            127,
+            133,
+            20,
+            125,
+            180,
+            158,
+            66,
+            121,
+            62,
+            202,
+            28,
+            181,
+            173,
+            155,
+            90,
+            112,
+            127,
+            176,
+            135,
+            70,
+            199,
+            106,
+            150,
+            210,
+            20
+          ],
+          "active": true,
+          "registered_at": 1794460728,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op2.ovc-v3-ctl-mwd3judn.testnet",
+          "public_key": [
+            238,
+            252,
+            213,
+            182,
+            254,
+            251,
+            14,
+            10,
+            101,
+            203,
+            79,
+            0,
+            35,
+            236,
+            94,
+            161,
+            12,
+            189,
+            254,
+            218,
+            143,
+            115,
+            31,
+            128,
+            62,
+            243,
+            192,
+            161,
+            35,
+            194,
+            44,
+            41
+          ],
+          "active": true,
+          "registered_at": 1794460730,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op3.ovc-v3-ctl-mwd3judn.testnet",
+          "public_key": [
+            91,
+            117,
+            191,
+            139,
+            166,
+            230,
+            188,
+            51,
+            117,
+            44,
+            233,
+            88,
+            223,
+            19,
+            5,
+            179,
+            32,
+            101,
+            6,
+            203,
+            23,
+            255,
+            217,
+            38,
+            179,
+            35,
+            156,
+            30,
+            163,
+            212,
+            94,
+            206
+          ],
+          "active": true,
+          "registered_at": 1794460733,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op4.ovc-v3-ctl-mwd3judn.testnet",
+          "public_key": [
+            87,
+            205,
+            106,
+            209,
+            255,
+            152,
+            196,
+            160,
+            37,
+            142,
+            198,
+            43,
+            21,
+            147,
+            56,
+            0,
+            126,
+            185,
+            31,
+            219,
+            159,
+            139,
+            22,
+            180,
+            189,
+            85,
+            161,
+            237,
+            252,
+            24,
+            207,
+            59
+          ],
+          "active": true,
+          "registered_at": 1794460735,
+          "revoked_at": 0,
+          "readings": 0
+        },
+        {
+          "account": "op5.ovc-v3-ctl-mwd3judn.testnet",
+          "public_key": [
+            137,
+            229,
+            249,
+            118,
+            243,
+            251,
+            58,
+            110,
+            197,
+            61,
+            32,
+            146,
+            79,
+            48,
+            72,
+            231,
+            249,
+            75,
+            224,
+            194,
+            103,
+            79,
+            69,
+            31,
+            32,
+            160,
+            185,
+            17,
+            38,
+            204,
+            159,
+            171
+          ],
+          "active": true,
+          "registered_at": 1794460737,
+          "revoked_at": 0,
+          "readings": 0
+        }
+      ],
+      "resolvers": [
+        {
+          "account": "res1.ovc-v3-ctl-mwd3judn.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd3judn.testnet"
+        },
+        {
+          "account": "res2.ovc-v3-ctl-mwd3judn.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd3judn.testnet"
+        },
+        {
+          "account": "res3.ovc-v3-ctl-mwd3judn.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd3judn.testnet"
+        },
+        {
+          "account": "res4.ovc-v3-ctl-mwd3judn.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd3judn.testnet"
+        },
+        {
+          "account": "res5.ovc-v3-ctl-mwd3judn.testnet",
+          "active": true,
+          "registered_by_owner": "owner.ovc-v3-ctl-mwd3judn.testnet"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "heat",
+          "category": "temperature",
+          "unit": "degC/10",
+          "max_value": 700,
+          "scale": 10,
+          "direction": "Above",
+          "active": true
+        }
+      ],
+      "products": [
+        {
+          "id": "heat-lagos",
+          "city": "lagos",
+          "metric_id": "heat",
+          "category": "temperature",
+          "threshold_tenths": 400,
+          "premium_bp": 500,
+          "min_payout": 1e+23,
+          "max_payout": 2e+24,
+          "min_lead_sec": 0,
+          "max_total_coverage": 2e+25,
+          "reserved": 0,
+          "active": true
+        }
+      ],
+      "pool": {
+        "capital": "500000000000000000000000",
+        "reserved": "0",
+        "available": "500000000000000000000000",
+        "held_bonds": "0",
+        "premiums_collected": "0",
+        "total_paid": "0",
+        "total_deposited": "500000000000000000000000",
+        "total_withdrawn": "0",
+        "bonds_forfeited": "0",
+        "policy_count": 0,
+        "solvent": true,
+        "paused": false
+      },
+      "policies": [],
+      "txns": [
+        {
+          "tx": "ApiZ1kCUioU6ScXAXTgZ2JGNom4kinEq3hDW2zPo4tEN",
+          "block": 277318603,
+          "signer": "buyer.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "buy_cover"
+        },
+        {
+          "tx": "8yUJBLbQ7SjH87mybbPWxu8AY2e2ZBa5caUXuYBHy3Mm",
+          "block": 277318598,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "deposit",
+          "success": true
+        },
+        {
+          "tx": "G5H2jFqZXR4d2ZduVUbY22e83kP5pb7VfWzVGTuH7UAB",
+          "block": 277318593,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "9BZvxwqPbJgDiyWBWn1epdMQ69Cm7WZLxw23vmpCvzrq",
+          "block": 277318589,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "7shr9G376J5KnrFuKxbLXx18WMe3fHnDviywz41nRsDA",
+          "block": 277318585,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "EVmLa4MzFgknn2cpYE7KTMPzMtYRJSVC3RghmY2fExCb",
+          "block": 277318580,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "6wgtRtEdsMpKBkc916oFcqUZhf1e1qWKcZWuf15yUvuh",
+          "block": 277318575,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_resolver",
+          "success": true
+        },
+        {
+          "tx": "8MrXDPM46Bq7TCU9S7QoZeQUNRkYdNXM1y3guJLLbZH1",
+          "block": 277318571,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "7mWiK9YqNa8KU8phen644SfTpWjptB8vTXo2UbZxMdGz",
+          "block": 277318567,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "2rUgoxuYXKGtpKeD8F5oU8aMTxhyuszCrCHGzX6SfvLm",
+          "block": 277318563,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "6FfegWURWQg94cqSMqWfSQWz3yEhyeuqPDgdsb6YHaCu",
+          "block": 277318559,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "Gk8VULAimirZawQaekTRAEPgDysuXnX4MEqj6rTynkQU",
+          "block": 277318555,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_operator",
+          "success": true
+        },
+        {
+          "tx": "4VhLmKMocdDbpybWACRXm6LXtjboTJaQ4KPJAtRwtReM",
+          "block": 277318551,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_metric_product",
+          "success": true
+        },
+        {
+          "tx": "DUYWgjk2EjHUcpxC98JaMx3KAY5cbbRZUFPrGwDada8V",
+          "block": 277318546,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "add_metric",
+          "success": true
+        },
+        {
+          "tx": "5YjZWJTAEekEbvQgwkA9EApDxKasxPV2pZNxia4cFHzG",
+          "block": 277318542,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "set_dispute_window",
+          "success": true
+        },
+        {
+          "tx": "nmVbtS1pCneE9LWXbTJkR25A6pPJqzgojqZG8WAU2Ub",
+          "block": 277318538,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "set_resolver_quorum",
+          "success": true
+        },
+        {
+          "tx": "6NTBgtw835x3VP2S16xwMwdybJZ7Q8xWdW1BHyV6bQrg",
+          "block": 277318534,
+          "signer": "owner.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "set_quorum",
+          "success": true
+        },
+        {
+          "tx": "7sZTd2JyEfTVMk8McRgzGpDnFygdAfFGZK714y17xfMy",
+          "block": 277318531,
+          "signer": "contract.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "new",
+          "success": true
+        },
+        {
+          "tx": "CdkMM2kfYisMnrMkynWEo7t5E6Az3spCW8zHY2TxPrJt",
+          "block": 277318528,
+          "signer": "contract.ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "DEPLOY_CONTRACT"
+          ],
+          "method": null,
+          "success": true
+        },
+        {
+          "tx": "CfZSdeYZnxphjNLPGKAUbNtdyLwCBMqaSyickxyopCvW",
+          "block": 277318517,
+          "signer": "ovc-v3-ctl-mwd3judn.testnet",
+          "actions": [
+            "CREATE_ACCOUNT",
+            "TRANSFER",
+            "ADD_KEY"
+          ],
+          "method": null,
+          "success": true
+        }
+      ]
+    }
+  ]
+}

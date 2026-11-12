@@ -20,7 +20,7 @@
     "test:agent-eval": "node --test tests/products-feed.test.mjs tests/agent-eval.test.mjs tests/agent-integration.test.mjs",
     "test:console": "node --test tests/console.test.js tests/wallet-journey.test.mjs",
     "test:contract": "cargo +stable test --manifest-path contract/Cargo.toml",
-    "test:deploy": "node --test tests/upgrade-guard-refusal.test.mjs",
+    "test:deploy": "node --test tests/upgrade-guard-refusal.test.mjs tests/controlled-v3-funding.test.mjs",
     "test:model": "node research/model/attacks.mjs",
     "test:onchain": "node --test tests/*.test.js",
     "test:sim": "node --test tests/model.test.mjs tests/v3-message.test.mjs",
@@ -37,7 +37,8 @@
     "verify:testnet-deploy": "node proof/testnet-v2-deploy.mjs",
     "verify:controlled-v3": "node proof/controlled-v3-deploy.mjs",
     "verify:controlled-v3:plan": "node proof/controlled-v3-deploy.mjs --plan",
-    "verify:controlled-v3:sandbox": "node proof/controlled-v3-deploy.mjs --sandbox"
+    "verify:controlled-v3:sandbox": "node proof/controlled-v3-deploy.mjs --sandbox",
+    "verify:controlled-v3:evidence": "node proof/controlled-v3-evidence.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

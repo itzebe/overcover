@@ -26,6 +26,7 @@ npm run verify:live         # production URL at 5 widths
 npm run verify:sandbox               # 21/21 — the decentralised lifecycle on a real neard
 npm run verify:controlled-v3:plan    # prints the controlled v3 deployment plan; sends nothing
 npm run verify:controlled-v3:sandbox # 29/29 — controlled v3 deploy + SEC-1 closure on a real neard
+npm run verify:controlled-v3:evidence # public on-chain state of the deployed v3 testnet contracts
 npm run axe                 # 0 violations, page + dialog
 npm run ui:qa               # 7 viewports, real agent round-trip
 npm run fixture:capture     # refresh tests/fixtures/contract-snapshot.json from the live contract
@@ -512,12 +513,23 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
   refundable stake) or the controlled deployment in §5 of that document is run. Status: IMPLEMENTED,
   VERIFIED IN SANDBOX AND ON AN ISOLATED TESTNET DEPLOY, MIGRATION PROVEN STATE-PRESERVING,
   CONTROLLED-DEPLOY PROOF 29/29, MERGED — the single remaining BLOCKED BY HUMAN ACTION item.
-- **The controlled v3 testnet deployment did not run this session.** It needs the free testnet faucet
-  to fund the fresh identity graph; `helper.testnet.near.org` returned **HTTP 429** on every probe
-  (`near-faucet.io` → 404, `faucet.testnet.near.org` → connection failure). The identical harness was
-  run against the identical compiled wasm on a local `neard` node (`29/29`, mode `SANDBOX`); the only
-  untested part of the testnet path is the faucet account creation itself. Status: BLOCKED BY EXTERNAL
-  SERVICE. Re-run `node proof/controlled-v3-deploy.mjs` when the faucet recovers.
+- **The controlled v3 testnet deployment did not complete this session, but v3 *is* live on two
+  isolated testnet accounts.** Two runs stood up fresh, operator-controlled contracts
+  (`contract.ovc-v3-ctl-mwd32f3w.testnet`, `contract.ovc-v3-ctl-mwd3judn.testnet`), each initialised
+  with a 3-of-5 operator quorum, a 3-of-5 resolver quorum and the accelerated 60 s demo window. The
+  first run's `buy_cover` (a separate probe) created **policy 1**; the second run's `buy_cover`
+  (tx `ApiZ1kCUioU6ScXAXTgZ2JGNom4kinEq3hDW2zPo4tEN`) reached the contract and was refused only on
+  clock skew. Their **deployed bytes are byte-identical to the source-rebuilt wasm** — 489602 bytes,
+  sha256 `52c11c22…`, SEC-1 guard present — independently re-hashed from `view_code`. Evidence:
+  `proof/controlled-v3-onchain-evidence.json` (`npm run verify:controlled-v3:evidence`). The runs
+  could not be *re-run* to the full 29/29 because the testnet faucet then rate-limited
+  (`helper.testnet.near.org` → **HTTP 429**, "retry in 12 h"; `faucet.fastnear.com`,
+  `testnet-faucet.near.org` unreachable). Three real harness defects surfaced only on testnet and
+  were fixed (PR #26): signer funding ignored the `gas_limit × gas_price` float, keys were never
+  persisted, and the observation clock read from `finality: final` (which lags the tip). Status:
+  v3 LIVE ON AN ISOLATED TESTNET DEPLOY (deploy + lifecycle verified on-chain); the full 29/29
+  testnet re-run is BLOCKED BY EXTERNAL SERVICE (faucet). Re-run `npm run verify:controlled-v3`
+  once the faucet recovers — with key persistence fixed, that run is recoverable.
 - **No professional audit; testnet only.** Not for real funds. An internal pre-audit
   (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
   not a substitute for a third-party audit.

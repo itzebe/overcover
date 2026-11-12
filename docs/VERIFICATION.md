@@ -135,7 +135,7 @@ It is the reason the invariant and the reconciliation identity were trusted enou
 
 `npm run verify:connectivity` boots the **real** agent service in dry-run with a throwaway key,
 serves the **real** `ui/` files, drives a real Chromium, and blocks every request to the operator's
-localhost. It reports **12/12** checks: the page ships no localhost default; the public page loads
+localhost. It reports **13/13** checks: the page ships no localhost default; the public page loads
 with no local agent reachable and no console errors; the read-only evaluation works and its verdict
 equals the shared engine's verdict on the live contract quote (and the premium it shows is the
 contract's own premium); an unreachable service yields a safe, human message (never `Failed to

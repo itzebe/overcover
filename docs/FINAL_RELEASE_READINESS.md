@@ -197,7 +197,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
 | Vercel deployment | FIXED AND VERIFIED | Project `overcover`; production alias `overcover.vercel.app`. | `GET /v6/deployments?…&target=production` shows a READY production deployment. |
-| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | `GET /v6/deployments?…&target=production`; the served `index.html` sha256 equals the working-tree file. |
+| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | 2026-11-12: `main` = `392dbab602c3a9e72181fc40233d1abdc99c5971` (PR #34, squash-merge); the production deployment `dpl_8d5J63pKHJACQGXPKTb4FRbPgRvD` reports `meta.githubCommitSha = 392dbab6…` (READY) and the public alias `overcover.vercel.app` returns HTTP 200 serving `DEFAULT_CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet"`. |
 | API availability | NOT APPLICABLE | The console is a static page reading public NEAR RPC; there is no product API. | — |
 | Browser functionality | FIXED AND VERIFIED | Page loads and renders live contract state. | `verify:live` (5 widths, 0 console errors); browser probe: 0 console errors. |
 | Wallet compatibility | FIXED AND VERIFIED (integration) | HERE + Meteor; honest availability. | `verify:connectivity`; `ui:qa`. Live extension approval BLOCKED BY HUMAN ACTION. |
@@ -255,7 +255,7 @@ What v3 adds over v1 (all in `contract/src/lib.rs`):
    provider error, and returns `null` (unknown) only if every endpoint fails — which the funds guard
    treats as a refusal (the safe direction). Regression: `tests/agent-funds.test.mjs` gained
    "balanceYocto() reads a missing account as null, without throwing" and "reads a funded account's
-   total as a digit string". Verified: `npm run test:agent` 51/51; `npm run ui:qa` now emits **0**
+   total as a digit string". Verified: `npm run test:agent` 53/53; `npm run ui:qa` now emits **0**
    `AccountDoesNotExist` lines (was a wall of them).
 
 2. **Documentation still described the product as rainfall-only after the default flipped to the

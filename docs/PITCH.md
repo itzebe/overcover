@@ -90,7 +90,7 @@ capital — which is exactly what a mutual structure exists to aggregate.
 
 1. **A real, working primitive, not a deck.** The product runs on testnet: a live
    contract, a live catalogue, human and agent purchases with real transaction
-   hashes, and a one-command independent proof (`npm run verify:proof`, 12/12).
+   hashes, and a one-command independent proof (`npm run verify:proof`, 13/13).
 2. **The pairing is the moat.** Deterministic parametric settlement *and*
    first-class agent authorization in one protocol. Frameworks make you build the
    first; payment rails move money but decide nothing; mutuals decide claims by

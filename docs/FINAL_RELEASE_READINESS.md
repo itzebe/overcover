@@ -197,7 +197,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
 | Vercel deployment | FIXED AND VERIFIED | Project `overcover`; production alias `overcover.vercel.app`. | `GET /v6/deployments?…&target=production` shows a READY production deployment. |
-| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | 2026-11-12: `main` = `392dbab602c3a9e72181fc40233d1abdc99c5971` (PR #34, squash-merge); the production deployment `dpl_8d5J63pKHJACQGXPKTb4FRbPgRvD` reports `meta.githubCommitSha = 392dbab6…` (READY) and the public alias `overcover.vercel.app` returns HTTP 200 serving `DEFAULT_CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet"`. |
+| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | 2026-11-13: `main` = `7f95f992e29ec36314b4af213a4978d888e7e127` (PR #37, squash-merge); the production deployment `dpl_Byu6DQq5fRub978RxRQ9XfuAmK2j` reports `meta.githubCommitSha = 7f95f992…` (READY) and the public alias `overcover.vercel.app` returns HTTP 200. Prior: PR #36 `c25bb77d…`, PR #34 `392dbab6…`. |
 | API availability | NOT APPLICABLE | The console is a static page reading public NEAR RPC; there is no product API. | — |
 | Browser functionality | FIXED AND VERIFIED | Page loads and renders live contract state. | `verify:live` (5 widths, 0 console errors); browser probe: 0 console errors. |
 | Wallet compatibility | FIXED AND VERIFIED (integration) | HERE + Meteor; honest availability. | `verify:connectivity`; `ui:qa`. Live extension approval BLOCKED BY HUMAN ACTION. |
@@ -237,7 +237,36 @@ What v3 adds over v1 (all in `contract/src/lib.rs`):
 | Demo reliability | FIXED AND VERIFIED | The console reads live and degrades to stale/"no data"; a backup procedure is in `docs/JUDGE_DEMO.md`. | Honest read states tested (`tests/console.test.js`). |
 | Documentation | FIXED AND VERIFIED | `README`, `SUBMISSION`, `docs/*`, `proof/README`, `agent/README`. | Counts corrected to the real values. |
 | Submission accuracy | FIXED AND VERIFIED | The human-path section now states the programmatic-vs-extension distinction plainly. | This register; `SUBMISSION.md` §6. |
-| Judge-facing evidence | FIXED AND VERIFIED | `docs/JUDGE_DEMO.md` (script, checklist, backup) + `proof/` + explorer links. | This mission. |
+| Judge-facing evidence | FIXED AND VERIFIED | `docs/JUDGE_DEMO.md` (script, checklist, backup) + `proof/` + explorer links + the 2:57 narrated video `video/out/overcover-demo.mp4`. | This mission; video reproduced by `node video/capture.mjs && node video/build.mjs`. |
+
+---
+
+## Judge-demo video (2026-11-13, PR #37, merged `7f95f992`)
+
+A **2:57 narrated walkthrough** of the shipped product, recorded against the **live production
+console** and committed as `video/out/overcover-demo.mp4` (H.264/AAC, 1600×900). Every frame is the
+real console in a real Chromium; every number on screen is read from the contract by the page.
+Nothing is staged.
+
+- **Reproducible.** `video/capture.mjs` records one clip per scene and derives each clip's length
+  from its own narration — it synthesises the line to speech, measures it, and holds the clip for
+  that length plus a small pad, so picture and voice cannot drift. `video/build.mjs` renders the
+  on-brand title cards and lower-thirds (the console's own palette and type roles), composites them,
+  concatenates the scenes, lays the narration underneath, and muxes MP4 + WebM.
+- **Honest about its limits.** The wallet scene shows the real **approval surface**; the signature a
+  headless browser cannot make is the **RECORDED** human purchase already in the register (hash
+  `87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i`), and the narration says so. No transaction is
+  simulated and no policy is fabricated.
+- **Defect found and fixed during production.** Scene 4 ("the contract quotes the premium") scrolled
+  to the products heading instead of the quote card, so the lower-third title did not match the
+  frame. Fixed the scroll target to the quote control and re-captured; OCR of the rebuilt frame
+  confirms the live quote panel (5.00% premium rate, capacity, read-only notice) is on screen under
+  the correct title.
+- **Verified.** OCR of extracted frames confirms real content (real policies #1/#2, `HARDENED BUILD`
+  badge, contract id `contract.ovc-v3-ctl-2f6c4c.testnet`) and the lower-third titles. Output is
+  177.2 s; audio peaks at −2.7 dB (limiter applied). Raw captures and intermediates are git-ignored.
+- Docs updated: `README.md` and `docs/JUDGE_DEMO.md` link the video; `video/README.md` documents how
+  to run it and the honesty rules.
 
 ---
 

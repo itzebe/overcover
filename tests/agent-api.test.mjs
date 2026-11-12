@@ -74,24 +74,24 @@ test("a malformed JSON body is rejected with 400", async () => {
 });
 
 test("an unknown field is rejected with 400 (no silent acceptance)", async () => {
-  const r = await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "rain-lagos", payoutYocto: "1", obsDateSec: 1, evil: true }) });
+  const r = await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "heat-lagos", payoutYocto: "1", obsDateSec: 1, evil: true }) });
   assert.equal(r.status, 400);
   assert.match((await r.json()).message, /unknown field/);
 });
 
 test("a non-integer payout is rejected with 400", async () => {
-  const r = await fetch(BASE + "/api/v1/agent/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "rain-lagos", payoutYocto: "1e5" }) });
+  const r = await fetch(BASE + "/api/v1/agent/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "heat-lagos", payoutYocto: "1e5" }) });
   assert.equal(r.status, 400);
 });
 
 test("a non-integer observation date is rejected with 400", async () => {
-  const r = await fetch(BASE + "/api/v1/agent/decide", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "rain-lagos", payoutYocto: "1", obsDateSec: "soon" }) });
+  const r = await fetch(BASE + "/api/v1/agent/decide", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "heat-lagos", payoutYocto: "1", obsDateSec: "soon" }) });
   assert.equal(r.status, 400);
 });
 
 test("a disabled agent refuses a buy with 403 and reasons, before the network", async () => {
   await fetch(BASE + "/api/v1/agent/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: false }) });
-  const r = await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "rain-lagos", payoutYocto: "100000000000000000000000", obsDateSec: Math.floor(Date.now() / 1000) + 7200 }) });
+  const r = await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "heat-lagos", payoutYocto: "100000000000000000000000", obsDateSec: Math.floor(Date.now() / 1000) + 7200 }) });
   assert.equal(r.status, 403);
   const j = await r.json();
   assert.equal(j.error, "denied");
@@ -133,7 +133,7 @@ function countKind(kind) {
   } catch { return 0; }
 }
 const buyBody = (idempotencyKey) => JSON.stringify({
-  productId: "rain-lagos",
+  productId: "heat-lagos",
   payoutYocto: "100000000000000000000000",
   obsDateSec: Math.floor(Date.now() / 1000) + 7200,
   idempotencyKey,

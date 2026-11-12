@@ -103,12 +103,26 @@ test("capacity_left is max_total_coverage minus reserved, never negative", () =>
   }
 });
 
-test("every product's trigger statement states the contract's at-or-above rule", () => {
+test("every product's trigger statement states the contract's own direction and unit", () => {
   for (const p of feed.products) {
-    assert.equal(p.trigger.direction, "at-or-above");
-    assert.match(p.trigger.statement, /at or above/);
-    assert.equal(p.trigger.threshold_mm, (Number(p.trigger.threshold_tenths) / 10).toFixed(1));
+    assert.ok(["at-or-above", "at-or-below"].includes(p.trigger.direction), `${p.id} direction`);
+    // The statement must name the unit the metric actually uses — a temperature
+    // product must not be described as rainfall (the pre-fix defect).
+    assert.match(p.trigger.statement, new RegExp(p.metric.name));
+    assert.match(p.trigger.statement, new RegExp(p.trigger.unit.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.equal(p.trigger.threshold_value, (Number(p.trigger.threshold_tenths) / 10).toFixed(1));
+    assert.equal(p.trigger.unit, p.metric.unit);
   }
+});
+
+test("the feed never describes a temperature product as rainfall", () => {
+  const heat = feed.products.find((p) => p.id === "heat-lagos");
+  assert.ok(heat, "heat-lagos must be in the feed");
+  assert.equal(heat.metric.name, "temperature");
+  assert.equal(heat.metric.unit, "degC");
+  assert.doesNotMatch(heat.trigger.statement, /rainfall|mm/);
+  assert.match(heat.trigger.statement, /temperature/);
+  assert.match(heat.trigger.statement, /degC/);
 });
 
 test("classification: a machine id is a demo fixture, a ceiling trigger is a broken definition, neither is sellable", () => {
@@ -124,6 +138,12 @@ test("classification: a machine id is a demo fixture, a ceiling trigger is a bro
   assert.equal(shapeProduct(ceiling).kind, "broken-definition");
   assert.equal(shapeProduct(real).kind, "offering");
   assert.equal(shapeProduct(ceiling).trigger.at_plausibility_ceiling, true);
+
+  // The ceiling is the metric's own max_value, not a rainfall constant.
+  const heatMetric = { id: "heat", category: "temperature", unit: "degC/10", max_value: 700, direction: "Above" };
+  assert.equal(classify({ ...real, threshold_tenths: 700 }, heatMetric).atCeiling, true, "a threshold at the metric ceiling is broken");
+  assert.equal(classify({ ...real, threshold_tenths: 699 }, heatMetric).atCeiling, false);
+  assert.equal(classify({ ...real, threshold_tenths: 5000 }, heatMetric).sellable, false, "over the metric ceiling is not sellable");
 });
 
 test("the shipped feed marks exactly the ceiling-trigger product as a broken definition", () => {

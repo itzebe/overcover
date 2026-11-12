@@ -1,9 +1,9 @@
 {
-  "contract": "contract.attestor-overcover.testnet",
+  "contract": "contract.ovc-v3-ctl-2f6c4c.testnet",
   "product": {
-    "id": "p-1794315395272-3",
+    "id": "heat-lagos",
     "city": "lagos",
-    "max_payout_yocto": "1000000000000000000000000"
+    "max_payout_yocto": "300000000000000000000000"
   },
   "engine": {
     "maxPayoutPerPolicy_yocto": "1000000000000000000000000",
@@ -14,10 +14,9 @@
     "proposal": "payout = 5x product max",
     "allow": false,
     "reasons": [
-      "premium 250000000000000000000000 exceeds maxPremiumPerPolicy 50000000000000000000000",
-      "payout 5000000000000000000000000 exceeds maxPayoutPerPolicy 1000000000000000000000000",
-      "premium 250000000000000000000000 would exceed dailyPremiumBudget (spent 0 of 200000000000000000000000 in 24h)",
-      "payout 5000000000000000000000000 outside product bounds 50000000000000000000000..1000000000000000000000000"
+      "premium 75000000000000000000000 exceeds maxPremiumPerPolicy 50000000000000000000000",
+      "payout 1500000000000000000000000 exceeds maxPayoutPerPolicy 1000000000000000000000000",
+      "payout 1500000000000000000000000 outside product bounds 100000000000000000000000..300000000000000000000000"
     ]
   },
   "permitted_case": {
@@ -32,20 +31,12 @@
   },
   "real_onchain_agent_purchases": [
     {
-      "productId": "rain-lagos",
-      "payoutYocto": "1000000000000000000000000",
-      "premiumYocto": "50000000000000000000000",
-      "tx": "7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ",
-      "policyId": 11,
-      "explorer": "https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ"
-    },
-    {
-      "productId": "rain-bergen-dry",
-      "payoutYocto": "500000000000000000000000",
-      "premiumYocto": "25000000000000000000000",
-      "tx": "26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And",
-      "policyId": 12,
-      "explorer": "https://testnet.nearblocks.io/txns/26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And"
+      "productId": "heat-lagos",
+      "payoutYocto": "100000000000000000000000",
+      "premiumYocto": "5000000000000000000000",
+      "tx": "45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn",
+      "policyId": 3,
+      "explorer": "https://testnet.nearblocks.io/txns/45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn"
     }
   ]
 }

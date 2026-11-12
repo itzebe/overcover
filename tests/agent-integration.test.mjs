@@ -66,7 +66,7 @@ before(async () => {
       OVERCOVER_AGENT_PORT: String(PORT),
       OVERCOVER_AGENT_HOST: "127.0.0.1",
       OVERCOVER_AGENT_DRY_RUN: "1",
-      OVERCOVER_AGENT_LIMITS: JSON.stringify({ maxPremiumPerPolicy: "100000000000000000000000", maxPayoutPerPolicy: "2000000000000000000000000", dailyPremiumBudget: "1000000000000000000000000", dailyPolicyLimit: 3, cooldownSec: 0, allowedProducts: ["rain-lagos"] }),
+      OVERCOVER_AGENT_LIMITS: JSON.stringify({ maxPremiumPerPolicy: "100000000000000000000000", maxPayoutPerPolicy: "2000000000000000000000000", dailyPremiumBudget: "1000000000000000000000000", dailyPolicyLimit: 3, cooldownSec: 0, allowedProducts: ["heat-lagos"] }),
       OVERCOVER_AGENT_AUDIT: AUDIT,
     },
     stdio: ["ignore", "ignore", "inherit"],
@@ -165,7 +165,7 @@ test("a purchase for a product outside the allow-list is refused", async () => {
   const c = new AgentClient({ baseUrl: BASE });
   const obsDateSec = Math.floor(Date.now() / 1000) + 7200;
   await assert.rejects(
-    () => c.buy({ productId: "rain-bergen-dry", payoutYocto: "1000000000000000000000000", obsDateSec, idempotencyKey: `list-${Date.now()}` }),
+    () => c.buy({ productId: "heat-lagos-factory", payoutYocto: "1000000000000000000000000", obsDateSec, idempotencyKey: `list-${Date.now()}` }),
     (e) => { assert.equal(e.status, 403); assert.match(e.reasons.join(" "), /allowedProducts|not in/); return true; },
   );
 });
@@ -186,7 +186,7 @@ test("replaying an idempotency key returns the original result and does not buy 
 test("a malformed request is rejected with 400, not silently accepted", async () => {
   const c = new AgentClient({ baseUrl: BASE });
   await assert.rejects(
-    () => c.buy({ productId: "rain-lagos", payoutYocto: "not-a-number", obsDateSec: Math.floor(Date.now() / 1000) + 7200 }),
+    () => c.buy({ productId: "heat-lagos", payoutYocto: "not-a-number", obsDateSec: Math.floor(Date.now() / 1000) + 7200 }),
     (e) => { assert.equal(e.status, 400); return true; },
   );
 });

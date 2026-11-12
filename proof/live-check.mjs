@@ -23,8 +23,8 @@ for (const width of WIDTHS) {
   await page.waitForTimeout(3000);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   const title = await page.title();
-  const hasContract = await page.evaluate(() => document.body.innerText.includes("contract.attestor-overcover.testnet"));
-  const capitalShown = await page.evaluate(() => /14\.0\d+ NEAR|14\.05/.test(document.body.innerText));
+  const hasContract = await page.evaluate(() => document.body.innerText.includes("contract.ovc-v3-ctl-2f6c4c.testnet"));
+  const capitalShown = await page.evaluate(() => /1\.4\d+ NEAR|1\.425/.test(document.body.innerText));
   await page.screenshot({ path: new URL(`live-${width}.png`, OUT).pathname, fullPage: false });
   const ok = errors.length === 0 && overflow <= 0;
   if (!ok) failed = true;

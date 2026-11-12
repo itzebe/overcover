@@ -5,7 +5,7 @@ import { normalizeLimits, evaluate, premiumSpentWithin, policiesWithin, DEFAULT_
 
 const NEAR = 10n ** 24n;
 const product = {
-  id: "rain-lagos",
+  id: "heat-lagos",
   city: "lagos",
   min_payout: (NEAR / 100n).toString(), // 0.01
   max_payout: (NEAR * 2n).toString(),
@@ -23,7 +23,7 @@ function baseCtx(overrides = {}) {
 
 function proposal(over = {}) {
   return {
-    productId: "rain-lagos",
+    productId: "heat-lagos",
     city: "lagos",
     payoutYocto: (NEAR / 2n).toString(),
     premiumYocto: (NEAR / 100n).toString(),

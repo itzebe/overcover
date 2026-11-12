@@ -18,7 +18,7 @@ import { parseBigIntJson } from "../agent/json.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-export const CONTRACT = process.env.OVERCOVER_CONTRACT || "contract.attestor-overcover.testnet";
+export const CONTRACT = process.env.OVERCOVER_CONTRACT || "contract.ovc-v3-ctl-2f6c4c.testnet";
 export const NETWORK = "testnet";
 export const PLAUSIBLE_CEILING_TENTHS = 5000; // MAX_RAINFALL_TENTHS in the contract
 const MACHINE_ID = /^p-\d+-\d+$/; // demo fixtures from the recorded cycle
@@ -63,40 +63,55 @@ async function view(method, args = {}) {
 }
 
 const near = (yocto) => (Number(BigInt(yocto)) / 1e24).toFixed(4);
-const mm = (tenths) => (Number(tenths) / 10).toFixed(1);
 const premiumFor = (payoutYocto, bp) => {
   const num = BigInt(payoutYocto) * BigInt(bp);
   return ((num + 9999n) / 10000n).toString(); // ceil(payout * bp / 10000)
 };
 
-export function classify(product) {
+// A metric's stored `unit` carries the contract's internal scale (e.g. "degC/10");
+// the public unit is that with the "/10" removed. Legacy v1 products carry no
+// metric_id, so they fall back to the rainfall semantics v1 actually enforces.
+const publicUnit = (unit) => String(unit || "mm/10").replace(/\/\s*10$/, "");
+const scaled = (tenths) => (Number(tenths) / 10).toFixed(1);
+const directionPhrase = (dir) => (String(dir).toLowerCase() === "below" ? "at or below" : "at or above");
+
+export function classify(product, metric) {
   const named = !MACHINE_ID.test(product.id);
-  const atCeiling = Number(product.threshold_tenths) >= PLAUSIBLE_CEILING_TENTHS;
+  // A product pinned at its metric's own ceiling can only ever pay on one reading
+  // (report_observation rejects any value above the ceiling, and the trigger is
+  // at-or-above), so it is a broken definition. The ceiling is the metric's, not a
+  // rainfall constant: legacy v1 products have no metric and use MAX_RAINFALL_TENTHS.
+  const ceiling = metric ? Number(metric.max_value) : PLAUSIBLE_CEILING_TENTHS;
+  const atCeiling = Number(product.threshold_tenths) >= ceiling;
   const sellable = named && !atCeiling && product.active !== false;
   return { named, atCeiling, sellable };
 }
 
-export function shapeProduct(p, config) {
-  const { named, atCeiling, sellable } = classify(p);
+export function shapeProduct(p, config, metric) {
+  const { named, atCeiling, sellable } = classify(p, metric);
   // Force every money field to an exact decimal string. parseBigIntJson returns
   // a plain number for values <= 2^53 (e.g. reserved: 0), so without this the
   // feed would mix strings and numbers and a consumer could round or crash.
   const money = (v) => BigInt(v).toString();
   const maxPayout = money(p.max_payout);
   const capacityLeft = (BigInt(p.max_total_coverage) - BigInt(p.reserved)).toString();
+  const unit = publicUnit(metric && metric.unit);
+  const name = (metric && metric.category) || "rainfall";
+  const direction = directionPhrase(metric && metric.direction);
   return {
     id: p.id,
     named,
     sellable,
     kind: sellable ? "offering" : atCeiling ? "broken-definition" : "demo-fixture",
     status: sellable ? "available" : "not-offered",
-    metric: { name: "rainfall", unit: "mm", city: p.city },
+    metric: { name, unit, city: p.city, metric_id: p.metric_id || null },
     trigger: {
-      direction: "at-or-above",
+      direction: direction === "at or below" ? "at-or-below" : "at-or-above",
       threshold_tenths: p.threshold_tenths,
-      threshold_mm: mm(p.threshold_tenths),
+      threshold_value: scaled(p.threshold_tenths),
+      unit,
       at_plausibility_ceiling: atCeiling,
-      statement: `Pays if ${p.city} rainfall is at or above ${mm(p.threshold_tenths)} mm on the observation date.`,
+      statement: `Pays if ${p.city} ${name} is ${direction} ${scaled(p.threshold_tenths)} ${unit} on the observation date.`,
     },
     premium: {
       basis_points: p.premium_bp,
@@ -137,13 +152,15 @@ export function shapeProduct(p, config) {
 }
 
 export async function buildFeed() {
-  const [products, config, pool, observations] = await Promise.all([
+  const [products, config, pool, observations, metrics] = await Promise.all([
     view("list_products"),
     view("get_config"),
     view("get_pool"),
     view("list_observations"),
+    view("list_metrics").catch(() => []), // v1 has no metrics; legacy products fall back
   ]);
-  const shaped = products.map((p) => shapeProduct(p, config));
+  const byId = new Map((metrics || []).map((m) => [m.id, m]));
+  const shaped = products.map((p) => shapeProduct(p, config, p.metric_id ? byId.get(p.metric_id) : undefined));
   const money = (v) => BigInt(v).toString();
   return {
     schema: "https://overcover.vercel.app/products.schema.json",

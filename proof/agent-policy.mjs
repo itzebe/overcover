@@ -18,7 +18,7 @@ import fs from "node:fs";
 import { evaluate, DEFAULT_LIMITS } from "../agent/limits.mjs";
 import { parseBigIntJson } from "../agent/json.mjs";
 
-const CONTRACT = "contract.attestor-overcover.testnet";
+const CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
 const RPC = "https://test.rpc.fastnear.com";
 
 async function view(method, args = {}) {
@@ -66,7 +66,9 @@ let shippedPath = null;
   shippedPath = { blocked_allow: dBlocked.allow, permitted_allow: dOk.allow, agrees_with_engine: dBlocked.allow === over.allow && dOk.allow === within.allow };
 }
 
-const purchases = JSON.parse(fs.readFileSync(new URL("./agent-purchases.json", import.meta.url), "utf8"));
+// The agent's real purchases on this contract, from the committed evidence file
+// (proof/agent-purchases-v3.json). verify.mjs re-derives each one from the chain.
+const purchases = JSON.parse(fs.readFileSync(new URL("./agent-purchases-v3.json", import.meta.url), "utf8"));
 const buys = purchases.purchases
   .map((e) => ({ productId: e.productId, payoutYocto: e.payoutYocto, premiumYocto: e.premiumYocto, tx: e.hash, policyId: e.policyId, explorer: `https://testnet.nearblocks.io/txns/${e.hash}` }));
 

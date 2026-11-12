@@ -80,7 +80,7 @@ test("the spec declares the money rule and the dry-run/denied semantics", () => 
 test("a documented 403 denial is exactly what the service returns", async () => {
   const res = await fetch(BASE + "/api/v1/agent/buy", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ productId: "rain-lagos", payoutYocto: "1", obsDateSec: Math.floor(Date.now() / 1000) + 7200, idempotencyKey: "openapi-deny" }),
+    body: JSON.stringify({ productId: "heat-lagos", payoutYocto: "1", obsDateSec: Math.floor(Date.now() / 1000) + 7200, idempotencyKey: "openapi-deny" }),
   });
   // payout "1" is below the product minimum, so the policy refuses it.
   assert.equal(res.status, 403);

@@ -19,7 +19,7 @@ import { KeyPair } from "near-api-js";
 import { observe } from "./adapters.js";
 import { readingMessageV3 } from "./attestor.js";
 
-const CONTRACT = process.env.OVERCOVER_CONTRACT || "contract.attestor-overcover.testnet";
+const CONTRACT = process.env.OVERCOVER_CONTRACT || "contract.ovc-v3-ctl-2f6c4c.testnet";
 /// How long the operator asserts its reading stays valid (default 6 h). Must be
 /// inside the contract's 7-day cap and past the challenge window at settle time.
 const READING_VALIDITY_SEC = Number(process.env.OVERCOVER_READING_VALIDITY ?? 6 * 3600);

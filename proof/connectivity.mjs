@@ -34,7 +34,7 @@ const UI = path.join(root, "ui");
 const LIVE = process.env.LIVE_URL || "";
 const EXEC = process.env.CHROME_PATH || "/home/openhands/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome";
 const RPC = "https://test.rpc.fastnear.com";
-const CONTRACT = "contract.attestor-overcover.testnet";
+const CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
 const STATIC_PORT = 8600 + Math.floor(Math.random() * 90);
 const AGENT_PORT = 8500 + Math.floor(Math.random() * 90);
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".txt": "text/plain", ".xml": "application/xml" };
@@ -92,6 +92,13 @@ check("10 buy_cover is the only signing capability",
     /transactions\.functionCall\(\s*"buy_cover"/.test(agentJs) &&
     !/functionCall\(\s*"(?!buy_cover)/.test(agentJs),
   "the wallet scope is buy_cover alone, bound to the read contract, and the agent's only function call is buy_cover");
+
+check("13 the page only signs against a verified hardened contract",
+  /TRUSTED\[HARDENED_CONTRACT\]\s*=/.test(html) &&
+    /var DEFAULT_CONTRACT = HARDENED_CONTRACT/.test(html) &&
+    /trust\.state !== "hardened"/.test(html) &&
+    /HARDENED_CONTRACT = "contract\.ovc-v3-ctl-2f6c4c\.testnet"/.test(html),
+  "the console has an (address, module) allowlist, defaults to the hardened address, and refuses to sign unless the read contract is verified hardened");
 
 check("11 a visitor cannot buy without a wallet authorization",
   /window\.OvercoverWallet/.test(html) && /signAndSend/.test(walletJs) &&
@@ -151,13 +158,13 @@ if (started) {
   const base = `http://127.0.0.1:${AGENT_PORT}`;
   const big = await fetch(base + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "x".repeat(20 * 1024) }) });
   const badJson = await fetch(base + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{not json" });
-  const unknown = await fetch(base + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "rain-lagos", payoutYocto: "1", obsDateSec: 1, evil: true }) });
+  const unknown = await fetch(base + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "heat-lagos", payoutYocto: "1", obsDateSec: 1, evil: true }) });
   check("5  invalid and oversized requests are rejected",
     big.status === 413 && badJson.status === 400 && unknown.status === 400,
     `oversized=${big.status} malformed=${badJson.status} unknown-field=${unknown.status}`);
 
   // A buy far above the limits must be refused with reasons, before any network.
-  const denied = await fetch(base + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "rain-lagos", payoutYocto: (10n ** 30n).toString(), obsDateSec: Math.floor(Date.now() / 1000) + 7200 }) });
+  const denied = await fetch(base + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: "heat-lagos", payoutYocto: (10n ** 30n).toString(), obsDateSec: Math.floor(Date.now() / 1000) + 7200 }) });
   const dj = await denied.json();
   check("9  the agent's spending limits are enforced",
     denied.status === 403 && dj.error === "denied" && Array.isArray(dj.reasons) && dj.reasons.length > 0,

@@ -290,7 +290,7 @@ test("the console never embeds a private key or a secret", () => {
 
 // Real RPC integration: the deployed contract must decode through the same path.
 test("live RPC get_pool decodes to a solvency-checked pool", { timeout: 30000 }, async (t) => {
-  const contract = "contract.attestor-overcover.testnet";
+  const contract = "contract.ovc-v3-ctl-2f6c4c.testnet";
   let payload;
   try {
     const res = await fetch("https://test.rpc.fastnear.com", {
@@ -405,8 +405,8 @@ test("the first screen answers what/risk/who/how/trust, not chain metrics", () =
   assert.ok(start !== -1 && end > start, "hero markup must be found");
   const hero = HTML.slice(start, end);
   assert.match(hero, /Insurance for businesses that[\s\S]*cannot afford to wait/, "hero must state the product");
-  assert.match(hero, /rainfall reading meeting a set trigger, in a named city, on a named date/, "hero must name the covered event");
-  assert.match(hero, /at or above/, "the hero must state the trigger direction the contract enforces");
+  assert.match(hero, /public index reading[\s\S]*meeting a set trigger, in a named city, on a named date/, "hero must name the covered event");
+  assert.match(hero, /Each product states its own trigger and direction/, "the hero must not hardcode one index or direction");
   assert.match(hero, /no adjuster, no queue/, "hero must say how protection is received");
   // The chain belongs to the proof, not the promise.
   assert.ok(!/blockchain|smart contract|on-chain/i.test(hero), "the hero must not lead with blockchain jargon");
@@ -709,7 +709,8 @@ test("llms.txt and llms-full.txt exist and state the real product", () => {
   const short = fs.readFileSync(path.join(root, "ui", "llms.txt"), "utf8");
   const full = fs.readFileSync(path.join(root, "ui", "llms-full.txt"), "utf8");
   for (const doc of [short, full]) {
-    assert.match(doc, /contract\.attestor-overcover\.testnet/);
+    assert.match(doc, /contract\.ovc-v3-ctl-2f6c4c\.testnet/, "the hardened contract must be the default named in the docs");
+    assert.match(doc, /contract\.attestor-overcover\.testnet/, "the legacy address must still be disclosed, labelled legacy");
     assert.match(doc, /NEAR testnet/);
     assert.match(doc, /HERE Wallet/);
   }

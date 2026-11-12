@@ -25,14 +25,18 @@ const HTML = fs.readFileSync(path.join(root, "ui", "index.html"), "utf8");
 const SCRIPT = HTML.slice(HTML.indexOf("<script>") + 8, HTML.lastIndexOf("</script>"));
 const FIXTURE = JSON.parse(fs.readFileSync(path.join(root, "tests", "fixtures", "contract-snapshot.json"), "utf8"));
 
-const CONTRACT = "contract.attestor-overcover.testnet";
+const CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";       // hardened, the default
+const LEGACY = "contract.attestor-overcover.testnet";       // legacy, read-only
+const HARDENED_HASH = "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL";
+const LEGACY_HASH = "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R";
 const ONE_NEAR = 10n ** 24n;
 
 // ------------------------------------------------------------------ DOM shim
 
 function makeElement(id) {
   const listeners = {};
-  return {
+  const kids = new Map();
+  const el = {
     id,
     value: "",
     textContent: "",
@@ -50,7 +54,9 @@ function makeElement(id) {
     getAttribute() { return null; },
     hasAttribute() { return false; },
     removeAttribute() {},
-    querySelector() { return null; },
+    // The v2/v3 narrative upgrade addresses child nodes by selector; return a
+    // stable stub per selector so the page can set their text without a real DOM.
+    querySelector(sel) { if (!kids.has(sel)) kids.set(sel, makeElement(id + " " + sel)); return kids.get(sel); },
     querySelectorAll() { return []; },
     appendChild() {},
     removeChild() {},
@@ -59,13 +65,17 @@ function makeElement(id) {
     showModal() {},
     close() {},
   };
+  return el;
 }
 
 /** Build a fresh DOM + global environment, run the page script inside a vm
  *  context (so Node's getter-only globals are not touched), and return a handle
- *  with the elements and the mock wallet for assertions. */
-function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash }) {
+ *  with the elements and the mock wallet for assertions. `search` lets a test
+ *  exercise the ?contract= selection; `codeHash` overrides the deployed module
+ *  the stubbed RPC reports (so trust states can be driven). */
+function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash, search = "" }) {
   const elements = new Map();
+  let viewAccountCalls = 0;
   const getEl = (id) => {
     if (!elements.has(id)) elements.set(id, makeElement(id));
     return elements.get(id);
@@ -86,7 +96,7 @@ function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash }) {
 
   const sandbox = {
     document,
-    location: { search: "" },
+    location: { search },
     navigator: {},
     OvercoverWallet: wallet,
     OvercoverPolicy: null,
@@ -99,12 +109,15 @@ function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash }) {
     btoa: (s) => Buffer.from(s, "binary").toString("base64"),
     // Serve the frozen contract snapshot instead of a network RPC. The page's
     // view() sends call_function; accountState() sends view_account. A quote call
-    // carries args, so it is matched against the frozen quotes map.
+    // carries args, so it is matched against the frozen quotes map. `codeHash`
+    // may be a function of the view_account call count, so a test can simulate a
+    // module that changes between page load and signing.
     fetch: async (_url, opts) => {
       const body = opts && opts.body ? JSON.parse(opts.body) : {};
       const rt = body.params && body.params.request_type;
       if (rt === "view_account") {
-        return { ok: true, json: async () => ({ result: { code_hash: codeHash, amount: FIXTURE.view_account.amount } }) };
+        const hash = typeof codeHash === "function" ? codeHash(viewAccountCalls++) : codeHash;
+        return { ok: true, json: async () => ({ result: { code_hash: hash, amount: FIXTURE.view_account.amount } }) };
       }
       const method = body.params.method_name;
       let text;
@@ -137,7 +150,6 @@ function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith 
   return {
     calls,
     NETWORK_ID: "testnet",
-    CONTRACT_ID: CONTRACT,
     DEFAULT_CONTRACT_ID: CONTRACT,
     configuredContract: CONTRACT,
     configure(id) { this.configuredContract = id; return id; },
@@ -145,7 +157,7 @@ function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith 
     async setup() { return this; },
     status() {
       return {
-        ready: true, networkId: "testnet", contractId: CONTRACT,
+        ready: true, networkId: "testnet", contractId: this.configuredContract,
         connected: state.connected, accountId: state.accountId, networkMismatch: false,
         available: [
           { id: "here-wallet", name: "HERE Wallet", type: "injected", downloadUrl: null, present: true, extensionOnly: false },
@@ -175,7 +187,7 @@ async function settle(page, timeoutMs = 2000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 5));
-    if (page.el("q-product").innerHTML.includes("rain-lagos")) return;
+    if (page.el("q-product").innerHTML.includes("heat-lagos")) return;
   }
   throw new Error("the page never rendered the product catalogue");
 }
@@ -205,13 +217,13 @@ test("the page builds and hands the wallet exactly one buy_cover with the contra
   assert.equal(a.params.methodName, "buy_cover");
 
   // The payout string is the product's own max, unrounded (u128 precision).
-  assert.equal(a.params.args.product_id, "rain-lagos");
-  assert.equal(a.params.args.payout, (1n * ONE_NEAR).toString());
+  assert.equal(a.params.args.product_id, "heat-lagos");
+  assert.equal(a.params.args.payout, "300000000000000000000000");
   assert.equal(a.params.args.beneficiary, null);
   assert.ok(Number.isInteger(a.params.args.obs_date), "obs_date must be an integer unix second");
 
   // The deposit is the contract's own quote, not a client-side recomputation.
-  assert.equal(a.params.deposit, "50000000000000000000000", "deposit must equal the contract quote (0.05 NEAR)");
+  assert.equal(a.params.deposit, "15000000000000000000000", "deposit must equal the contract quote (0.015 NEAR)");
 
   // The observation date must clear the page's own future-date floor.
   const nowSec = Math.floor(Date.now() / 1000);
@@ -306,8 +318,9 @@ test("the page reads the premium from the contract, not from the product's basis
   const wallet = mockWallet({ result: okResult("HASH-PREM") });
   const page = bootPage({ wallet });
   await settle(page);
-  // The quote panel shows the contract's own premium (0.0500 NEAR).
-  assert.match(page.el("q-premium").textContent, /0\.0500 NEAR/);
+  // The quote panel shows the contract's own premium (0.0150 NEAR for a 300 NEAR
+  // payout at 500 bp), matching the deployed quote exactly.
+  assert.match(page.el("q-premium").textContent, /0\.0150 NEAR/);
 });
 
 // ---- contract/version honesty: the page must state the build it actually reads. ----
@@ -320,28 +333,82 @@ test("the page binds the wallet to the contract it reads, so a signature can nev
     "the console must configure the wallet with the contract id it reads");
 });
 
-test("the legacy build is labelled as the original, vulnerable module", async () => {
+test("the default destination is the hardened contract, and buying is enabled on it", async () => {
   const wallet = mockWallet({ result: okResult("H") });
-  const page = bootPage({ wallet }); // fixture code_hash == the legacy module
+  const page = bootPage({ wallet }); // fixture == the hardened module
   await settle(page);
-  assert.equal(page.el("sec-banner").hidden, false, "the security banner must be shown");
-  assert.match(page.el("sec-tag").textContent, /Legacy build/);
+  await wallet.connect();
+  assert.equal(page.el("sec-tag").textContent, "Hardened build");
+  assert.equal(page.el("b-buy").disabled, false, "buying must be enabled on a verified hardened build");
+  assert.match(page.el("b-dest").innerHTML, new RegExp(CONTRACT.replace(/\./g, "\\.")),
+    "the buy panel must state the exact destination address");
+});
+
+test("the legacy build is disclosed and its buy button is disabled", async () => {
+  const wallet = mockWallet({ result: okResult("H") });
+  const page = bootPage({ wallet, search: "?contract=" + LEGACY, codeHash: LEGACY_HASH });
+  await settle(page);
+  await wallet.connect();
+  assert.equal(page.el("sec-tag").textContent, "Legacy build");
   assert.match(page.el("sec-text").innerHTML, /unauthenticated/);
-  assert.match(page.el("sec-text").innerHTML, /contract\.ovc-v3-ctl-2f6c4c\.testnet/);
+  assert.equal(page.el("b-buy").disabled, true, "no purchase may be offered on the legacy address");
+  assert.match(page.el("b-hint").textContent, /legacy address/i);
 });
 
-test("a hardened module is labelled as hardened, from its own code hash", async () => {
+test("a legacy address reporting an unexpected module is refused, not trusted by its name", async () => {
+  // Same address, but the deployed module is not the approved one.
   const wallet = mockWallet({ result: okResult("H") });
-  const page = bootPage({ wallet, codeHash: "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL" });
+  const page = bootPage({ wallet, search: "?contract=" + LEGACY, codeHash: "SomeUnknownHash1111111111111111111111111" });
   await settle(page);
-  assert.match(page.el("sec-tag").textContent, /Hardened build/);
-  assert.match(page.el("sec-text").innerHTML, /migrate\(\)/);
+  assert.equal(page.el("sec-tag").textContent, "Untrusted build");
+  assert.equal(page.el("b-buy").disabled, true);
 });
 
-test("an unknown module is never presented as hardened", async () => {
+test("an unknown contract address is untrusted and cannot be signed against", async () => {
   const wallet = mockWallet({ result: okResult("H") });
-  const page = bootPage({ wallet, codeHash: "SomeUnknownHashThatIsNotOurs111111111111111" });
+  const page = bootPage({ wallet, search: "?contract=evil.example.testnet", codeHash: HARDENED_HASH });
   await settle(page);
-  assert.match(page.el("sec-tag").textContent, /Unrecognised build/);
-  assert.doesNotMatch(page.el("sec-text").innerHTML, /hardened module/);
+  assert.equal(page.el("sec-tag").textContent, "Untrusted build");
+  assert.match(page.el("sec-text").innerHTML, /not<\/b> an approved|not an approved/);
+  assert.equal(page.el("b-buy").disabled, true, "an unapproved address must never be signable");
+});
+
+test("a malformed ?contract= is ignored and the hardened default stands", async () => {
+  const wallet = mockWallet({ result: okResult("H") });
+  const page = bootPage({ wallet, search: "?contract=NOT%20A%20VALID%20ACCOUNT!!" });
+  await settle(page);
+  assert.equal(wallet.configuredContract, CONTRACT, "a malformed contract id must not steer the read or the signature");
+  assert.equal(page.el("sec-tag").textContent, "Hardened build");
+});
+
+// ---- adversarial: the destination is re-verified immediately before signing. ----
+
+test("doBuy re-verifies the module and refuses if it changed before signing", async () => {
+  // The first read (page load) reports the hardened module, so the button is
+  // enabled. The second read (immediately before signing) reports a different
+  // module — simulating a contract substituted between load and signature.
+  let calls = 0;
+  const wallet = mockWallet({ result: okResult("HASH-SHOULD-NOT-HAPPEN") });
+  const page = bootPage({ wallet, codeHash: () => (calls++ === 0 ? HARDENED_HASH : "SomeOtherModule1111111111111111111111111111") });
+  await settle(page);
+  await wallet.connect();
+  assert.equal(page.el("b-buy").disabled, false, "the button is enabled from the first read");
+  page.el("b-buy").dispatch("click");
+  await wait(60);
+  assert.equal(wallet.calls.length, 0, "no transaction may be signed once the module no longer matches");
+  assert.match(page.el("b-status").textContent, /refusing to sign|not the verified hardened build/i);
+});
+
+test("doBuy signs exactly one buy_cover and never an owner-only method", async () => {
+  const wallet = mockWallet({ result: okResult("HASH-ONE") });
+  const page = bootPage({ wallet });
+  await settle(page);
+  await wallet.connect();
+  page.el("b-buy").dispatch("click");
+  await wait(60);
+  assert.equal(wallet.calls.length, 1);
+  const methods = wallet.calls[0].actions.map((x) => x.params.methodName);
+  assert.equal(methods.length, 1);
+  assert.equal(methods[0], "buy_cover", "the console may sign only buy_cover");
+  assert.equal(wallet.calls[0].receiverId, CONTRACT);
 });

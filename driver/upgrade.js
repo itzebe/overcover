@@ -65,7 +65,7 @@ async function main() {
   try { ids = loadIdentities(); } catch { ids = null; }
   if (!ids && !PLAN) throw new Error("missing keys/identities.json; run: node driver/keys.js");
 
-  const contractId = ids?.contract?.accountId || process.env.OVERCOVER_CONTRACT || "contract.attestor-overcover.testnet";
+  const contractId = ids?.contract?.accountId || process.env.OVERCOVER_CONTRACT || "contract.ovc-v3-ctl-2f6c4c.testnet";
   const wasm = fs.readFileSync(WASM);
   const { createHash } = await import("node:crypto");
   const sha = createHash("sha256").update(wasm).digest("hex");

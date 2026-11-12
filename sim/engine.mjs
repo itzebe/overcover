@@ -75,7 +75,7 @@ export class Decentralized {
     resolverQuorum = 3,
     disputeWindowSec = 3600,
     now = 0,
-    contractId = "contract.attestor-overcover.testnet",
+    contractId = "contract.ovc-v3-ctl-2f6c4c.testnet",
   } = {}) {
     if (!owner) throw new ContractError("owner required");
     this.owner = owner;

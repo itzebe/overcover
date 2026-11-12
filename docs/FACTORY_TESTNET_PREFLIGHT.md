@@ -79,6 +79,21 @@ sub-accounts the harness creates, and is refused early.)
 **Recommended account to fund:** `ovc-v3-ctl-<tag>.testnet` (a new top-level account). The public
 address is exactly the account id; it is created and funded by the human, not by this environment.
 
+### Prepared identity (autonomous run, 2026-11-12)
+
+A fresh keypair and its gitignored credential file are already in place, so the run needs **funding
+only** — no further setup:
+
+| Item | Value |
+| --- | --- |
+| Account id (public) | `ovc-v3-ctl-2f6c4c.testnet` (does not exist on chain yet) |
+| Public key | `ed25519:EUBFaRRaGLw5HtyguAVYReMNNsww6KgJZ98deceyssYd` |
+| Secret key | stored only in `keys/controlled-v3-root.json` (mode 0600, gitignored) — never printed, never committed |
+
+The harness loads it automatically (it is the default `ROOT_FILE`). After funding, the live run is a
+single command with no arguments. To use a different account, overwrite that file (or set the two env
+vars); the generated keypair is disposable.
+
 ## 5. Minimum funding requirement
 
 Storage price on testnet is **1 × 10⁻⁵ NEAR per byte** (`storage_amount_per_byte = 10000000000000000000`).
@@ -112,17 +127,18 @@ Notes:
 
 | Source | Result |
 | --- | --- |
-| `helper.testnet.near.org/account` | **HTTP 429** — "Rate limit exceeded, retry in 10 hours" |
-| `faucet.fastnear.com/account` | unreachable (connection failed) |
-| `testnet-faucet.near.org/account` | unreachable (connection failed) |
-| `near-faucet.io` API | HTTP 404 (web UI only) |
-| Public RPC (`test.rpc.fastnear.com`, `rpc.testnet.fastnear.com`, `near-testnet.drpc.org`, `rpc.testnet.near.org`) | all **healthy**, chain `testnet` |
+| `helper.testnet.near.org/account` | **HTTP 429** — "Rate limit exceeded, retry in 8 hours" (re-probed 2026-11-12) |
+| `faucet.fastnear.com/account` | HTTP 000 — proxies the same helper, same rate-limit message |
+| `testnet-faucet.near.org/account` | HTTP 000 — proxies the same helper, same rate-limit message |
+| `near-faucet.io` (the docs' "External Faucet") | web UI; no separate public API found (404 on API routes) |
+| `docs.near.org/getting-started/faucet` | confirms `helper.testnet.near.org` is the canonical programmatic faucet |
+| Public RPC (`rpc.testnet.near.org`, fastnear, drpc) | all **healthy**, chain `testnet` |
 
 **Restriction:** the environment's IP is rate-limited on the free faucet, and no funded key exists
-locally (`keys/` is empty). This no longer blocks the run: the harness takes an operator-supplied root
-(§4), so the human funds one account from a **different IP/session** (browser faucet) — no faucet call
-by this environment is needed. (`OVERCOVER_USE_FAUCET=1` remains available for a self-contained smoke
-run once the faucet recovers.)
+locally. The harness takes an operator-supplied root (§4) and the prepared identity is already in place
+(§4), so the human funds that one account from a **different IP/session** (browser faucet) — no faucet
+call by this environment is needed, and its cooldown is respected (no identity rotation, no retries).
+(`OVERCOVER_USE_FAUCET=1` remains available for a self-contained smoke run once the faucet recovers.)
 
 ## 7. Factory path in the harness (gap found, now closed)
 

@@ -87,6 +87,7 @@ npm run test:onchain    # 17 adversarial tests against the LIVE contract
 #   npm run verify:sandbox                # 21/21 (compiled v3 wasm, real neard)
 #   npm run verify:upgrade-preservation   # in-place upgrade of the live v1 bytecode preserves state
 #   npm run verify:controlled-v3:plan     # the controlled v3 testnet deployment plan (sends nothing)
+#   npm run verify:controlled-v3          # 40/40 — the controlled v3 deploy on NEAR TESTNET (needs a funded root)
 #   npm run verify:controlled-v3:sandbox  # 39/39 — controlled v3 deploy + SEC-1 closure on a real neard
 #   npm run verify:factory                # 22/22 — permissionless factory on the COMPILED wasm + a real neard
 ```
@@ -149,9 +150,11 @@ development still works. Run it against production with
 - **No professional audit.** The contract has not been audited.
 - **No mainnet deployment.** Testnet only; not for real funds.
 - **Single attestor on the deployed v1 contract.** The oracle on the live address is not
-  decentralised; the dispute path mitigates but does not remove that. The merged **v3** source
+  decentralised; the dispute path mitigates but does not remove that. The **v3** source
   replaces it with a 3-of-5 operator quorum and independent resolvers, proven on a fresh deployment
-  by `npm run verify:controlled-v3:sandbox` (39/39) — but v3 is not on the live address (see below).
+  by `npm run verify:controlled-v3` (**40/40** against the real testnet contract
+  `contract.ovc-v3-ctl-2f6c4c.testnet`; 39/39 in sandbox) — but v3 is not on the *legacy* live address
+  (see below).
 - **The v3 contract is not deployed to the live address, and the legacy key is unrecoverable.** The
   live `contract.attestor-overcover.testnet` runs **v1**, whose `migrate()` is unauthenticated
   (**SEC-1**). Closing it on that address needs the account's FullAccess private key
@@ -161,14 +164,17 @@ development still works. Run it against production with
   the state-preserving in-place upgrade (`node driver/upgrade.js`), or the controlled v3 deployment
   (`node proof/controlled-v3-deploy.mjs`) stands up a fresh, SEC-1-closed contract. **Do not claim the
   live address is hardened until one of those has run.**
-- **The controlled v3 testnet deployment has not run in this environment (needs a funded root).** The
-  free testnet faucet (`helper.testnet.near.org`) returns HTTP 429 here. The identical harness — now
-  including the permissionless factory path (a NON-OWNER `propose_product` activation and a `buy_cover`
-  on the resulting product) — was run against the identical compiled wasm on a local `neard` node
-  (39/39, mode `SANDBOX`). The harness takes an **operator-supplied funded root account** (env
-  `OVERCOVER_ROOT_ACCOUNT_ID`/`OVERCOVER_ROOT_SECRET_KEY` or the gitignored
-  `keys/controlled-v3-root.json`); the only untested part of the testnet path is that the human funds
-  the root. Re-run `node proof/controlled-v3-deploy.mjs` once the root is funded. See
+- **The controlled v3 testnet deployment is complete (2026-11-12).** `npm run verify:controlled-v3`
+  passed **40/40** against the **real deployed** contract `contract.ovc-v3-ctl-2f6c4c.testnet` on NEAR
+  testnet: deploy + init, the 3-of-5 operator and resolver quorums, the settled-and-paid policy, the
+  permissionless factory (a **non-owner** `propose_product` activation and a `buy_cover` on the
+  resulting product, policy 2), the adversarial refusals, pool solvency, `reconcile() == true`,
+  `check_invariant() == true`, and SEC-1 closure on the deployed bytes. The deployed module is
+  byte-identical to the source rebuild (sha256 `a97034e6…`, 500,023 bytes; `code_hash`
+  `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`). Evidence: `proof/controlled-v3-deploy.json` and
+  the public, independently re-derivable `proof/controlled-v3-onchain-evidence.json`. The identical
+  harness also passes **39/39** on a local `neard` node (`npm run verify:controlled-v3:sandbox`). The
+  root that funded it is an operator-supplied account (`keys/controlled-v3-root.json`); see
   [`FACTORY_TESTNET_PREFLIGHT.md`](FACTORY_TESTNET_PREFLIGHT.md).
 - **`npm run test:onchain` is not run in this environment.** The 17 live adversarial tests need the
   gitignored operator identities (`keys/identities.json`, `keys/state.json`) and a fresh deploy, so

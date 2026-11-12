@@ -3,7 +3,7 @@
   "nodeUrl": "http://127.0.0.1:3035",
   "contract": "cover.test.near",
   "v1WasmSha256": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e",
-  "v2WasmSha256": "52c11c22fe52bd26b00a4f2122fa21acc3d9930b421a4534c9bcbfe923714b57",
+  "v2WasmSha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1",
   "migrateAccepted": true,
   "migrateError": null,
   "migratedPolicySettled": true,
@@ -11,7 +11,7 @@
   "before": {
     "config": {
       "owner": "owner.test.near",
-      "attestor": "5sevALJzgK93R99a71i5zaFchyPKKVgSFHjuvcz4i2nD",
+      "attestor": "3hEWeWgFgYRgsrdjtESFsvi72MJMbJwDJvnNaDRcRHXY",
       "challenge_bond": "100000000000000000000000",
       "challenge_window_sec": 1,
       "settle_delay_sec": 0
@@ -40,8 +40,8 @@
         "threshold_tenths": 400,
         "payout": 3e+23,
         "premium": 3e+22,
-        "obs_date": 1794424874,
-        "issued_at": 1794424872,
+        "obs_date": 1794490343,
+        "issued_at": 1794490341,
         "status": "active",
         "paid_amount": 0,
         "observed_value": 0,
@@ -57,7 +57,7 @@
   "after": {
     "config": {
       "owner": "owner.test.near",
-      "attestor": "5sevALJzgK93R99a71i5zaFchyPKKVgSFHjuvcz4i2nD",
+      "attestor": "3hEWeWgFgYRgsrdjtESFsvi72MJMbJwDJvnNaDRcRHXY",
       "challenge_bond": "100000000000000000000000",
       "challenge_window_sec": 1,
       "settle_delay_sec": 0,
@@ -91,9 +91,9 @@
         "threshold_tenths": 400,
         "payout": 3e+23,
         "premium": 3e+22,
-        "obs_date": 1794424874,
+        "obs_date": 1794490343,
         "challenge_window_sec": 1,
-        "issued_at": 1794424872,
+        "issued_at": 1794490341,
         "status": "active",
         "paid_amount": 0,
         "observed_value": 0,

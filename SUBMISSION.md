@@ -204,12 +204,13 @@ captured in this environment. A judge can complete it in two minutes by followin
 | Console regression + live RPC | `npm run test:console` | **97 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **51 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
 | Product feed + agent evaluation | `npm run test:agent-eval` | **32 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
-| Discovery agent | `npm run test:factory` | **9 passed, 0 failed** — deterministic risk rule, evidence-hash reproducibility, forecast (not observation) labelling, one live API read |
+| Discovery agent | `npm run test:factory` | **11 passed, 0 failed** — deterministic risk rule, evidence-hash reproducibility, forecast (not observation) labelling, one live API read |
 | Permissionless factory (compiled wasm) | `npm run verify:factory` | **22/22 passed** — a NON-OWNER proposal activates a product with no owner tx, every rule refuses, the stake enters the pool, and a buyer buys on the permissionlessly-created product (real `neard` node) |
 | Deploy fail-closed regression | `npm run test:deploy` | **3 passed, 0 failed** — both deploy paths refuse a stale (guard-less) wasm |
 | SEC-1 guard on the compiled wasm | `npm run verify:upgrade` | **8/8 passed** — real local `neard` node: third-party `migrate()` refused, state untouched, self-call with no legacy state fails closed |
 | In-place upgrade preserves state | `npm run verify:upgrade-preservation` | **PASS** — runs the exact deployed v1 bytecode on a real `neard` node, deploys v3 over it, self-calls `migrate()`: capital, reserved, products and policies survive and the migrated policy still settles |
 | Controlled v3 deploy + SEC-1 closure | `npm run verify:controlled-v3:sandbox` | **39/39 passed** — deploys the compiled v3 wasm to a fresh account on a real `neard` node, configures a 3-of-5 operator quorum and a 3-of-5 resolver quorum, and asserts sub-quorum non-finalisation, forged/non-operator refusal, owner/challenger/signer vote exclusion, resolver-quorum decision, a third-party `migrate()` refused, a NON-OWNER `propose_product` activation, and pool solvency |
+| Controlled v3 deploy on NEAR **testnet** | `npm run verify:controlled-v3` | **40/40 passed** — the same proof against the **real deployed** contract `contract.ovc-v3-ctl-2f6c4c.testnet` (deploy + init, quorums, settled-and-paid policy, permissionless factory via a non-owner `propose_product` + a factory purchase, adversarial refusals, SEC-1 closure); deployed wasm byte-identical to the source rebuild (sha256 `a97034e6…`) |
 | Real isolated v2 deploy on testnet | `npm run verify:testnet-deploy` | **9/9 passed** — deploys the compiled wasm to NEAR testnet, buys one real policy, and shows a third-party `migrate()` refused on the live chain |
 | Live adversarial tests | `npm run test:onchain` | **17 tests** — refused-with-the-expected-reason against the LIVE contract; needs a fresh `npm run deploy` and the gitignored operator identities (not run in the CI environment) |
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, public read-only + local dry-run round-trip OK, wallet picker opens in-viewport** |
@@ -248,15 +249,16 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
   nothing). Its rate limits and single-flight locks are **per-instance**, not a global distributed
   lock.
 - Testnet only; unaudited; not for real funds.
-- The **permissionless factory** (v3) is proven end-to-end on the compiled wasm against a real
-  `neard` node (`npm run verify:factory`, 22/22) and its underwriting rules are unit-tested. The full
-  deployment harness now also proves the factory path — a **non-owner** `propose_product` activation
-  plus a `buy_cover` on the resulting product — and passes **39/39** in sandbox mode. It is **not yet
-  deployed to the live testnet address**: that needs a funded root account, and the faucet is
-  rate-limited here (`429 retry in 10h`) with no funded account held in this environment. The harness
-  now takes an operator-supplied funded root (see `docs/FACTORY_TESTNET_PREFLIGHT.md`), so one funded
-  account unblocks the live run. The factory is demonstrable on the sandbox and through the console's
-  feed, but a live on-chain factory purchase is pending that deploy. It is not claimed as deployed.
+- The **permissionless factory** (v3) is **deployed and proven end-to-end on NEAR testnet**:
+  `npm run verify:controlled-v3` passes **40/40** against the real contract
+  `contract.ovc-v3-ctl-2f6c4c.testnet` — a **non-owner** `propose_product` activates a product with no
+  owner transaction, an invalid proposal is refused on-chain, and a `buy_cover` on the resulting
+  product creates policy 2. The deployed module is byte-identical to the source rebuild (sha256
+  `a97034e6…`). Evidence: `proof/controlled-v3-deploy.json` and
+  `proof/controlled-v3-onchain-evidence.json`. The factory is also proven on the compiled wasm against
+  a real `neard` node (`npm run verify:factory`, 22/22) and on the sandbox (`verify:controlled-v3:sandbox`,
+  39/39). The **legacy live address** `contract.attestor-overcover.testnet` still runs v1 (SEC-1 closure
+  there needs the operator key — see below); the permissionless factory is **not** on that address.
 - The **deployed v1 contract** exports `migrate()`, which is unauthenticated because it is
   `#[init(ignore_state)]` (it runs before state is read, so it cannot check the stored owner). An
   internal security pre-audit reproduced a full state takeover against the exact deployed bytecode
@@ -265,8 +267,9 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
   end to end: the deployed module is byte-identical to the v1 source (sha256 `1f30ccf1…`), v1's
   `migrate()` has the vulnerable shape, v2's has the guard, and the guard tests pass. The fix is
   integrated on `main` and the deploy path is now safe: `npm run deploy` refuses a stale
-  (guard-less) wasm, `npm run verify:controlled-v3:sandbox` proves a third-party `migrate()` is
-  refused on a freshly **deployed** v3 module (39/39), and `node driver/upgrade.js` upgrades the live
+  (guard-less) wasm, `npm run verify:controlled-v3` proves a third-party `migrate()` is refused on the
+  freshly **deployed** v3 testnet contract `contract.ovc-v3-ctl-2f6c4c.testnet` (**40/40**; 39/39 in
+  sandbox), and `node driver/upgrade.js` upgrades the live
   contract **in place** (address, pool and policies preserved) via a self-call `migrate()`. The v2
   build is proven on a real, isolated testnet deployment (`npm run verify:testnet-deploy`). Until the
   operator runs that upgrade on the live address — it needs the account's full-access key, which is

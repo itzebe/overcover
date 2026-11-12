@@ -1,7 +1,7 @@
 # Final release readiness register
 
-**As of:** 2026-11-11 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (PR #27 merged 2026-11-12)
-**Contract:** `contract.attestor-overcover.testnet` (NEAR testnet) · **Production:** https://overcover.vercel.app/
+**As of:** 2026-11-12 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (HEAD `93bbecaacd85`)
+**Live contract:** `contract.attestor-overcover.testnet` (v1) · **Controlled v3 contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (v3, NEAR testnet) · **Production:** https://overcover.vercel.app/
 
 This register states, for every requirement, exactly what exists, what was tested, the evidence, and
 whether it needs fixing. A status is only **FIXED AND VERIFIED** when there is a reproducible command
@@ -27,7 +27,8 @@ npm run verify:connectivity # 12/12 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
 npm run verify:sandbox               # 21/21 — the decentralised lifecycle on a real neard
 npm run verify:controlled-v3:plan    # prints the controlled v3 deployment plan; sends nothing
-npm run verify:controlled-v3:sandbox # 39/39 — controlled v3 deploy + SEC-1 closure on a real neard
+npm run verify:controlled-v3         # 40/40 — the controlled v3 deploy on NEAR TESTNET (needs a funded root)
+npm run verify:controlled-v3:sandbox # 39/39 — the same proof on a real neard node
 npm run verify:controlled-v3:evidence # public on-chain state of the deployed v3 testnet contracts
 npm run axe                 # 0 violations, page + dialog
 npm run ui:qa               # 7 viewports, real agent round-trip
@@ -87,7 +88,7 @@ owner transaction**. This is the difference between an operated product and a pe
 | A permissionless product is buyable | FIXED AND VERIFIED | `buy_cover` works on a factory-created product with no special case. | The sandbox proof buys cover on the permissionlessly-created product and asserts the policy. |
 | Discovery agent finds real emerging risk | FIXED AND VERIFIED | `agent/discovery.mjs` reads a real Open-Meteo forecast and applies a deterministic rule. | `npm run test:factory` (11/11): determinism, threshold crossing, evidence hash reproducibility, forecast (not observation) labelling; one live read of the real API. |
 | Console shows the proposal honestly | FIXED AND VERIFIED | A proposal is shown **PROPOSED** until the contract returns a product whose `evidence_hash` matches; never ACTIVE on the page's own word. | 7 `renderFactory` regression tests in `tests/console.test.js`; rendered live at 390/768/1280 px with 0 axe violations and 0 console errors. |
-| Factory deployed to the live testnet address | BLOCKED BY EXTERNAL SERVICE | The compiled v3 factory wasm is proven on a real `neard` node; a fresh testnet deployment needs a funded account. | The faucet returns `429 retry in 10h` and no funded account is held here. The controlled-v3 accounts (`contract.ovc-v3-ctl-*`) are the deployment target once funded. Not claimed as deployed. |
+| Factory deployed and proven on testnet | FIXED AND VERIFIED | The compiled v3 factory is deployed to `contract.ovc-v3-ctl-2f6c4c.testnet` and exercised end-to-end on-chain. | `npm run verify:controlled-v3` 40/40 (2026-11-12): a non-owner `propose_product` activates a product with no owner transaction, an invalid proposal is refused on-chain, and a buyer purchases cover on the factory product (policy 2). The legacy live address `contract.attestor-overcover.testnet` remains v1 (SEC-1 closure there needs the operator key). |
 
 ## 2. Human wallet
 
@@ -196,6 +197,20 @@ What v3 adds over the deployed v1 (all in `contract/src/lib.rs`):
 | Judge-facing evidence | FIXED AND VERIFIED | `docs/JUDGE_DEMO.md` (script, checklist, backup) + `proof/` + explorer links. | This mission. |
 
 ---
+
+## Defects found and fixed in this mission (2026-11-12, live v3 deployment)
+
+1. **`cargo` was absent in this environment, so the 76 Rust contract tests and the byte-identity proof
+   could not run.** Root cause: the container had no Rust toolchain (only Node). Fix: installed the
+   pinned toolchain (`rust-toolchain.toml` → 1.99.1, `wasm32-unknown-unknown`). Result: `npm run
+   test:contract` = **76 passed / 0 failed**, and a from-source rebuild is **byte-identical** to the
+   deployed module (sha256 `a97034e6…`, 500,023 bytes) — proving the deployed contract equals this
+   source. No product code changed.
+
+2. **No behavioural defect was found in the v3 contract or harness during the live run.** The
+   controlled-v3 harness completed **40/40** on the first funded attempt; every refusal was returned
+   with its intended human-readable reason and the pool stayed solvent throughout. This entry is
+   recorded for honesty: the mission fixed the *environment* gap (Rust), not a contract defect.
 
 ## Defects found and fixed in this mission
 
@@ -472,6 +487,49 @@ Agent tests 49 → 51; the OpenAPI spec test 4 → 5. Full pre-audit: **`docs/SE
 
 ## Blockchain evidence (real testnet)
 
+**Controlled v3 deployment on NEAR testnet — `npm run verify:controlled-v3` (40/40), 2026-11-12.**
+A funded root (`ovc-v3-ctl-2f6c4c.testnet`, 10 NEAR from the official helper faucet, tx
+`67m4ApUC58zkFiNxP31e4Za3ZbwU5NrK5RFd2KbRDi4q`) stood up a fresh, fully decentralised v3 contract and
+exercised the whole lifecycle against the **real deployed module** — not a sandbox:
+
+- **Contract:** `contract.ovc-v3-ctl-2f6c4c.testnet`. Deploy tx `8to8kukd8VBVNWDUjZhEUDNyrAeVet4GEbzirCPNYr25`
+  (`DeployContract`, `SuccessValue`, block `DCP5eZ7EB9sATkSsgDqKch3i77f6vBnwkDTVoNqT8YDY`).
+- **Deployed identity (independently re-read from `view_code`):** module sha256
+  `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1`, 500,023 bytes — **byte-identical
+  to the local source rebuild** (`rust-toolchain.toml` 1.99.1, `CARGO_HOME=/home/openhands/.cargo`).
+  `code_hash` `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`. The SEC-1 guard string is present in the
+  deployed bytes.
+- **Permissionless product creation:** the **non-owner** `proposer.ovc-v3-ctl-2f6c4c.testnet` called
+  `propose_product` (tx `2PwSJug83az8ShtN2c5TeCaHtiDPM4PPoqE5nfZhGCAh`, block
+  `HpDXy24VE9syt3fB7VGHrGT7iP5AdQCveArdKQ9wzPCp`, `SuccessValue`). The return value shows the product
+  was **activated with no owner transaction**: `{"id":"heat-lagos-factory","active":true,
+  "proposed_by":"proposer.ovc-v3-ctl-2f6c4c.testnet","evidence_hash":"sha256:open-meteo-heat-lagos-factory",…}`.
+- **Adversarial refusal:** the same proposer's `propose_product` on an unregistered metric was rejected
+  on-chain (tx `5oQa1xfgWLFviGZ7zbJvchydcrNT4wxxNiaWAXbiiwHB`, block
+  `Dg5z4Mw2dX1rgaMp7XQsoRrAjEZvLzfH9s4DDr12Grz4`) with `Smart contract panicked: no such metric`.
+- **Factory purchase:** `buyer.ovc-v3-ctl-2f6c4c.testnet` bought cover on the permissionlessly-created
+  product (tx `3SDiX9BY3KH4UZwMNGVavitnGSeqroarn4fkwd7SkVC1`, block
+  `5nd2EYA6NbhDq9NGwKPE7mVVeLp4EhuaN9K1xqAF3B4n`); args
+  `{"product_id":"heat-lagos-factory","payout":"100000000000000000000000",…}`; the call returned
+  **policy 2**. On-chain policy 2: `{"id":2,"buyer":"buyer.ovc-v3-ctl-2f6c4c.testnet",
+  "product_id":"heat-lagos-factory","payout":"100000000000000000000000","premium":"5000000000000000000000",
+  "status":"active",…}`.
+- **SEC-1 closure on the deployed module:** a third-party `migrate()` from `attacker.ovc-v3-ctl-2f6c4c.testnet`
+  (tx `GKzB8Eugk6ygT2HU3oKB6gEQxtQCZ9xqWddwNHrg74q`) was refused with
+  `migrate may only be called by the contract account itself`; the owner was unchanged afterwards.
+- **Financial invariants (raw RPC reads):** `get_pool()` →
+  `capital 1,420,000000000000000000000000 · reserved 100,000000000000000000000000 ·
+  available 1,320,000000000000000000000000 · premiums_collected 20,000000000000000000000000 ·
+  total_paid 300,000000000000000000000000 · bonds_forfeited 100,000000000000000000000000 ·
+  policy_count 2 · solvent true · paused false`; `reconcile()` → **true**; `check_invariant()` → **true**.
+  Pool lifecycle proven end-to-end: a policy (1) settled and paid 300 NEAR above threshold, a later
+  policy (2) holds 100 NEAR reserved.
+- **Full 40/40 proof:** a 3-of-5 operator quorum and a 3-of-5 resolver quorum; sub-quorum
+  non-finalisation; the owner cannot vote on a dispute; an operator that signed a reading cannot resolve
+  its own dispute; the challenger cannot resolve their own dispute; the pool releases the reservation
+  and stays solvent after settlement. Evidence files: `proof/controlled-v3-deploy.json` (full check
+  log) and `proof/controlled-v3-onchain-evidence.json` (public, independently re-derivable state).
+
 **Isolated v2 deployment — `npm run verify:testnet-deploy` (9/9), 2026-11-11.** A throwaway
 faucet-funded identity graph deployed the compiled v2 wasm to real NEAR testnet and exercised it:
 
@@ -517,39 +575,35 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
   contract, tied to source by the wasm sha256 (`1f30ccf1…`, rebuilt locally and matched). In a
   container where the faucet is available, `proof/testnet-v2-deploy.mjs` performs a real, isolated v2
   deployment (see §"Blockchain evidence").
-- **The v3 contract (with the SEC-1 fix) is merged but not deployed to the live address.** The v3 build
-  (domain-separated length-prefixed observation message, multi-operator oracle quorum, per-policy
-  challenge window, frozen per-dispute resolver threshold, owner-excluded resolvers, generic metric
-  model, hardened `migrate`) is implemented and proven end-to-end in a **local sandbox**
-  (`npm run verify:sandbox` = 21/21), the in-place `migrate` is proven **state-preserving** against the
-  exact live v1 bytecode (`npm run verify:upgrade-preservation`), and the **controlled v3 deployment**
-  harness proves the whole decentralised design plus SEC-1 closure against the compiled module
-  (`npm run verify:controlled-v3:sandbox` = **39/39**). It is **not** on the live address
+- **The v3 contract (with the SEC-1 fix) is deployed to a fresh testnet account and fully verified there;
+  it is NOT on the live address.** The controlled v3 deployment (`npm run verify:controlled-v3`, **40/40**
+  on 2026-11-12) stood up `contract.ovc-v3-ctl-2f6c4c.testnet` and exercised the whole decentralised
+  design against the real deployed module: permissionless (non-owner) product activation, adversarial
+  proposal refusal, a factory-product purchase (policy 2), a settled-and-paid policy (policy 1),
+  pool solvency, `reconcile() == true`, `check_invariant() == true`, and SEC-1 closure on the deployed
+  bytes. See §"Blockchain evidence". The v3 build (domain-separated length-prefixed observation message,
+  multi-operator oracle quorum, per-policy challenge window, frozen per-dispute resolver threshold,
+  owner-excluded resolvers, generic metric model, hardened `migrate`) is proven end-to-end on a **local
+  sandbox** (`npm run verify:sandbox` = 21/21; `npm run verify:controlled-v3:sandbox` = 39/39) and the
+  in-place `migrate` is proven **state-preserving** against the exact live v1 bytecode
+  (`npm run verify:upgrade-preservation`). It is **not** on the live address
   `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the contract's full-access
   key (`ed25519:CwZBmKyV…`), which this environment does not hold and which is **not recoverable from
   the chain** — see `docs/AUTHORITY_RECOVERY.md`. The public console therefore reads the live **v1**
   contract; its v2/v3 rendering path is present but gated (`CONTRACT_V2`). The **SEC-1 vulnerability
-  remains live** until either the operator runs `node driver/upgrade.js` (non-destructive, ~4.63 NEAR
-  refundable stake) or the controlled deployment in §5 of that document is run. Status: IMPLEMENTED,
-  VERIFIED IN SANDBOX AND ON AN ISOLATED TESTNET DEPLOY, MIGRATION PROVEN STATE-PRESERVING,
-  CONTROLLED-DEPLOY PROOF 39/39, MERGED — the single remaining BLOCKED BY HUMAN ACTION item.
-- **The controlled v3 testnet deployment did not complete this session, but v3 *is* live on two
-  isolated testnet accounts.** Two runs stood up fresh, operator-controlled contracts
-  (`contract.ovc-v3-ctl-mwd32f3w.testnet`, `contract.ovc-v3-ctl-mwd3judn.testnet`), each initialised
-  with a 3-of-5 operator quorum, a 3-of-5 resolver quorum and the accelerated 60 s demo window. The
-  first run's `buy_cover` (a separate probe) created **policy 1**; the second run's `buy_cover`
-  (tx `ApiZ1kCUioU6ScXAXTgZ2JGNom4kinEq3hDW2zPo4tEN`) reached the contract and was refused only on
-  clock skew. Their **deployed bytes are byte-identical to the source-rebuilt wasm** — 489602 bytes,
-  sha256 `52c11c22…`, SEC-1 guard present — independently re-hashed from `view_code`. Evidence:
-  `proof/controlled-v3-onchain-evidence.json` (`npm run verify:controlled-v3:evidence`). The runs
-  could not be *re-run* to the full 39/39 because the testnet faucet then rate-limited (the harness now takes an operator-supplied funded root instead)
-  (`helper.testnet.near.org` → **HTTP 429**, "retry in 12 h"; `faucet.fastnear.com`,
-  `testnet-faucet.near.org` unreachable). Three real harness defects surfaced only on testnet and
-  were fixed (PR #26): signer funding ignored the `gas_limit × gas_price` float, keys were never
-  persisted, and the observation clock read from `finality: final` (which lags the tip). Status:
-  v3 LIVE ON AN ISOLATED TESTNET DEPLOY (deploy + lifecycle verified on-chain); the full 39/39
-  testnet re-run needs a funded root account (BLOCKED BY HUMAN ACTION). Re-run `npm run verify:controlled-v3`
-  with `OVERCOVER_ROOT_ACCOUNT_ID`/`OVERCOVER_ROOT_SECRET_KEY` set — with key persistence fixed, that run is recoverable.
+  remains live on the legacy address** until either the operator runs `node driver/upgrade.js`
+  (non-destructive, ~4.63 NEAR refundable stake) or the controlled deployment in §5 of that document is
+  run. Status: **FIXED AND VERIFIED on a fresh controlled testnet contract (40/40)**; on the legacy live
+  address it remains BLOCKED BY HUMAN ACTION (the operator's key).
+- **The controlled v3 testnet deployment is complete (2026-11-12).** The funded-root harness
+  (`npm run verify:controlled-v3`) ran the full lifecycle to **40/40** against
+  `contract.ovc-v3-ctl-2f6c4c.testnet`: deploy + init, the 3-of-5 operator and resolver quorums, the
+  accelerated demo window, the settled-and-paid policy, the permissionless factory (non-owner proposal →
+  automatic activation → factory purchase), the adversarial refusals, and SEC-1 closure. The deployed
+  bytes are byte-identical to the source-rebuilt wasm (sha256 `a97034e6…`, 500,023 bytes). Earlier
+  sessions' two isolated runs (`contract.ovc-v3-ctl-mwd32f3w.testnet`, `contract.ovc-v3-ctl-mwd3judn.testnet`)
+  remain on-chain; their public state is in `proof/controlled-v3-onchain-evidence.json`. Status: **VERIFIED
+  (live testnet, 40/40)**.
 - **No professional audit; testnet only.** Not for real funds. An internal pre-audit
   (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
   not a substitute for a third-party audit.

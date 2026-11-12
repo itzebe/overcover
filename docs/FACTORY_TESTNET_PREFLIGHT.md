@@ -1,8 +1,11 @@
 # Factory testnet deployment — preflight
 
 **As of:** 2026-11-12 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main`
-**Baseline HEAD:** `8f69e97e530c4ed440bd2fc1ec70d10b05ab367a` (matches the expected baseline)
-**Status:** harness complete (factory path proven, 39/39 sandbox) · **nothing deployed** · awaiting human funding.
+**Baseline HEAD:** `93bbecaacd855f52a043c8a21e2c7f554cbafde7`
+**Status:** ✅ **DEPLOYED AND VERIFIED (2026-11-12)** — `npm run verify:controlled-v3` passed **40/40**
+against the live contract `contract.ovc-v3-ctl-2f6c4c.testnet` on NEAR testnet, including the
+permissionless factory path (non-owner proposal → automatic activation → factory purchase). Evidence:
+`proof/controlled-v3-deploy.json` and `proof/controlled-v3-onchain-evidence.json`.
 
 This document is the preflight for the **first live controlled-v3 testnet deployment that carries the
 permissionless insurance factory**. It contains no secret material — only public on-chain facts,
@@ -86,12 +89,13 @@ only** — no further setup:
 
 | Item | Value |
 | --- | --- |
-| Account id (public) | `ovc-v3-ctl-2f6c4c.testnet` (does not exist on chain yet) |
+| Account id (public) | `ovc-v3-ctl-2f6c4c.testnet` (**created + funded 2026-11-12**, balance 10.000000 NEAR) |
+| Funding | official helper faucet, one request; tx `67m4ApUC58zkFiNxP31e4Za3ZbwU5NrK5RFd2KbRDi4q` (signer `testnet`) |
 | Keypair | generated; the secret lives only in `keys/controlled-v3-root.json` (mode 0600, gitignored) — never printed, never committed |
 
-The harness loads it automatically (it is the default `ROOT_FILE`). After funding, the live run is a
-single command with no arguments. To use a different account, overwrite that file (or set the two env
-vars); the generated keypair is disposable.
+The harness loads it automatically (it is the default `ROOT_FILE`). The live run is a single command
+with no arguments. To use a different account, overwrite that file (or set the two env vars); the
+generated keypair is disposable.
 
 ## 5. Minimum funding requirement
 
@@ -122,21 +126,19 @@ Notes:
   budgets a worst case of `1e9` → 0.1 NEAR per call, which the map already covers.
 - The code stake (~5 NEAR) is **refunded** when the account is later upgraded or deleted.
 
-## 6. Faucet status and restrictions (checked now, not assumed)
+## 6. Faucet status and restrictions (resolved 2026-11-12)
 
 | Source | Result |
 | --- | --- |
-| `helper.testnet.near.org/account` | **HTTP 429** — "Rate limit exceeded, retry in 8 hours" (re-probed 2026-11-12) |
-| `faucet.fastnear.com/account` | HTTP 000 — proxies the same helper, same rate-limit message |
-| `testnet-faucet.near.org/account` | HTTP 000 — proxies the same helper, same rate-limit message |
-| `near-faucet.io` (the docs' "External Faucet") | web UI; no separate public API found (404 on API routes) |
+| `helper.testnet.near.org/account` | **Working again** — the earlier 429 cooldown elapsed; granted **10 NEAR** for one account. Used for `ovc-v3-ctl-2f6c4c.testnet`. |
+| `faucet.fastnear.com/account`, `testnet-faucet.near.org/account` | proxy the same helper backend (not independent) |
+| `faucet.zalalena.com/near/` | online but only **0.005 NEAR/claim** and gated by hCaptcha + Cloudflare Turnstile |
+| `near-faucet.io` | a NEAR contract `near_faucet` call via a wallet selector; **2 NEAR max**, requires wallet signing |
 | `docs.near.org/getting-started/faucet` | confirms `helper.testnet.near.org` is the canonical programmatic faucet |
 | Public RPC (`rpc.testnet.near.org`, fastnear, drpc) | all **healthy**, chain `testnet` |
 
-**Restriction:** the environment's IP is rate-limited on the free faucet, and no funded key exists
-locally. The harness takes an operator-supplied root (§4) and the prepared identity is already in place
-(§4), so the human funds that one account from a **different IP/session** (browser faucet) — no faucet
-call by this environment is needed, and its cooldown is respected (no identity rotation, no retries).
+**Resolution:** the helper faucet's IP rate limit cleared, so the prepared root was funded with a single
+request (no identity rotation, no retries). The account and its funding tx are recorded in §4.
 (`OVERCOVER_USE_FAUCET=1` remains available for a self-contained smoke run once the faucet recovers.)
 
 ## 7. Factory path in the harness (gap found, now closed)

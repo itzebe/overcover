@@ -86,10 +86,12 @@ check("8  no public path can call an owner-only method",
   "the page, wallet module and agent service never name an owner-only method");
 
 check("10 buy_cover is the only signing capability",
-  /signIn\(\{\s*contractId:\s*CONTRACT_ID,\s*methodNames:\s*\["buy_cover"\]\s*\}\)/.test(walletJs) &&
+  /signIn\(\{\s*contractId:\s*\w+,\s*methodNames:\s*\["buy_cover"\]\s*\}\)/.test(walletJs) &&
+    /function configure\(/.test(walletJs) &&
+    /WALLET\.configure\(CONTRACT\)/.test(html) &&
     /transactions\.functionCall\(\s*"buy_cover"/.test(agentJs) &&
     !/functionCall\(\s*"(?!buy_cover)/.test(agentJs),
-  "the wallet scope is buy_cover alone and the agent's only function call is buy_cover");
+  "the wallet scope is buy_cover alone, bound to the read contract, and the agent's only function call is buy_cover");
 
 check("11 a visitor cannot buy without a wallet authorization",
   /window\.OvercoverWallet/.test(html) && /signAndSend/.test(walletJs) &&

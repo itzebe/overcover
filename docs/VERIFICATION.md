@@ -78,7 +78,7 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 npm ci --ignore-scripts
 npm run test:model      # 66 attacks, 66 defended, 0 exploitable  (reference model)
 npm run test:contract   # 76 Rust unit tests
-npm run test:console    # 97 regression + live-RPC tests (page regressions + end-to-end wallet journey)
+npm run test:console    # 101 regression + live-RPC tests (page regressions + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
 npm run test:agent-eval # 32 product-feed schema/premium + agent boundary + independent-client integration
 npm run test:factory    # 11 discovery-agent tests (deterministic rule, evidence hash, forecast labelling)

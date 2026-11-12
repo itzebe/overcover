@@ -1,7 +1,7 @@
 {
   "note": "Public, independently re-derivable evidence for the controlled v3 testnet deployments. No private keys. Regenerate with `node proof/controlled-v3-evidence.mjs`.",
   "mode": "TESTNET",
-  "generatedAt": "2026-11-12T13:37:49.311Z",
+  "generatedAt": "2026-11-12T14:56:29.446Z",
   "wasm": {
     "path": "contract/target/wasm32-unknown-unknown/release/overcover.wasm",
     "bytes": 500023,

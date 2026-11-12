@@ -49,6 +49,11 @@ transactions. Nothing is staged.
 
 Open **https://overcover.vercel.app/**. Do not narrate the technology; narrate the product.
 
+- Point at the **security banner** under the header: *"Before you trust anything here, the page tells
+  you which build it is reading. This address runs the original module — `migrate()` there is
+  unauthenticated — and the page says so, points at the hardened build, and shows the switch. It does
+  not dress it up."* (Open **https://overcover.vercel.app/?contract=contract.ovc-v3-ctl-2f6c4c.testnet**
+  to show the same banner read "Hardened build" from the deployed code hash.)
 - Point at the hero: *"Insurance for businesses that cannot afford to wait."*
 - Point at the **cover strip**: it is already reading the contract —
   *"capital backing policies, reserved for payouts, policies in force, settlements paid."*
@@ -56,7 +61,8 @@ Open **https://overcover.vercel.app/**. Do not narrate the technology; narrate t
   the payout bounds, and the parametric limitation. *"This is what you would actually buy."*
 
 *Why it is credible:* every number is a `get_pool` / `list_products` read from
-`contract.attestor-overcover.testnet`. Refresh it; it changes when the chain changes.
+`contract.attestor-overcover.testnet`, and the banner's build label is a read of that account's
+`code_hash` — not a claim written into the page. Refresh it; it changes when the chain changes.
 
 Optional, if a judge asks how software finds the cover: open
 **https://overcover.vercel.app/products.json** — *"the whole catalogue, generated from the contract,
@@ -212,12 +218,14 @@ without the contract — is regression-tested (`npm run test:console`).
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 66/0, contract 76/0, console 97/0, agent 51/0, sim 71/0, agent-eval 32/0, factory 11/0 | `npm test` |
+| 11 | Tests pass | model 66/0, contract 76/0, console 101/0, agent 51/0, sim 71/0, agent-eval 32/0, factory 11/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
 | 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 39/39 sandbox · **40/40 live testnet** | `npm run verify:controlled-v3:sandbox`; `npm run verify:controlled-v3` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |
 | 15 | Anyone can add cover (permissionless factory) | a non-owner proposal activates a product; every rule refuses; a buyer buys on it | `npm run verify:factory` (22/22) |
 | 16 | The console never shows a proposal as active without the contract | PROPOSED unless the contract returns a matching product | `npm run test:console` |
+| 17 | The page discloses the build it reads | "Legacy build" on the v1 address; "Hardened build" on the v3 address; never "hardened" without a hash match | Open `?contract=contract.ovc-v3-ctl-2f6c4c.testnet`; `npm run test:console` |
+| 18 | No high/moderate dependency advisory ships | `npm audit` → 19 low / 0 high / 0 moderate | `npm audit` |
 
 ## Honesty details a judge may probe
 
@@ -248,9 +256,13 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   signed operator quorum can create one.
 - **Wallet errors are actionable.** A cancelled connection, a blocked pop-up, an unreachable wallet
   service or a wrong network each produce a plain sentence, not a raw `Error`.
-- **The deployed contract is v1 and has one known issue.** An internal security pre-audit found that
-  the **deployed v1** contract's `migrate()` is unauthenticated (`#[init(ignore_state)]` cannot check
-  the stored owner), so any account could overwrite all state. It was reproduced against the exact
+- **The deployed contract is v1 and has one known issue — and the page says so.** An internal security
+  pre-audit found that the **deployed v1** contract's `migrate()` is unauthenticated
+  (`#[init(ignore_state)]` cannot check the stored owner), so any account could overwrite all state. The
+  console discloses this on the page itself: its banner is driven by the deployed `code_hash` and reads
+  **"Legacy build"** on `contract.attestor-overcover.testnet`, naming the hardened address and the
+  `?contract=` switch. It is not possible to show "Hardened build" for an address whose hash does not
+  match the v3 module. The issue was reproduced against the exact
   deployed bytecode and **fixed in the v2/v3 source**, verified by the attack being refused, by Rust
   regression tests (`sec1_*`) and by `npm run verify:migration` (6/6). The fix is merged into `main`
   and the deploy path is now safe: `npm run test:deploy` proves both deploy scripts refuse a stale

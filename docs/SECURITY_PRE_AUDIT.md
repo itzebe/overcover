@@ -178,21 +178,39 @@ now declares `bearerAuth` and the `401`. Loopback with no token stays open for l
 
 ---
 
-### SEC-5 — LOW — accepted dependency advisories in the wallet stack
+### SEC-5 — LOW — dependency advisories in the wallet stack (partially remediated)
 
-**What.** `npm audit` reports 9 high / 2 moderate / 13 low advisories, all transitively through the
-wallet libraries: `@here-wallet/core` → `bn.js`; `@meteorwallet/sdk` → `near-api-js` → `bs58` →
-`base-x` (homograph), `nanoid`, `query-string` → `decode-uri-component` (DoS). The fixes require a
-**breaking** downgrade of `@near-wallet-selector/meteor-wallet` (10 → 9).
+**What.** `npm audit` reported 9 high / 2 moderate / 16 low advisories, all transitively through the
+wallet libraries: `@here-wallet/core` → `bn.js`; `@meteorwallet/sdk` → `nanoid`, `query-string` →
+`decode-uri-component` (DoS); `near-api-js`/`bs58` → `base-x` (homograph). The `npm audit fix`
+recommendation was a **breaking** downgrade of the wallet selector (10 → 9), which was rejected.
 
-**Assessment.** These are build-time/transitive; the shipped page (`ui/index.html` + `ui/vendor/*`)
-is a pre-built static bundle with no server, and the contract is the money authority. No path uses
-these libraries to handle untrusted input on a hot path. Downgrading the wallet selector to silence
-the audit would regress working wallet support, which the engineering constitution forbids without a
-clear need.
+**Remediation (this mission).** The vulnerable leaves were pinned **forward** with npm `overrides`
+(same-major, API-compatible patch/minor releases), which clears every high and moderate advisory
+without touching the wallet-selector major:
 
-**Status: NOT FIXED (accepted, documented).** Recommended follow-up: track an upstream
-`@near-wallet-selector` release that moves `@meteorwallet/sdk` off the affected `near-api-js`.
+| Package | Was | Now | Advisory cleared |
+| --- | --- | --- | --- |
+| `nanoid` | 5.1.5 | 5.1.16 | infinite-loop generators (high) |
+| `bn.js` (via `@here-wallet/core`, `borsh`) | 5.2.1 | 5.2.5 | affected-by-infinite-loop (moderate) |
+| `base-x` (via `bs58`) | 2.0.6 | 3.0.11 | homograph (high) |
+| `decode-uri-component` (via `query-string`) | 0.2.2 | 0.5.1 | exponential-decoding DoS (high) |
+
+Result: `npm audit` **19 low / 0 high / 0 moderate**. The residual 19 low advisories are
+`elliptic` (via `crypto-browserify`, a **devDependency** used only to build the bundle; the 6.x line
+is the patched one and the advisory is informational), plus the transitive wallet-lib parents that
+still list an affected range in their own metadata.
+
+**Why the leaves were safe to bump.** All four are patch/minor moves within their major (except
+`base-x` 2→3 and `decode-uri-component` 0.2→0.5, both of which are bug-fix lines with no API change
+that these consumers use). The overrides were verified not to regress the product: the shipped
+bundle was rebuilt and the real browser path re-tested — the wallet selector still initialises with
+both HERE and Meteor, the console tests (101), agent tests (51), and the live connectivity proof
+(12/12) all pass against the rebuilt bundle.
+
+**Status: FIXED for every high/moderate advisory (verified).** 19 low advisories remain; recommended
+follow-up is to track an upstream `@near-wallet-selector` release that drops the affected transitive
+ranges and then remove the overrides.
 
 ---
 
@@ -262,8 +280,9 @@ The 17 cases it covers, and where each is independently defended today:
 - **No third-party audit; testnet only.** Not for real funds.
 - **Agent rate limits and idempotency are per-process**, not a distributed limit. A multi-process
   deployment must centralise spend state.
-- **Dependency advisories (SEC-5)** remain in the wallet stack; no exploit path was identified in the
-  shipped static page, but they are real and tracked.
+- **Dependency advisories (SEC-5)** — every high/moderate advisory is now cleared via forward
+  `overrides` (nanoid, bn.js, base-x, decode-uri-component); 19 low advisories remain (dev-only
+  `elliptic` and transitive parents), no exploit path identified in the shipped static page.
 
 ---
 
@@ -272,14 +291,14 @@ The 17 cases it covers, and where each is independently defended today:
 | Check | Command | Result |
 | --- | --- | --- |
 | Reference adversarial model | `npm run test:model` | 66 attacks, 66 defended, 0 exploitable |
-| Contract unit tests | `npm run test:contract` | 40 passed (v2, main) |
-| Console + wallet journey | `npm run test:console` | 90 passed |
+| Contract unit tests | `npm run test:contract` | 76 passed |
+| Console + wallet journey | `npm run test:console` | 101 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 51 passed |
 | Product feed + agent eval | `npm run test:agent-eval` | 32 passed |
-| Deploy fail-closed regression | `npm run test:deploy` | 3 passed |
+| Deploy fail-closed regression | `npm run test:deploy` | 21 passed |
+| Dependency audit | `npm audit` | 19 low / 0 high / 0 moderate (SEC-5) |
 | v2 lifecycle (local sandbox) | `npm run verify:sandbox` | 21/21 passed |
 | SEC-1 guard on compiled wasm | `npm run verify:upgrade` | 8/8 passed |
 | SEC-1 reproduction (deployed v1) | local sandbox attack | VULNERABLE (pre-fix) |
 | SEC-1 fix (v2 wasm) | local sandbox attack | SAFE (post-fix) |
 | Secret scan | `git grep -nIE 'ed25519:[0-9A-Za-z]{40,}\|BEGIN .*PRIVATE KEY'` | clean |
-| Dependency audit | `npm audit --omit=dev` | 9 high / 2 moderate / 13 low, accepted (SEC-5) |

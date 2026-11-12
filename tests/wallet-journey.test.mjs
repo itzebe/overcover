@@ -64,7 +64,7 @@ function makeElement(id) {
 /** Build a fresh DOM + global environment, run the page script inside a vm
  *  context (so Node's getter-only globals are not touched), and return a handle
  *  with the elements and the mock wallet for assertions. */
-function bootPage({ wallet }) {
+function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash }) {
   const elements = new Map();
   const getEl = (id) => {
     if (!elements.has(id)) elements.set(id, makeElement(id));
@@ -104,7 +104,7 @@ function bootPage({ wallet }) {
       const body = opts && opts.body ? JSON.parse(opts.body) : {};
       const rt = body.params && body.params.request_type;
       if (rt === "view_account") {
-        return { ok: true, json: async () => ({ result: { code_hash: FIXTURE.view_account.code_hash, amount: FIXTURE.view_account.amount } }) };
+        return { ok: true, json: async () => ({ result: { code_hash: codeHash, amount: FIXTURE.view_account.amount } }) };
       }
       const method = body.params.method_name;
       let text;
@@ -138,6 +138,10 @@ function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith 
     calls,
     NETWORK_ID: "testnet",
     CONTRACT_ID: CONTRACT,
+    DEFAULT_CONTRACT_ID: CONTRACT,
+    configuredContract: CONTRACT,
+    configure(id) { this.configuredContract = id; return id; },
+    contractId() { return this.configuredContract; },
     async setup() { return this; },
     status() {
       return {
@@ -304,4 +308,40 @@ test("the page reads the premium from the contract, not from the product's basis
   await settle(page);
   // The quote panel shows the contract's own premium (0.0500 NEAR).
   assert.match(page.el("q-premium").textContent, /0\.0500 NEAR/);
+});
+
+// ---- contract/version honesty: the page must state the build it actually reads. ----
+
+test("the page binds the wallet to the contract it reads, so a signature can never target another", async () => {
+  const wallet = mockWallet({ result: okResult("HASH-BIND") });
+  const page = bootPage({ wallet });
+  await settle(page);
+  assert.equal(wallet.configuredContract, CONTRACT,
+    "the console must configure the wallet with the contract id it reads");
+});
+
+test("the legacy build is labelled as the original, vulnerable module", async () => {
+  const wallet = mockWallet({ result: okResult("H") });
+  const page = bootPage({ wallet }); // fixture code_hash == the legacy module
+  await settle(page);
+  assert.equal(page.el("sec-banner").hidden, false, "the security banner must be shown");
+  assert.match(page.el("sec-tag").textContent, /Legacy build/);
+  assert.match(page.el("sec-text").innerHTML, /unauthenticated/);
+  assert.match(page.el("sec-text").innerHTML, /contract\.ovc-v3-ctl-2f6c4c\.testnet/);
+});
+
+test("a hardened module is labelled as hardened, from its own code hash", async () => {
+  const wallet = mockWallet({ result: okResult("H") });
+  const page = bootPage({ wallet, codeHash: "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL" });
+  await settle(page);
+  assert.match(page.el("sec-tag").textContent, /Hardened build/);
+  assert.match(page.el("sec-text").innerHTML, /migrate\(\)/);
+});
+
+test("an unknown module is never presented as hardened", async () => {
+  const wallet = mockWallet({ result: okResult("H") });
+  const page = bootPage({ wallet, codeHash: "SomeUnknownHashThatIsNotOurs111111111111111" });
+  await settle(page);
+  assert.match(page.el("sec-tag").textContent, /Unrecognised build/);
+  assert.doesNotMatch(page.el("sec-text").innerHTML, /hardened module/);
 });

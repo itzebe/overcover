@@ -1,6 +1,6 @@
 # Final release readiness register
 
-**As of:** 2026-11-12 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (HEAD `93bbecaacd85`)
+**As of:** 2026-11-12 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (HEAD `5e84ef7e1d32dfe4396b980f11e99c871c551622` + this mission's fixes)
 **Live contract:** `contract.attestor-overcover.testnet` (v1) · **Controlled v3 contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (v3, NEAR testnet) · **Production:** https://overcover.vercel.app/
 
 This register states, for every requirement, exactly what exists, what was tested, the evidence, and
@@ -17,7 +17,7 @@ npm ci --ignore-scripts
 npm run test:model && npm run test:contract && npm run test:console && npm run test:agent
 npm run test:agent-eval     # 32 — product-feed schema/premium + agent boundary (offline) + independent-client integration
 npm run test:factory        # 11 — discovery agent: deterministic rule, evidence hash, forecast labelling
-npm run test:deploy         # 3 — the deploy/upgrade paths refuse a stale (guard-less) wasm
+npm run test:deploy         # 21 — the deploy/upgrade paths refuse a stale (guard-less) wasm
 npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
 npm run verify:agent        # limits engine vs the live product
 npm run verify:upgrade      # 8/8 — the SEC-1 guard on the compiled wasm (real neard node)
@@ -101,6 +101,7 @@ owner transaction**. This is the difference between an operated product and a pe
 | Account identification | FIXED AND VERIFIED | `selector.store.observable` keeps the account id in sync; returned on connect. | `tests/console.test.js`; `wallet.js` status snapshot. |
 | Testnet verification | FIXED AND VERIFIED | Network fixed to `testnet`; a mainnet wallet is a reported mismatch. | `wallet.js` `NETWORK_ID`; `tests/console.test.js`. |
 | Quote retrieval | FIXED AND VERIFIED | `doBuy` re-reads `quote` from the contract before signing. | `tests/console.test.js`; live quote shown. |
+| Contract binding | FIXED AND VERIFIED | The wallet signs against the contract the console reads (`WALLET.configure(CONTRACT)`); a `?contract=` page can never price one contract and pay another. | `tests/wallet-journey.test.mjs` (configured-contract assertion); `proof/connectivity.mjs` check 10. |
 | Transaction construction | FIXED AND VERIFIED | `buildBuyArgs` → `{product_id, payout, obs_date, beneficiary}`; deposit = contract premium; payout stays an exact u128 string. | `tests/console.test.js`: ABI match, empty beneficiary → null, payout not rounded. |
 | Wallet signing | IMPLEMENTED BUT NOT VERIFIED (live) | `signAndSend` passes exactly the caller's action; the wallet signs. | Unit-tested shapes; `verify:connectivity` loads the bundle. A live HERE/Meteor extension approval is **BLOCKED BY HUMAN ACTION**. |
 | Transaction confirmation | FIXED AND VERIFIED | `evaluateWalletOutcome` claims success only from the wallet's own confirmed hash. | `tests/console.test.js`: rejected/failed/hashless results are never success. |
@@ -151,6 +152,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Denial-of-service exposure | FIXED AND VERIFIED | Body cap with a drain (the socket is not destroyed, so the client still gets a 413). | `tests/agent-api.test.mjs` oversized-body test. |
 | Error handling | FIXED AND VERIFIED | Contract refusals carry a human-readable `panic_utf8` reason; the agent surfaces it. | Rust tests; adversarial tests assert the expected reason; `failureMessage`. |
 | Logging and audit integrity | FIXED AND VERIFIED | Audit log holds no key material; a write failure is surfaced on stderr, never silently dropped. | `agent.mjs` `appendAudit`; `tests/agent-api.test.mjs`. |
+| Build disclosure | FIXED AND VERIFIED | The console states the security status of the contract it reads, from the **deployed code hash**: "Hardened build" / "Legacy build" (with the hardened address) / "Unrecognised build". It never claims a build is hardened unless the hash matches. | `tests/wallet-journey.test.mjs` (three cases); live browser probe on `contract.attestor-overcover.testnet` (legacy) and `contract.ovc-v3-ctl-2f6c4c.testnet` (hardened), 0 console errors, 0 overflow at 320–1280 px. |
 
 ## 5. Production
 
@@ -197,6 +199,31 @@ What v3 adds over the deployed v1 (all in `contract/src/lib.rs`):
 | Judge-facing evidence | FIXED AND VERIFIED | `docs/JUDGE_DEMO.md` (script, checklist, backup) + `proof/` + explorer links. | This mission. |
 
 ---
+
+## Defects found and fixed in this mission (2026-11-12, SEC-1 disclosure + SEC-5 remediation)
+
+1. **The console could price one contract and pay another.** Root cause: `ui/wallet.js` hardcoded
+   `CONTRACT_ID = "contract.attestor-overcover.testnet"`, so a visitor who opened the page with
+   `?contract=<other>` read the other contract but a wallet signature still targeted the legacy one.
+   Fix: `ui/wallet.js` now exposes `configure(id)` / `contractId()` and signs against the contract the
+   console actually reads; `ui/index.html` calls `WALLET.configure(CONTRACT)` at boot. Regression:
+   `tests/wallet-journey.test.mjs` asserts the wallet is configured with the read contract; the console
+   suite (101) and `proof/connectivity.mjs` (12/12) both re-assert the `buy_cover` scope against the
+   configured id.
+
+2. **The SEC-1 vulnerability on the live address was not disclosed in the product itself.** Root cause:
+   the honest-read / disclosures work lived in docs, but the console rendered the legacy build with no
+   indication that its `migrate()` is unauthenticated. Fix: the console now shows a security banner
+   driven by the **deployed code hash** it reads — "Hardened build" for the v3 module, "Legacy build"
+   (with the hardened address and the `?contract=` switch) for the v1 module, and "Unrecognised build"
+   for anything else. It never claims a build is hardened unless the hash matches. Regression:
+   `tests/wallet-journey.test.mjs` (three cases) + a live browser probe on both contracts.
+
+3. **SEC-5 — dependency advisories (9 high / 2 moderate).** Root cause: transitive leaves pinned to
+   vulnerable versions inside the wallet libraries. Fix: forward `overrides` (nanoid 5.1.16, bn.js
+   5.2.5, base-x 3.0.11, decode-uri-component 0.5.1). Result: `npm audit` **19 low / 0 high / 0
+   moderate**. Verified non-regressing: bundle rebuilt, wallet selector still initialises (HERE +
+   Meteor) in a real browser, console (101), agent (51) and connectivity (12/12) all pass.
 
 ## Defects found and fixed in this mission (2026-11-12, live v3 deployment)
 
@@ -608,10 +635,11 @@ shown. `npm run verify:agent` confirms the spend engine against the live product
 - **No professional audit; testnet only.** Not for real funds. An internal pre-audit
   (`docs/SECURITY_PRE_AUDIT.md`) found and fixed a critical contract issue and two agent races; it is
   not a substitute for a third-party audit.
-- **Wallet-stack dependency advisories remain (pre-audit SEC-5).** `npm audit --omit=dev` reports
-  9 high / 2 moderate / 13 low, all transitive through the wallet libraries (`@here-wallet/core`,
-  `@meteorwallet/sdk`, `bs58`/`base-x`, `nanoid`, `query-string`). The fixes need a breaking wallet
-  downgrade; no exploit path was found in the shipped static page, so they are accepted and tracked.
+- **Wallet-stack dependency advisories (pre-audit SEC-5).** All **high and moderate** advisories are
+  now cleared via forward `overrides` (nanoid 5.1.16, bn.js 5.2.5, base-x 3.0.11,
+  decode-uri-component 0.5.1); `npm audit` reports **19 low / 0 high / 0 moderate** (dev-only `elliptic`
+  and transitive parents). No exploit path was found in the shipped static page. Recommended follow-up:
+  drop the overrides once `@near-wallet-selector` ships the patched transitive ranges.
 - **Agent rate limits and idempotency are per-process**, not a global distributed limit. Buys are
   serialized within one process, so a single service instance cannot be raced; a multi-instance
   deployment must centralise spend state.

@@ -16,7 +16,13 @@ import { setupHereWallet } from "@near-wallet-selector/here-wallet";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 
 const NETWORK_ID = "testnet";
-const CONTRACT_ID = "contract.attestor-overcover.testnet";
+// The canonical contract the wallet connects and signs against. The console may
+// point the *reads* at another deployment via ?contract=, but a signature must
+// target the same contract the page is showing — otherwise a buyer could price
+// one contract and pay another. `setup` accepts an override for exactly that
+// case; it defaults to the production contract.
+const DEFAULT_CONTRACT_ID = "contract.attestor-overcover.testnet";
+let contractId = DEFAULT_CONTRACT_ID;
 
 let selector = null;
 let wallet = null;
@@ -53,7 +59,7 @@ function status() {
   return {
     ready: !!selector,
     networkId: NETWORK_ID,
-    contractId: CONTRACT_ID,
+    contractId: contractId,
     connected: !!currentAccountId,
     accountId: currentAccountId,
     networkMismatch: networkMismatch(),
@@ -79,6 +85,16 @@ function networkMismatch() {
     const net = selector && selector.options && selector.options.network;
     return net ? net.networkId !== NETWORK_ID : false;
   } catch (e) { return false; }
+}
+
+/** Configure the contract this wallet connects and signs against. The console
+ *  calls this with the contract id it is reading, so a signature always targets
+ *  the contract the page is showing. Only a contract-shaped testnet account id
+ *  is accepted; anything else is ignored and the production default stands. */
+const CONTRACT_RE = /^[a-z0-9._-]+\.(testnet|near)$/;
+function configure(id) {
+  if (typeof id === "string" && CONTRACT_RE.test(id)) contractId = id;
+  return contractId;
 }
 
 async function setup() {
@@ -167,7 +183,7 @@ async function connect(walletId) {
   let accounts;
   try {
     accounts = await withTimeout(
-      w.signIn({ contractId: CONTRACT_ID, methodNames: ["buy_cover"] }),
+      w.signIn({ contractId: contractId, methodNames: ["buy_cover"] }),
       CONNECT_TIMEOUT_MS,
       `${name} did not respond. If a wallet window opened, finish there; otherwise install the wallet and try again.`,
     );
@@ -218,7 +234,9 @@ function functionCall({ methodName, args, gas, deposit }) {
 
 window.OvercoverWallet = {
   NETWORK_ID,
-  CONTRACT_ID,
+  DEFAULT_CONTRACT_ID,
+  configure,
+  contractId: () => contractId,
   setup,
   status,
   connect,

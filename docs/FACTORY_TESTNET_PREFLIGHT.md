@@ -2,7 +2,7 @@
 
 **As of:** 2026-11-12 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main`
 **Baseline HEAD:** `8f69e97e530c4ed440bd2fc1ec70d10b05ab367a` (matches the expected baseline)
-**Status:** preflight complete · **nothing deployed** · awaiting human funding.
+**Status:** harness complete (factory path proven, 39/39 sandbox) · **nothing deployed** · awaiting human funding.
 
 This document is the preflight for the **first live controlled-v3 testnet deployment that carries the
 permissionless insurance factory**. It contains no secret material — only public on-chain facts,
@@ -56,21 +56,25 @@ The deployment harness (`proof/controlled-v3-deploy.mjs`) generates a **fresh, r
 creates the root account from it, and derives the whole identity graph as sub-accounts:
 
 ```
-ovc-v3-ctl-<tag>.testnet          <- the funding root (faucet-created)
-  ├─ owner.<root>      ├─ buyer.<root>   ├─ attacker.<root>
+ovc-v3-ctl-<tag>.testnet          <- the funding root (created + funded by the human)
+  ├─ owner.<root>      ├─ buyer.<root>   ├─ attacker.<root>   ├─ proposer.<root>
   ├─ op1..op5.<root>   ├─ res1..res5.<root>
   └─ contract.<root>                <- the contract account (wasm is deployed here)
 ```
 
-Because the harness keys are random and never printed, the human does not need to know them. Two
-viable funding paths:
+The harness derives the whole graph from **one operator-supplied root** and never invents it. Supply it
+either as environment variables (`OVERCOVER_ROOT_ACCOUNT_ID` + `OVERCOVER_ROOT_SECRET_KEY`) or as a
+gitignored file `keys/controlled-v3-root.json` (`{ "accountId": "...", "secretKey": "..." }`, mode
+0600). The sub-account keys are random and never printed. Two viable funding paths:
 
 - **Path A (recommended, self-contained):** the human creates **one** fresh top-level testnet account
   named e.g. `ovc-v3-ctl-<tag>.testnet` (any wallet or the web faucet at https://near-faucet.io/),
-  funds it with **≥ 9.6 NEAR**, and the harness runs `bootstrapTestnet()` against it. *(The harness
-  currently always faucets its own root — see §7; a one-line change makes it accept this account.)*
-- **Path B (no code change):** fund **one** existing testnet account that already holds a FullAccess
-  key the operator controls with **≥ 9.6 NEAR**, and point the harness at it.
+  funds it with **≥ 10 NEAR**, and passes it to the harness via the env vars above.
+- **Path B:** fund **one** existing testnet account that already holds a FullAccess key the operator
+  controls with **≥ 10 NEAR**, and point the harness at it the same way.
+
+(The root must be a **named** account, e.g. `*.testnet`; an implicit 64-hex account cannot host the
+sub-accounts the harness creates, and is refused early.)
 
 **Recommended account to fund:** `ovc-v3-ctl-<tag>.testnet` (a new top-level account). The public
 address is exactly the account id; it is created and funded by the human, not by this environment.
@@ -83,19 +87,23 @@ The contract code is **500 023 bytes**, so the code stake is the dominant cost.
 | Item | Amount (NEAR) |
 | --- | --- |
 | Code stake (`500023 × 1e-5`) | **5.0002** |
-| Contract state + account storage reserve | ~0.6 |
-| `owner` (pool seed + gas float) | 0.8 |
+| Contract state + account storage reserve | ~0.2 |
+| `owner` (pool seed 1.5 + gas float) | 1.8 |
 | `buyer` (premium + gas float) | 0.3 |
-| `attacker` (challenge bond + gas float) | 0.35 |
-| `proposer` (proposal stake + gas float) — *new, for the factory step* | 0.5 |
+| `attacker` (challenge bond + gas float) | 0.3 |
+| `proposer` (0.1 NEAR proposal stake + gas float) | 0.4 |
 | `op1…op5` (5 × 0.15, gas float) | 0.75 |
 | `res1…res5` (5 × 0.15, gas float) | 0.75 |
-| **Subtotal (harness funding map, with proposer)** | **9.45** |
-| Safety margin (recoverable; code stake refunded on next upgrade) | +0.55 |
-| **Recommended funding** | **≥ 10 NEAR** (hard floor **9.6 NEAR**) |
+| **Subtotal (harness funding map)** | **9.50** |
+| Safety margin (recoverable; code stake refunded on next upgrade) | +0.30 |
+| **Recommended funding** | **≥ 10 NEAR** (hard floor **9.8 NEAR**) |
+
+The harness enforces the floor: before it spends anything it reads the root balance and **fails closed**
+with the exact shortfall if the root holds less than `subtotal + 0.3`.
 
 Notes:
-- The free faucet grants up to **10 NEAR** per account, so one faucet account suffices.
+- The pool seed is 1.5 NEAR (not 0.5) because the factory product's declared capacity is checked
+  against `capital − capital/5`; a small pool cannot host two products. See §7.
 - The gas float is small today (gas price `1e8` yocto/Gas → 0.01 NEAR per 100 Tgas call); the harness
   budgets a worst case of `1e9` → 0.1 NEAR per call, which the map already covers.
 - The code stake (~5 NEAR) is **refunded** when the account is later upgraded or deleted.
@@ -111,30 +119,43 @@ Notes:
 | Public RPC (`test.rpc.fastnear.com`, `rpc.testnet.fastnear.com`, `near-testnet.drpc.org`, `rpc.testnet.near.org`) | all **healthy**, chain `testnet` |
 
 **Restriction:** the environment's IP is rate-limited on the free faucet, and no funded key exists
-locally (`keys/` is empty). The human must fund the account from a **different IP/session** (browser
-faucet) or wait out the 10-hour window.
+locally (`keys/` is empty). This no longer blocks the run: the harness takes an operator-supplied root
+(§4), so the human funds one account from a **different IP/session** (browser faucet) — no faucet call
+by this environment is needed. (`OVERCOVER_USE_FAUCET=1` remains available for a self-contained smoke
+run once the faucet recovers.)
 
-## 7. Readiness gap found (must fix before the funded run)
+## 7. Factory path in the harness (gap found, now closed)
 
-**The deployment harness does not exercise the factory.** `proof/controlled-v3-deploy.mjs` has **no
-`proposer` role and no `propose_product` call** — it proves the v3 operator/resolver lifecycle and the
-SEC-1 closure, but not the permissionless path. Running `npm run verify:controlled-v3` as-is would
-**deploy the factory wasm and never prove it works.**
+**Original gap:** `proof/controlled-v3-deploy.mjs` had **no `proposer` role and no `propose_product`
+call** — it proved the v3 operator/resolver lifecycle and the SEC-1 closure, but not the permissionless
+path. A funded run would have deployed the factory wasm and never exercised it.
 
-Corrective action (small, already templated by `proof/factory-sandbox.mjs`, 22/22):
+**Fix (this branch):** the harness now proves the whole factory lifecycle:
 
-1. Add a `proposer` sub-account to the identity graph (funded ~0.5 NEAR).
-2. After the metrics/products are configured, have the **non-owner** `proposer` call
-   `propose_product(...)` with a 0.1 NEAR stake, then assert:
-   `get_product(id).active == true`, `proposed_by == proposer`, `evidence_hash` recorded, and the
-   product appears in `list_products`.
-3. Add one adversarial assertion (e.g. an unknown metric is refused) so the on-chain rules are shown
-   refusing on testnet, not only in the sandbox.
-4. Record the `propose_product` tx hash in `evidence.txs.propose_product`.
+1. Creates an **independent `proposer`** sub-account, asserted distinct from the owner.
+2. Has the **proposer (never the owner)** sign `propose_product(...)` with the 0.1 NEAR stake, then
+   asserts `get_product(id).active == true`, `proposed_by == proposer`, `evidence_hash` recorded, the
+   product appears in `list_products`, and the stake raised the pool's `capital`.
+3. Asserts an adversarial proposal (unknown metric) is **refused on chain**.
+4. Buys cover on the permissionlessly-created product and asserts the policy belongs to the buyer on
+   that product, its payout is **reserved**, the pool stays **solvent**, and `reconcile() == true`.
+5. Records the `propose_product` tx hash and the factory policy id in the evidence file.
 
-The factory flow itself is already proven on the compiled wasm against a real `neard` node
-(`npm run verify:factory` → **22/22**, `proof/factory-sandbox.json`); this change carries the same
-assertions onto the testnet deployment. It must be validated in sandbox mode before any funded run.
+The factory block runs **after** the operator/resolver lifecycle settles, so it cannot be satisfied by
+the owner's own purchase; the pool's `reserved` is back to 0 by then.
+
+**Discovery while wiring it up:** the owner product originally declared `max_total_coverage = 20 NEAR`.
+The contract sums every product's declared capacity and refuses any change that pushes the total above
+`capital − capital/5`; with the small pool that made *any* second product impossible
+(`product capacity exceeds available capital`), and the owner product itself failed
+(`capacity below a single max payout`). The harness now uses a self-consistent configuration: a 1.5
+NEAR pool, the owner product at `max_payout 0.3` / `max_total_coverage 0.4`, and the factory product at
+`max_payout 0.1` (capacity 0.5). After the lifecycle settles, `capital = 1.315`, the ceiling is `1.052`,
+and the committed total is `0.9` — so both products are valid and both are proven live.
+
+The factory flow is also proven on the compiled wasm against a real `neard` node
+(`npm run verify:factory` → **22/22**). The full harness is validated in sandbox mode:
+`npm run verify:controlled-v3:sandbox` → **39/39**.
 
 ## 8. Exact commands after funding
 
@@ -148,14 +169,17 @@ sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm
 #   expected: a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1  (500023 bytes)
 
 # 2. prove the same harness locally first (no funds)
-npm run verify:controlled-v3:sandbox     # expect 29/29 (+ the new factory checks)
+npm run verify:controlled-v3:sandbox     # expect 39/39
 npm run verify:factory                   # expect 22/22
 
 # 3. print the plan (sends nothing)
 npm run verify:controlled-v3:plan
 
 # 4. the live deployment + verification (sends transactions; needs the funded root)
-npm run verify:controlled-v3             # REQUIRE_TESTNET=1 to fail loudly instead of SKIP on faucet 429
+#    Provide the root via env (or keys/controlled-v3-root.json, gitignored):
+OVERCOVER_ROOT_ACCOUNT_ID=ovc-v3-ctl-<tag>.testnet \
+OVERCOVER_ROOT_SECRET_KEY=<secret-key> \
+REQUIRE_TESTNET=1 npm run verify:controlled-v3   # REQUIRE_TESTNET=1 fails loudly instead of SKIP
 
 # 5. read back the public evidence, no key needed
 npm run verify:controlled-v3:evidence    # rewrites proof/controlled-v3-onchain-evidence.json
@@ -183,7 +207,9 @@ Every item is a real testnet transaction with a hash in the evidence file; none 
 ## 10. Remaining blocker
 
 **One item: human funding.** The environment cannot create or fund the root account (faucet 429, no
-local funds), and the harness keys are random. No further technical work is blocked — the factory
-implementation, the wasm, the sandbox proofs and the CI are all green.
+local funds). The harness now takes an operator-supplied root (§4), so the human funds **one** account
+with **≥ 10 NEAR** and passes its id + key to the harness — no further code change is needed. No
+technical work remains blocked: the factory implementation, the wasm, the harness factory path, the
+sandbox proofs (39/39) and the CI are all green.
 
 **Stop point:** this preflight performs no deployment. Waiting for human funding authorization.

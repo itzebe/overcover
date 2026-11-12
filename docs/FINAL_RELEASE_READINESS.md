@@ -1,6 +1,6 @@
 # Final release readiness register
 
-**As of:** 2026-11-11 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `feat/permissionless-insurance-factory` (PR pending merge to `main`)
+**As of:** 2026-11-11 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (PR #27 merged 2026-11-12)
 **Contract:** `contract.attestor-overcover.testnet` (NEAR testnet) · **Production:** https://overcover.vercel.app/
 
 This register states, for every requirement, exactly what exists, what was tested, the evidence, and
@@ -16,7 +16,7 @@ Reproduce the whole thing:
 npm ci --ignore-scripts
 npm run test:model && npm run test:contract && npm run test:console && npm run test:agent
 npm run test:agent-eval     # 32 — product-feed schema/premium + agent boundary (offline) + independent-client integration
-npm run test:factory        # 9 — discovery agent: deterministic rule, evidence hash, forecast labelling
+npm run test:factory        # 11 — discovery agent: deterministic rule, evidence hash, forecast labelling
 npm run test:deploy         # 3 — the deploy/upgrade paths refuse a stale (guard-less) wasm
 npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
 npm run verify:agent        # limits engine vs the live product
@@ -62,7 +62,7 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 62 Rust unit tests pass; 66-attack reference model `66 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
+| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 76 Rust unit tests pass; 66-attack reference model `66 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
 | Product discovery | FIXED AND VERIFIED | `list_products` view; console offers only *sellable* products (named, payable, active) and groups everything else as clearly-labelled fixtures. | Live `list_products` returns 22 products (2 named: `rain-lagos`, `rain-bergen-dry`; 20 demo-generated). `rain-bergen-dry` pins its trigger at the contract's plausible ceiling (500.0 mm), so it can only pay on that single reading — a broken definition shown as a fixture, not offered as cover; `rain-lagos` renders as a coverage card. `tests/console.test.js`; live probe. |
 | Premium calculation | FIXED AND VERIFIED | `quote(product_id, payout) = ceil(payout × premium_bp / 10_000)`, computed in the contract. | `quote` read live (`0.0500 NEAR` for 1 NEAR at 500 bp); console re-reads the contract's quote before buying (`tests/console.test.js`). |
 | Payout calculation | FIXED AND VERIFIED | Payout is the amount reserved at purchase; `resolve` pays iff `value_tenths ≥ threshold_tenths`. | Policy 3 settled `settled_paid` (1 NEAR paid); policy 4 `settled_no_pay` (0). `verify:proof` asserts both. The console's hero and cards state the **≥** direction, derived from `threshold_tenths`. |
@@ -85,7 +85,7 @@ owner transaction**. This is the difference between an operated product and a pe
 | Evidence provenance, immutable on-chain | FIXED AND VERIFIED | `Product.evidence_hash` is stored at activation and never mutated; `proposed_by` names the proposer. | `factory_13_the_evidence_hash_is_stored_and_immutable` (Rust); the sandbox proof reads the stored hash back. |
 | Anti-spam stake enters the pool | FIXED AND VERIFIED | `PROPOSAL_MIN_STAKE` (0.1 NEAR) is required and paid to the pool; below-minimum is refused. | Rust `factory_*` stake tests; sandbox proof asserts the stake raises `capital`. |
 | A permissionless product is buyable | FIXED AND VERIFIED | `buy_cover` works on a factory-created product with no special case. | The sandbox proof buys cover on the permissionlessly-created product and asserts the policy. |
-| Discovery agent finds real emerging risk | FIXED AND VERIFIED | `agent/discovery.mjs` reads a real Open-Meteo forecast and applies a deterministic rule. | `npm run test:factory` (9/9): determinism, threshold crossing, evidence hash reproducibility, forecast (not observation) labelling; one live read of the real API. |
+| Discovery agent finds real emerging risk | FIXED AND VERIFIED | `agent/discovery.mjs` reads a real Open-Meteo forecast and applies a deterministic rule. | `npm run test:factory` (11/11): determinism, threshold crossing, evidence hash reproducibility, forecast (not observation) labelling; one live read of the real API. |
 | Console shows the proposal honestly | FIXED AND VERIFIED | A proposal is shown **PROPOSED** until the contract returns a product whose `evidence_hash` matches; never ACTIVE on the page's own word. | 7 `renderFactory` regression tests in `tests/console.test.js`; rendered live at 390/768/1280 px with 0 axe violations and 0 console errors. |
 | Factory deployed to the live testnet address | BLOCKED BY EXTERNAL SERVICE | The compiled v3 factory wasm is proven on a real `neard` node; a fresh testnet deployment needs a funded account. | The faucet returns `429 retry in 10h` and no funded account is held here. The controlled-v3 accounts (`contract.ovc-v3-ctl-*`) are the deployment target once funded. Not claimed as deployed. |
 

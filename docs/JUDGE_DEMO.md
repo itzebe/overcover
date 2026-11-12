@@ -175,7 +175,7 @@ the **evidence** — the Open-Meteo source URL and the sha256 of exactly what th
 refusing, the proposer's stake entering the pool, and a buyer purchasing cover on the
 permissionlessly-created product — is proven end-to-end against the **compiled wasm on a real neard
 node** (`npm run verify:factory`, 22/22), and the discovery agent's determinism and evidence hashing
-are unit-tested (`npm run test:factory`, 9/9). The console's honesty rule — a proposal is never shown
+are unit-tested (`npm run test:factory`, 11/11). The console's honesty rule — a proposal is never shown
 ACTIVE without the contract — is regression-tested (`npm run test:console`).
 
 ## Closing payoff (10 s)
@@ -200,7 +200,7 @@ ACTIVE without the contract — is regression-tested (`npm run test:console`).
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 66/0, contract 76/0, console 97/0, agent 51/0, sim 71/0, agent-eval 32/0, factory 9/0 | `npm test` |
+| 11 | Tests pass | model 66/0, contract 76/0, console 97/0, agent 51/0, sim 71/0, agent-eval 32/0, factory 11/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
 | 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 29/29 checks | `npm run verify:controlled-v3:sandbox` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |

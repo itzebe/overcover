@@ -1,6 +1,6 @@
 {
   "contract": "contract.attestor-overcover.testnet",
-  "at": "2026-11-11T22:21:36.730Z",
+  "at": "2026-11-12T06:42:48.063Z",
   "pool": {
     "capital": "14050000000000000000000000",
     "reserved": "10500000000000000000000000",
@@ -31,7 +31,7 @@
     {
       "name": "repository is contract v3; the deployed v1 module is the live product",
       "ok": true,
-      "detail": "local build 52c11c22fe52bd26… — deploy + re-pin to assert byte equality"
+      "detail": "local build a97034e65fb0c53f… — deploy + re-pin to assert byte equality"
     },
     {
       "name": "pool is solvent (reserved <= capital)",

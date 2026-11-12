@@ -248,15 +248,16 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
   nothing). Its rate limits and single-flight locks are **per-instance**, not a global distributed
   lock.
 - Testnet only; unaudited; not for real funds.
-- The **permissionless factory** (v3) is proven end-to-end on the compiled wasm against a real
-  `neard` node (`npm run verify:factory`, 22/22) and its underwriting rules are unit-tested. The full
-  deployment harness now also proves the factory path — a **non-owner** `propose_product` activation
-  plus a `buy_cover` on the resulting product — and passes **39/39** in sandbox mode. It is **not yet
-  deployed to the live testnet address**: that needs a funded root account, and the faucet is
-  rate-limited here (`429 retry in 10h`) with no funded account held in this environment. The harness
-  now takes an operator-supplied funded root (see `docs/FACTORY_TESTNET_PREFLIGHT.md`), so one funded
-  account unblocks the live run. The factory is demonstrable on the sandbox and through the console's
-  feed, but a live on-chain factory purchase is pending that deploy. It is not claimed as deployed.
+- The **permissionless factory** (v3) is **deployed and proven end-to-end on NEAR testnet**:
+  `npm run verify:controlled-v3` passes **40/40** against the real contract
+  `contract.ovc-v3-ctl-2f6c4c.testnet` — a **non-owner** `propose_product` activates a product with no
+  owner transaction, an invalid proposal is refused on-chain, and a `buy_cover` on the resulting
+  product creates policy 2. The deployed module is byte-identical to the source rebuild (sha256
+  `a97034e6…`). Evidence: `proof/controlled-v3-deploy.json` and
+  `proof/controlled-v3-onchain-evidence.json`. The factory is also proven on the compiled wasm against
+  a real `neard` node (`npm run verify:factory`, 22/22) and on the sandbox (`verify:controlled-v3:sandbox`,
+  39/39). The **legacy live address** `contract.attestor-overcover.testnet` still runs v1 (SEC-1 closure
+  there needs the operator key — see below); the permissionless factory is **not** on that address.
 - The **deployed v1 contract** exports `migrate()`, which is unauthenticated because it is
   `#[init(ignore_state)]` (it runs before state is read, so it cannot check the stored owner). An
   internal security pre-audit reproduced a full state takeover against the exact deployed bytecode

@@ -11,18 +11,18 @@ transactions. Nothing is staged.
 > Never present a RECORDED item as if it just happened.
 
 > **Version note.** The live console and `contract.attestor-overcover.testnet` currently run the
-> **v1** product (single attestor, owner-resolved disputes). The repository source is now **contract
-> v3** (metric-agnostic products, a domain-separated multi-operator oracle quorum, independent
-> dispute resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, and a
-> state-preserving in-place `migrate`). v3 is implemented and proven end-to-end on a real local
+> **v1** product (single attestor, owner-resolved disputes). The repository source is **contract v3**
+> (metric-agnostic products, a domain-separated multi-operator oracle quorum, independent dispute
+> resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, a permissionless
+> product factory, and a state-preserving in-place `migrate`). v3 is proven end-to-end on a real local
 > `neard` node (`npm run verify:sandbox`, 21/21), its in-place upgrade is proven state-preserving
-> against the exact live v1 bytecode (`npm run verify:upgrade-preservation`), and the **controlled v3
-> deployment** harness proves the full decentralised design plus SEC-1 closure against the compiled
-> module (`npm run verify:controlled-v3:sandbox`, **29/29**). It is **not yet deployed to the live
-> address** — the legacy account's FullAccess key is not held here and is not recoverable from the
-> chain (see `docs/AUTHORITY_RECOVERY.md`), so closing SEC-1 on that address is the operator's step,
-> or the controlled deployment stands up a fresh, SEC-1-closed contract instead. The demo below runs
-> against whatever is deployed — currently v1, which the console renders with a version gate. Where a
+> against the exact live v1 bytecode (`npm run verify:upgrade-preservation`), and it is **deployed and
+> verified on NEAR testnet** at `contract.ovc-v3-ctl-2f6c4c.testnet` (`npm run verify:controlled-v3`,
+> **40/40**; the sandbox equivalent is 39/39). It is **not deployed to the legacy live address** — that
+> account's FullAccess key is not held here and is not recoverable from the chain (see
+> `docs/AUTHORITY_RECOVERY.md`), so closing SEC-1 on that address is the operator's step, or the
+> controlled deployment stands up a fresh, SEC-1-closed contract instead (already done on testnet). The
+> demo below runs against whatever is deployed — the console renders v1 with a version gate. Where a
 > check's numbers differ between the two, both are given.
 
 ---
@@ -155,7 +155,7 @@ underfunded agent refuses rather than sending a doomed transaction.
 Also show the **kill switch**: `POST /api/v1/agent/control {"enabled":false}` stops all buying
 immediately; a further buy returns `403` with "agent is disabled".
 
-## 6. The insurance factory — anyone can add cover (25 s) — FEED LIVE, ACTIVATION SANDBOX-PROVEN
+## 6. The insurance factory — anyone can add cover (25 s) — FEED LIVE, ACTIVATION VERIFIED ON TESTNET
 
 Scroll to **The insurance factory**. The discovery agent has read a real public forecast and prepared
 a proposal. Point at it: the city and index, the trigger, the premium rate, the coverage start, and
@@ -173,16 +173,18 @@ itself is live (the page fetched `factory.json`, generated from the real API).
   contract itself returns the product — it will not tell you a proposal is live when it is not."*
 
 **Be precise about what is live and what is proven.** The feed on the page is live. The on-chain
-activation is **proven on the compiled wasm against a real `neard` node, not yet deployed to the live
-testnet address** (the faucet is rate-limited and no funded account is held here). Do not say a
-`propose_product` call on the live contract succeeded — it would be refused with `MethodNotFound`
-until that deploy happens. Say instead:
+activation is **proven on the real deployed v3 contract** `contract.ovc-v3-ctl-2f6c4c.testnet` on
+NEAR **testnet** (`npm run verify:controlled-v3`, **40/40**, 2026-11-12) — a non-owner proposal
+activated a product with no owner transaction, an invalid proposal was refused, and a buyer purchased
+cover on the factory product. The **legacy live address** `contract.attestor-overcover.testnet`
+remains v1, so do not say a `propose_product` call on *that* address succeeded — it would be refused
+with `MethodNotFound`. Say instead:
 
 - *"The whole factory — a non-owner proposal activating a product, every rule refusing, the proposer's
   stake entering the pool, and a buyer purchasing cover on the permissionlessly-created product — is
-  proven end-to-end against the compiled contract on a real NEAR node (`npm run verify:factory`,
-  22/22). The contract is not yet deployed to the live testnet address; that needs a funded account.
-  I am not going to show you a live call that has not happened."*
+  proven end-to-end against the real deployed v3 contract on NEAR testnet
+  (`npm run verify:controlled-v3`, 40/40). The product the console shows here is read from the legacy
+  v1 contract; the permissionless factory lives on the fresh v3 contract."*
 
 *Why it is credible:* the discovery agent's determinism and evidence hashing are unit-tested
 (`npm run test:factory`, 11/11), and the console's honesty rule — a proposal is never shown ACTIVE
@@ -212,7 +214,7 @@ without the contract — is regression-tested (`npm run test:console`).
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
 | 11 | Tests pass | model 66/0, contract 76/0, console 97/0, agent 51/0, sim 71/0, agent-eval 32/0, factory 11/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
-| 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 29/29 checks | `npm run verify:controlled-v3:sandbox` |
+| 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 39/39 sandbox · **40/40 live testnet** | `npm run verify:controlled-v3:sandbox`; `npm run verify:controlled-v3` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |
 | 15 | Anyone can add cover (permissionless factory) | a non-owner proposal activates a product; every rule refuses; a buyer buys on it | `npm run verify:factory` (22/22) |
 | 16 | The console never shows a proposal as active without the contract | PROPOSED unless the contract returns a matching product | `npm run test:console` |
@@ -254,8 +256,9 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   and the deploy path is now safe: `npm run test:deploy` proves both deploy scripts refuse a stale
   (guard-less) wasm, `npm run verify:upgrade` proves the guard on the compiled wasm (8/8),
   `npm run verify:controlled-v3:sandbox` proves a third-party `migrate()` is refused on a freshly
-  **deployed** v3 module (29/29), and `node driver/upgrade.js` upgrades the live contract **in place**
-  — address, pool and policies preserved — with a `--plan` mode that sends nothing. Closing SEC-1
+  **deployed** v3 module (39/39 sandbox; **40/40** on the live testnet contract
+  `contract.ovc-v3-ctl-2f6c4c.testnet`), and `node driver/upgrade.js` upgrades the live contract **in
+  place** — address, pool and policies preserved — with a `--plan` mode that sends nothing. Closing SEC-1
   **on the live address** still needs that account's FullAccess key
   (`ed25519:CwZBmKyV…`), which this environment does not hold and which cannot be recovered from the
   chain; the alternative is the controlled deployment to a fresh, SEC-1-closed account
@@ -275,16 +278,17 @@ These are deliberate, not accidents. If a judge asks, the answers are:
 - **NEAR testnet RPC is slow or down.** The console shows **stale** with the last good read — that is
   the designed behaviour, not a failure. Fall back to `demo-log.json` (18 real hashes) and
   `npm run verify:proof` (which re-derives everything from public RPC).
-- **The faucet is rate-limited (the testnet v3 deploy cannot run).** Do not wait on it. Run
-  `npm run verify:controlled-v3:sandbox` — the identical harness against the identical compiled wasm
-  on a local `neard` node (29/29) — and say plainly that only the faucet account-creation step is
-  exercised on testnet. State that the legacy address's key is unrecoverable
-  (`docs/AUTHORITY_RECOVERY.md`).
-- **The factory is not deployed to the live address.** The feed on the page is live; the on-chain
-  activation is not. Show it honestly: `npm run verify:factory` (22/22) proves a non-owner proposal
-  activating a product on the **compiled** contract against a real `neard` node, and
-  `npm run test:factory` (11/11) proves the agent's determinism and evidence hashing. Do not claim a
-  live `propose_product` succeeded — on the live contract it returns `MethodNotFound` until deployed.
+- **The faucet is rate-limited (you cannot stand up a *new* funded contract right now).** Do not wait
+  on it. The live v3 deployment is **already done and recorded**: show `npm run verify:controlled-v3:evidence`
+  (public state of `contract.ovc-v3-ctl-2f6c4c.testnet`) and the 40/40 run in
+  `proof/controlled-v3-deploy.json`. For a fresh re-run offline, `npm run verify:controlled-v3:sandbox`
+  is the identical harness against the identical compiled wasm on a local `neard` node (39/39). State
+  that the legacy address's key is unrecoverable (`docs/AUTHORITY_RECOVERY.md`).
+- **The factory is not on the legacy live address.** The feed on the page is live; the on-chain
+  factory activation lives on the fresh v3 contract. Show it honestly: `npm run verify:controlled-v3`
+  (40/40) proves a non-owner proposal activating a product on the **real deployed v3 testnet contract**,
+  and `npm run test:factory` (11/11) proves the agent's determinism and evidence hashing. Do not claim a
+  live `propose_product` succeeded on the *legacy* contract — there it returns `MethodNotFound`.
 - **Vercel URL unreachable.** Use the mirror https://itzebe.github.io/overcover/ (byte-identical
   `index.html`).
 - **Nothing loads at all.** Run the read-only proof locally: `npm ci --ignore-scripts && npm run

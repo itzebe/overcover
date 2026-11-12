@@ -161,14 +161,17 @@ development still works. Run it against production with
   the state-preserving in-place upgrade (`node driver/upgrade.js`), or the controlled v3 deployment
   (`node proof/controlled-v3-deploy.mjs`) stands up a fresh, SEC-1-closed contract. **Do not claim the
   live address is hardened until one of those has run.**
-- **The controlled v3 testnet deployment has not run in this environment (needs a funded root).** The
-  free testnet faucet (`helper.testnet.near.org`) returns HTTP 429 here. The identical harness — now
-  including the permissionless factory path (a NON-OWNER `propose_product` activation and a `buy_cover`
-  on the resulting product) — was run against the identical compiled wasm on a local `neard` node
-  (39/39, mode `SANDBOX`). The harness takes an **operator-supplied funded root account** (env
-  `OVERCOVER_ROOT_ACCOUNT_ID`/`OVERCOVER_ROOT_SECRET_KEY` or the gitignored
-  `keys/controlled-v3-root.json`); the only untested part of the testnet path is that the human funds
-  the root. Re-run `node proof/controlled-v3-deploy.mjs` once the root is funded. See
+- **The controlled v3 testnet deployment is complete (2026-11-12).** `npm run verify:controlled-v3`
+  passed **40/40** against the **real deployed** contract `contract.ovc-v3-ctl-2f6c4c.testnet` on NEAR
+  testnet: deploy + init, the 3-of-5 operator and resolver quorums, the settled-and-paid policy, the
+  permissionless factory (a **non-owner** `propose_product` activation and a `buy_cover` on the
+  resulting product, policy 2), the adversarial refusals, pool solvency, `reconcile() == true`,
+  `check_invariant() == true`, and SEC-1 closure on the deployed bytes. The deployed module is
+  byte-identical to the source rebuild (sha256 `a97034e6…`, 500,023 bytes; `code_hash`
+  `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`). Evidence: `proof/controlled-v3-deploy.json` and
+  the public, independently re-derivable `proof/controlled-v3-onchain-evidence.json`. The identical
+  harness also passes **39/39** on a local `neard` node (`npm run verify:controlled-v3:sandbox`). The
+  root that funded it is an operator-supplied account (`keys/controlled-v3-root.json`); see
   [`FACTORY_TESTNET_PREFLIGHT.md`](FACTORY_TESTNET_PREFLIGHT.md).
 - **`npm run test:onchain` is not run in this environment.** The 17 live adversarial tests need the
   gitignored operator identities (`keys/identities.json`, `keys/state.json`) and a fresh deploy, so

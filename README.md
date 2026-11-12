@@ -228,7 +228,9 @@ npm run verify:migration # SEC-1 proof: the deployed v1 migrate() takeover, and 
 npm run verify:upgrade  # SEC-1 guard on the COMPILED wasm on a real local neard node (needs neard)
 npm run verify:upgrade-preservation  # the in-place upgrade PRESERVES state (real v1 bytecode; needs neard)
 npm run verify:controlled-v3:plan    # the controlled v3 testnet deployment plan (sends nothing)
+npm run verify:controlled-v3         # the controlled v3 deploy on NEAR TESTNET (40/40; needs a funded root)
 npm run verify:controlled-v3:sandbox # controlled v3 deploy + SEC-1 closure + permissionless factory on a real neard (39/39)
+npm run verify:controlled-v3:evidence # public on-chain state of the deployed v3 testnet contract (no key)
 npm run verify:testnet-deploy  # a real, isolated v2 deploy to NEAR testnet (needs the faucet)
 npm run verify:agent    # the agent's spend-authorization engine vs the live product definition
 npm run verify:connectivity  # the public console works with no local agent (needs a Chromium)

@@ -20,6 +20,7 @@ const WASM = path.join(root, "contract/target/wasm32-unknown-unknown/release/ove
 const OUT = path.join(root, "proof/controlled-v3-onchain-evidence.json");
 
 const CONTRACTS = [
+  { account: "contract.ovc-v3-ctl-2f6c4c.testnet", label: "run 3 (funded-root harness; 40/40 checks: permissionless factory + factory purchase + SEC-1)" },
   { account: "contract.ovc-v3-ctl-mwd32f3w.testnet", label: "run 1 (pre-fix harness; buy_cover reached via a separate probe)" },
   { account: "contract.ovc-v3-ctl-mwd3judn.testnet", label: "run 2 (post gas/funding fix; full lifecycle to buy_cover)" },
 ];

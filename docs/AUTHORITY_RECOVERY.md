@@ -109,24 +109,28 @@ asserts (against the deployed module, not the source):
    unchanged afterwards;
 10. the pool reserves capital per policy, settles it correctly, and stays solvent.
 
-**Sandbox evidence (executed this mission).** `npm run verify:controlled-v3:sandbox` →
-**29/29 checks passed**, `mode: SANDBOX`. Full record, with every check and transaction id:
+**Sandbox evidence.** `npm run verify:controlled-v3:sandbox` →
+**39/39 checks passed**, `mode: SANDBOX`. Full record, with every check and transaction id:
 `proof/controlled-v3-sandbox.json`.
 
-**Testnet evidence (the remaining step).** The testnet run creates a real account and spends real
-faucet funds, so it is run only when the faucet is available. It writes
-`proof/controlled-v3-deploy.json` and the generated keys to the gitignored
+**Testnet evidence (done 2026-11-12).** `npm run verify:controlled-v3` → **40/40 checks passed**,
+`mode: TESTNET`, against `contract.ovc-v3-ctl-2f6c4c.testnet`. It creates a real account and spends
+real faucet funds, so it is run only when the faucet is available (or with an operator-supplied funded
+root). It writes `proof/controlled-v3-deploy.json` and the generated keys to the gitignored
 `keys/controlled-v3.json` (mode `0600`). If the faucet is rate-limited the script **SKIPs cleanly**
 (exit 0) rather than failing; set `REQUIRE_TESTNET=1` to make it fail loudly instead.
 
-### Why the testnet run was not completed this session
+### Why the testnet run needed an operator-funded root
 
-The NEAR testnet faucet (`helper.testnet.near.org`) returned **HTTP 429** on every probe throughout
-the session (the alternative faucets — `near-faucet.io`, `faucet.testnet.near.org` — returned 404
-and a connection failure respectively). Without the faucet there is no free funded account to create
-the fresh identity graph from, and the only funded accounts are the legacy ones whose keys are
-unrecoverable (§3). The sandbox run exercises the identical harness against the identical compiled
-wasm, so the only untested part of the testnet path is the account creation itself.
+The NEAR testnet faucet (`helper.testnet.near.org`) returned **HTTP 429** on every probe for several
+hours during the earlier sessions (the cooldown has since cleared, 2026-11-12), and no funded key
+existed locally. The harness therefore takes an operator-supplied funded root account and the run was
+completed once that root was funded (the alternative faucets — `near-faucet.io`,
+`faucet.testnet.near.org` — returned 404 and a connection failure respectively). Without a funded
+account there is no way to create the fresh identity graph, and the only other funded accounts are the
+legacy ones whose keys are unrecoverable (§3). The sandbox run exercises the identical harness against
+the identical compiled wasm, so the only testnet-specific part is the account creation itself, which
+is now done.
 
 ## 6. The operator's one step to close SEC-1 on the live address
 

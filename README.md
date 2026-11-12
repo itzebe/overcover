@@ -215,8 +215,8 @@ explorer links.
 ```bash
 npm ci --ignore-scripts
 npm run test:model      # 66 attacks, 66 defended, 0 exploitable  (reference model)
-npm run test:contract   # 62 Rust unit tests                      (contract logic)
-npm run test:console    # 90 regression + live-RPC tests          (browser console + end-to-end wallet journey)
+npm run test:contract   # 76 Rust unit tests                      (contract logic)
+npm run test:console    # 97 regression + live-RPC tests          (browser console + end-to-end wallet journey)
 npm run test:agent      # 51 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
 npm run test:agent-eval # 32 product-feed schema/premium + agent-eval boundary + independent-client integration tests
 npm run test:deploy     # 3 deploy-path regressions (a stale, guard-less wasm is refused)

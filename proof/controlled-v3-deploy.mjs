@@ -6,6 +6,15 @@
 //   node proof/controlled-v3-deploy.mjs --sandbox    # runs the whole proof on a local neard
 //   node proof/controlled-v3-deploy.mjs              # deploys + verifies on NEAR testnet
 //
+// Testnet mode does NOT silently fall back to the faucet. It uses a funded root
+// account the operator supplies, in order of preference:
+//   1. OVERCOVER_ROOT_ACCOUNT_ID + OVERCOVER_ROOT_SECRET_KEY (env; never printed);
+//   2. a `root` entry in the gitignored keys/controlled-v3-root.json
+//      ({ "accountId": "...", "secretKey": "..." }, mode 0600).
+// If neither is present the run FAILS with instructions — it never invents a root
+// and never touches the legacy contract. (An explicit OVERCOVER_USE_FAUCET=1 still
+// creates a throwaway root from the free faucet, for a self-contained smoke run.)
+//
 // Why this exists
 // ---------------
 // The legacy contract `contract.attestor-overcover.testnet` still runs v1 with the
@@ -34,6 +43,10 @@
 //   * the challenger cannot resolve their own dispute;
 //   * a real challenge is decided by an independent resolver quorum;
 //   * a third-party `migrate()` is refused (SEC-1 closed on the new module);
+//   * a NON-OWNER wallet proposes a product (`propose_product`) and it activates
+//     immediately, with the proposer and the evidence hash recorded — no owner
+//     transaction in the activation path (the permissionless factory);
+//   * the factory's own underwriting rules refuse a bad proposal on chain;
 //   * the pool reserves capital per policy, settles it, and stays solvent.
 //
 // Evidence (contract id, wasm sha256, every tx hash, every check) is written to
@@ -41,8 +54,9 @@
 // (sandbox). Generated testnet keys are written ONLY to the gitignored
 // keys/controlled-v3.json (mode 0600) and are never printed.
 //
-// Testnet mode requires the faucet. If it is rate-limited the script SKIPs
-// cleanly (exit 0) unless REQUIRE_TESTNET=1, in which case it fails loudly.
+// Testnet mode needs a funded root account (see above). When no root is supplied
+// the script SKIPs cleanly (exit 0) unless REQUIRE_TESTNET=1, in which case it
+// fails loudly.
 import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -93,6 +107,33 @@ const CHALLENGE_BOND_NEAR = "0.1";
 // the required float at ~0.1 NEAR. The sandbox validator's gas_price is ~0, so
 // this only ever binds on testnet.
 const GAS = process.env.OVERCOVER_GAS ?? "100000000000000";
+
+// The funded testnet root account the whole identity graph is created from. It is
+// supplied by the operator — never invented, never printed — as env vars or a
+// gitignored file. A self-contained faucet run is opt-in only.
+const ROOT_FILE = process.env.OVERCOVER_ROOT_FILE || path.join(root, "keys", "controlled-v3-root.json");
+const USE_FAUCET = process.env.OVERCOVER_USE_FAUCET === "1";
+// The factory proposal's coverage start must clear PROPOSAL_MIN_LEAD_SEC (3600s)
+// as read on the chain at execution time; 2h of margin covers testnet clock skew.
+const COVERAGE_LEAD_SEC = 7200;
+const PROPOSAL_STAKE_NEAR = "0.1";
+
+/** The operator-supplied funded root, from env or the gitignored file. Never logged. */
+function loadRootCredentials() {
+  const accountId = process.env.OVERCOVER_ROOT_ACCOUNT_ID;
+  const secretKey = process.env.OVERCOVER_ROOT_SECRET_KEY;
+  if (accountId && secretKey) return { accountId, secretKey, source: "environment" };
+  if (fs.existsSync(ROOT_FILE)) {
+    const j = JSON.parse(fs.readFileSync(ROOT_FILE, "utf8"));
+    if (j.accountId && j.secretKey) return { accountId: j.accountId, secretKey: j.secretKey, source: ROOT_FILE };
+  }
+  return null;
+}
+
+// A NEAR account id may be an implicit hex account (64 hex chars). It can only be
+// created by transferring to it, not by `createAccount` (which requires a named
+// parent). Detect it so a valid human-supplied root is not rejected.
+const isImplicitAccount = (id) => /^[0-9a-f]{64}$/.test(id);
 
 const results = [];
 const check = (name, ok, detail = "") => {
@@ -153,17 +194,47 @@ async function bootstrapSandbox() {
   return { near, ks, rootId: vk.account_id, network: "local", endpoints: [SANDBOX_URL], keepKeys: false };
 }
 
-/** Create the funding root on real testnet from the free faucet. */
+/**
+ * Connect the funded testnet root. Uses the operator-supplied account (env or the
+ * gitignored file) and NEVER invents one; only an explicit OVERCOVER_USE_FAUCET=1
+ * creates a throwaway root from the free faucet. Returns null when no root is
+ * available so the caller can SKIP (or fail under REQUIRE_TESTNET=1).
+ */
 async function bootstrapTestnet() {
-  const rootKp = KeyPair.fromRandom("ed25519");
-  const rootId = await faucet(`ovc-v3-ctl-${ts}`, rootKp.getPublicKey().toString());
-  if (!rootId) return null;
+  let rootId, rootKp;
+  const cred = loadRootCredentials();
+  if (cred) {
+    rootId = cred.accountId;
+    rootKp = KeyPair.fromString(cred.secretKey);
+    console.log(`Using the supplied root account ${rootId} (from ${cred.source}); its key is never printed.`);
+  } else if (USE_FAUCET) {
+    rootKp = KeyPair.fromRandom("ed25519");
+    rootId = await faucet(`ovc-v3-ctl-${ts}`, rootKp.getPublicKey().toString());
+    if (!rootId) { console.log("Faucet unavailable (rate-limited)."); return null; }
+    console.log(`Created a throwaway root ${rootId} from the free faucet.`);
+  } else {
+    console.log(`No funded root account supplied. Provide one of:`);
+    console.log(`  * OVERCOVER_ROOT_ACCOUNT_ID + OVERCOVER_ROOT_SECRET_KEY, or`);
+    console.log(`  * { "accountId", "secretKey" } in ${path.relative(root, ROOT_FILE)} (gitignored, mode 0600).`);
+    console.log(`(For a self-contained smoke run only, set OVERCOVER_USE_FAUCET=1.)`);
+    return null;
+  }
   const ks = new keyStores.InMemoryKeyStore();
   await ks.setKey("testnet", rootId, rootKp);
+  // An implicit (hex) account cannot host sub-accounts, and the whole identity
+  // graph is created as `role.<root>`. Refuse early rather than fail obscurely.
+  if (isImplicitAccount(rootId)) {
+    throw new Error(`root ${rootId} is an implicit account; it cannot host sub-accounts. Use a named root (e.g. ovc-v3-ctl-<tag>.testnet).`);
+  }
   const near = await connect({ networkId: "testnet", nodeUrl: RPC[0], keyStore: ks, headers: {} });
   near.connection.provider = new providers.FailoverRpcProvider(RPC.map((url) => new providers.JsonRpcProvider({ url })));
   await sleep(3000);
-  return { near, ks, rootId, network: "testnet", endpoints: RPC, keepKeys: true };
+  let rootBalance = 0n;
+  try {
+    const av = await near.connection.provider.query({ request_type: "view_account", account_id: rootId, finality: "final" });
+    rootBalance = BigInt(av.amount);
+  } catch { /* handled by the caller's fail-closed check */ }
+  return { near, ks, rootId, network: "testnet", endpoints: RPC, keepKeys: true, rootBalance };
 }
 
 async function main() {
@@ -186,14 +257,18 @@ async function main() {
   // under the 10 NEAR a single faucet account grants; the sandbox validator is
   // rich, so the same shape is scaled up.
   const SCALE = SANDBOX ? 5 : 1;
-  const funding = { contract: 6 * SCALE, owner: 0.8 * SCALE, buyer: 0.3 * SCALE, attacker: 0.35 * SCALE };
+  const funding = { contract: 5.2 * SCALE, owner: 1.8 * SCALE, buyer: 0.3 * SCALE, attacker: 0.3 * SCALE, proposer: 0.4 * SCALE };
   for (let i = 0; i < ops; i++) funding[`op${i + 1}`] = 0.15 * SCALE;
   for (let i = 0; i < res; i++) funding[`res${i + 1}`] = 0.15 * SCALE;
   const total = Object.values(funding).reduce((a, b) => a + b, 0);
+  // The root pays for every sub-account it creates (deposit + storage), so it must
+  // hold the whole map plus a little gas float. Testnet code stake dominates
+  // (~5.00 NEAR for the 500 KB wasm); the sandbox validator is rich so it is scaled.
+  const MIN_ROOT_NEAR = total + 0.3;
 
   if (PLAN) {
     console.log(`Controlled v3 deployment plan (fresh, independent account)\n`);
-    console.log(`  mode            ${SANDBOX ? "SANDBOX (local neard, no funds)" : "TESTNET (free faucet)"}`);
+    console.log(`  mode            ${SANDBOX ? "SANDBOX (local neard, no funds)" : "TESTNET (operator-funded root)"}`);
     console.log(`  wasm            ${WASM}`);
     console.log(`  wasm sha256     ${sha}`);
     console.log(`  wasm size       ${wasm.length} bytes`);
@@ -203,13 +278,17 @@ async function main() {
     console.log(`  challenge window ${DEMO_WINDOW}s (accelerated demo) -> ${PROD_WINDOW}s (restored after proof)`);
     console.log(`  dispute window  ${DISPUTE_WINDOW_SEC}s\n`);
     if (!SANDBOX) {
-      console.log(`Funding (all from ONE faucet account, then sub-accounts):`);
+      console.log(`Root account (funded by the operator; its key is never printed):`);
+      console.log(`  OVERCOVER_ROOT_ACCOUNT_ID + OVERCOVER_ROOT_SECRET_KEY, or ${path.relative(root, ROOT_FILE)}`);
+      console.log(`  minimum balance ${MIN_ROOT_NEAR.toFixed(2)} NEAR (all sub-accounts are created from it)\n`);
+      console.log(`Funding (all from the ONE root account, then sub-accounts):`);
       for (const [k, v] of Object.entries(funding)) console.log(`  ${k.padEnd(10)} ${v} NEAR`);
-      console.log(`  TOTAL       ${total.toFixed(2)} NEAR  (the free faucet grants 10 NEAR per account)\n`);
+      console.log(`  TOTAL       ${total.toFixed(2)} NEAR\n`);
     }
     console.log(`Transactions: CREATE_ACCOUNT x${Object.keys(funding).length + 1}, DeployContract, new(),`);
     console.log(`   set_quorum, set_resolver_quorum, set_challenge_window, set_dispute_window, add_metric,`);
-    console.log(`   add_metric_product, add_operator x${ops}, add_resolver x${res}, deposit, buy_cover,`);
+    console.log(`   add_metric_product, add_operator x${ops}, add_resolver x${res}, deposit,`);
+    console.log(`   propose_product (NON-OWNER -> activates), buy_cover on the proposed product,`);
     console.log(`   submit_reading, challenge_observation, resolver_vote, resolve, migrate(attacker -> refused).`);
     console.log(`\n--plan: nothing sent. This deploys a NEW account; it never touches the legacy contract.`);
     return;
@@ -218,12 +297,21 @@ async function main() {
   // --- fresh, operator-controlled identity graph ---------------------------
   const b = SANDBOX ? await bootstrapSandbox() : await bootstrapTestnet();
   if (!b) {
-    if (REQUIRE) throw new Error("bootstrap unavailable (faucet rate-limited or no sandbox binary)");
-    console.log(`SKIP  ${SANDBOX ? "no neard >= 2.14 sandbox binary" : "testnet faucet unavailable (rate-limited)"}. Re-run when it recovers.`);
+    if (REQUIRE) throw new Error(SANDBOX ? "no neard >= 2.14 sandbox binary" : "no funded root account supplied (set OVERCOVER_ROOT_ACCOUNT_ID/SECRET_KEY or keys/controlled-v3-root.json, or REQUIRE_TESTNET=0 to SKIP)");
+    console.log(`SKIP  ${SANDBOX ? "no neard >= 2.14 sandbox binary" : "no funded root account supplied"}. Re-run with a funded root.`);
     return;
   }
   const { near, ks, rootId, network, endpoints } = b;
-  check(`created the funding root (${network})`, true, rootId);
+  check(`resolved the funding root (${network})`, true, rootId);
+  // Fail closed if the supplied root cannot pay for the whole identity graph: the
+  // deploy would otherwise abort mid-way and orphan a partially funded contract.
+  if (!SANDBOX) {
+    const have = b.rootBalance ?? 0n;
+    check("the root account holds enough to fund the whole graph", have >= NEAR(String(MIN_ROOT_NEAR)), `balance=${have} need>=${NEAR(String(MIN_ROOT_NEAR))}`);
+    if (have < NEAR(String(MIN_ROOT_NEAR))) {
+      throw new Error(`root ${rootId} holds ${Number(have) / 1e24} NEAR; the graph needs >= ${MIN_ROOT_NEAR.toFixed(2)} NEAR. Fund the root and re-run.`);
+    }
+  }
 
   const EVIDENCE_PATH = path.join(root, "proof", SANDBOX ? "controlled-v3-sandbox.json" : "controlled-v3-deploy.json");
   const KEYS_OUT = path.join(root, "keys", "controlled-v3.json");
@@ -273,6 +361,10 @@ async function main() {
   const owner = await sub("owner", String(funding.owner));
   const buyer = await sub("buyer", String(funding.buyer));
   const attacker = await sub("attacker", String(funding.attacker));
+  // An INDEPENDENT wallet with no relation to the owner: it is the only account
+  // that will call the permissionless `propose_product`, so the factory proof
+  // cannot be satisfied by the owner acting on its own behalf.
+  const proposer = await sub("proposer", String(funding.proposer));
   const operators = [];
   for (let i = 1; i <= ops; i++) operators.push(await sub(`op${i}`, String(funding[`op${i}`])));
   const resolvers = [];
@@ -287,9 +379,11 @@ async function main() {
   persist();
   await sleep(3000);
   evidence.ownerId = owner.id;
+  evidence.proposerId = proposer.id;
   evidence.operatorIds = operators.map((o) => o.id);
   evidence.resolverIds = resolvers.map((r) => r.id);
   check("created the identity graph + contract account", true, CONTRACT);
+  check("the proposer is a distinct account from the owner", proposer.id !== owner.id, `owner=${owner.id} proposer=${proposer.id}`);
 
   // Fail closed on underfunding BEFORE the deploy spends the most gas: the RPC
   // reserves `gas_limit * gas_price` against the signer of every call, on top of
@@ -382,7 +476,7 @@ async function main() {
   evidence.txs.set_resolver_quorum = txOf(await call(owner, "set_resolver_quorum", { quorum: RESOLVER_QUORUM }));
   evidence.txs.set_dispute_window = txOf(await call(owner, "set_dispute_window", { secs: DISPUTE_WINDOW_SEC }));
   await call(owner, "add_metric", { id: "heat", category: "temperature", unit: "degC/10", max_value: 700, scale: 10, direction: "Above" });
-  await call(owner, "add_metric_product", { id: "heat-lagos", city: "lagos", metric_id: "heat", threshold_tenths: 400, premium_bp: 500, min_payout: NEAR("0.1"), max_payout: NEAR("2"), min_lead_sec: 0, max_total_coverage: NEAR("20") });
+  await call(owner, "add_metric_product", { id: "heat-lagos", city: "lagos", metric_id: "heat", threshold_tenths: 400, premium_bp: 500, min_payout: NEAR("0.1"), max_payout: NEAR("0.3"), min_lead_sec: 0, max_total_coverage: NEAR("0.4") });
   for (const o of operators) await call(owner, "add_operator", { account: o.id, public_key: Array.from(o.kp.getPublicKey().data) });
   for (const r of resolvers) await call(owner, "add_resolver", { account: r.id });
 
@@ -398,9 +492,9 @@ async function main() {
   check("the metric product is published", prod && prod.metric_id === "heat", prod ? `${prod.id}/${prod.metric_id}` : "missing");
 
   // --- fund the pool and buy a policy (human path) --------------------------
-  evidence.txs.deposit = txOf(await call(owner, "deposit", {}, NEAR("0.5")));
+  evidence.txs.deposit = txOf(await call(owner, "deposit", {}, NEAR("1.5")));
   const pool0 = await rawView("get_pool");
-  check("the pool holds the deposit", BigInt(pool0.capital) === BigInt(NEAR("0.5")), `capital=${pool0.capital}`);
+  check("the pool holds the deposit", BigInt(pool0.capital) === BigInt(NEAR("1.5")), `capital=${pool0.capital}`);
 
   // The observation must be dated far enough ahead that it is still in the
   // future when `buy_cover` executes. The local sandbox finalises in well under
@@ -484,6 +578,50 @@ async function main() {
   check("the policy settled and paid (value above threshold)", polAfter.status === "settled_paid" && BigInt(polAfter.paid_amount) === BigInt(payout), `status=${polAfter.status} paid=${polAfter.paid_amount}`);
   const poolAfter = await rawView("get_pool");
   check("the pool released the reservation and stayed solvent", BigInt(poolAfter.reserved) === 0n && poolAfter.solvent === true, `reserved=${poolAfter.reserved} solvent=${poolAfter.solvent}`);
+
+  // --- permissionless factory: a NON-OWNER activates a product on chain -----
+  // The proposer is an independent account and the ONLY signer of this call, so
+  // activation cannot be attributed to the owner. The coverage start is read from
+  // the chain's own clock (a `finality: final` read lags the tip, so pad it) to
+  // clear PROPOSAL_MIN_LEAD_SEC as it is evaluated at execution time. This runs
+  // after the lifecycle above has settled, so the pool's `reserved` is back to 0
+  // and the reservation assertions elsewhere are unaffected.
+  const factoryId = "heat-lagos-factory";
+  const factoryEvidence = "sha256:open-meteo-heat-lagos-factory";
+  const coverageStart = Math.floor((await near.connection.provider.block({ finality: "final" })).header.timestamp / 1e9) + COVERAGE_LEAD_SEC;
+  const proposalArgs = {
+    id: factoryId, city: "lagos", metric_id: "heat", threshold_tenths: 400, premium_bp: 500,
+    min_payout: NEAR("0.1"), max_payout: NEAR("0.1"), coverage_start: coverageStart, evidence_hash: factoryEvidence,
+  };
+  const capitalBefore = BigInt((await rawView("get_pool")).capital);
+  evidence.txs.propose_product = txOf(await call(proposer, "propose_product", proposalArgs, NEAR(PROPOSAL_STAKE_NEAR)));
+  const fprod = await rawView("get_product", { id: factoryId });
+  check("a NON-OWNER proposal activates a product with no owner transaction", fprod && fprod.active === true, `active=${fprod && fprod.active}`);
+  check("the activated product records the proposer (not the owner)", fprod && fprod.proposed_by === proposer.id && fprod.proposed_by !== owner.id, `proposed_by=${fprod && fprod.proposed_by}`);
+  check("the activated product carries the immutable evidence hash", fprod && fprod.evidence_hash === factoryEvidence, `evidence=${fprod && fprod.evidence_hash}`);
+  check("the activated product appears in the public product list", (await rawView("list_products")).some((p) => p.id === factoryId));
+  const capitalAfter = BigInt((await rawView("get_pool")).capital);
+  check("the proposal stake entered the pool", capitalAfter - capitalBefore === BigInt(NEAR(PROPOSAL_STAKE_NEAR)), `delta=${capitalAfter - capitalBefore}`);
+
+  // The factory's own rules must refuse a bad proposal on chain — the owner is
+  // not involved; the proposer signs this one too.
+  const badProp = await callErr(proposer, "propose_product", { ...proposalArgs, id: "heat-lagos-factory-bad", metric_id: "not-a-metric" }, NEAR(PROPOSAL_STAKE_NEAR));
+  check("the factory refuses a proposal on an unregistered metric", /no such metric/i.test(badProp || ""), (badProp || "").slice(0, 80));
+
+  // --- buy cover on the permissionlessly-created product --------------------
+  // The factory product carries min_lead_sec = PROPOSAL_MIN_LEAD_SEC (3600s), so
+  // the observation must be dated at least an hour ahead (the owner product above
+  // uses lead 0). Use the same generous lead as the proposal.
+  const fObsDate = Math.floor(await blockNow()) + COVERAGE_LEAD_SEC;
+  const fPayout = NEAR("0.1");
+  const fQuote = await rawView("quote", { product_id: factoryId, payout: fPayout });
+  const fPolicyId = await callRet(buyer, "buy_cover", { product_id: factoryId, payout: fPayout, obs_date: fObsDate, beneficiary: null }, String(fQuote));
+  evidence.factoryPolicyId = Number(fPolicyId);
+  const fPol = await rawView("get_policy", { id: Number(fPolicyId) });
+  check("a buyer purchases cover on the factory-created product", fPol && fPol.buyer === buyer.id && fPol.product_id === factoryId, `policy=${fPolicyId} product=${fPol && fPol.product_id}`);
+  const fPool = await rawView("get_pool");
+  check("the factory product's payout is reserved and the pool stays solvent", BigInt(fPool.reserved) === BigInt(fPayout) && fPool.solvent === true, `reserved=${fPool.reserved} solvent=${fPool.solvent}`);
+  check("the pool reconciles after the factory purchase", (await rawView("reconcile")) === true);
 
   // --- SEC-1 on the new module: third-party migrate refused -----------------
   let refused = null;

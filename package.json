@@ -22,7 +22,7 @@
     "test:factory": "node --test tests/factory-discovery.test.mjs",
     "factory:feed": "node scripts/factory-feed.mjs",
     "test:contract": "cargo +stable test --manifest-path contract/Cargo.toml",
-    "test:deploy": "node --test tests/upgrade-guard-refusal.test.mjs tests/controlled-v3-funding.test.mjs",
+    "test:deploy": "node --test tests/upgrade-guard-refusal.test.mjs tests/controlled-v3-funding.test.mjs tests/factory-deploy-harness.test.mjs",
     "test:model": "node research/model/attacks.mjs",
     "test:onchain": "node --test tests/*.test.js",
     "test:sim": "node --test tests/model.test.mjs tests/v3-message.test.mjs",

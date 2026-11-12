@@ -29,6 +29,7 @@ export function largestDepositYocto(role, { challengeBondYocto = 0n, premiumYoct
     case "owner": return BigInt(YOCTO_PER_NEAR) / 2n; // pool `deposit` = 0.5 NEAR
     case "buyer": return BigInt(premiumYocto); // buy_cover attaches the premium, NOT the payout
     case "attacker": return BigInt(challengeBondYocto); // challenge bond
+    case "proposer": return 10n ** 23n; // propose_product attaches the 0.1 NEAR stake
     default: return 0n; // operators / resolvers only sign
   }
 }

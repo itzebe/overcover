@@ -27,10 +27,16 @@ test("the deposit-free roles (operators, resolvers) still need the gas float", (
 
 test("the shipped testnet funding map clears the preflight at the real gas price", () => {
   // Mirrors the `funding` object in proof/controlled-v3-deploy.mjs.
-  const funding = { contract: 6, owner: 0.8, buyer: 0.3, attacker: 0.35 };
+  const funding = { contract: 5.2, owner: 1.8, buyer: 0.3, attacker: 0.3, proposer: 0.4 };
   for (let i = 1; i <= 5; i++) { funding[`op${i}`] = 0.15; funding[`res${i}`] = 0.15; }
   const short = underfundedRoles(funding, { gasLimit: NEW_GAS, gasPriceYocto: TESTNET_GAS_PRICE, challengeBondYocto: BOND });
   assert.deepEqual(short, [], `unexpected shortfalls: ${JSON.stringify(short)}`);
+});
+
+test("the proposer must hold the 0.1 NEAR proposal stake PLUS the gas float", () => {
+  // propose_product is payable: the signer needs the stake on top of the float.
+  assert.equal(largestDepositYocto("proposer", { challengeBondYocto: BOND }), 10n ** 23n);
+  assert.equal(requiredBalanceYocto({ depositYocto: 10n ** 23n, gasLimit: NEW_GAS, gasPriceYocto: TESTNET_GAS_PRICE }), 2n * 10n ** 23n);
 });
 
 test("the ORIGINAL config (300 Tgas, 0.1 op/res, 0.3 buyer) is rejected — the bug is caught", () => {

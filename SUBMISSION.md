@@ -228,7 +228,7 @@ captured in this environment. A judge can complete it in two minutes by followin
 | Console UI (Playwright, 320–1440 px) | `npm run ui:qa` | **7 viewports, 0 console errors, public read-only + local dry-run round-trip OK, wallet picker opens in-viewport** |
 | Full economic cycle | `npm run demo` | **18 transactions, all steps green (incl. both dispute outcomes)** |
 | Console accessibility (axe-core, WCAG 2.2 AA) | `npm run axe` | **0 violations at 320 / 360 / 390 / 768 / 1024 / 1280 / 1440 px (page and wallet dialog)** |
-| One-command independent proof | `npm run verify:proof` | **12/12 checks passed on a clean clone** — deployed bytecode == this source, pool solvent, all 18 demo txs real, the agent's buys real (each tied to its on-chain policy), settled outcomes match |
+| One-command independent proof | `npm run verify:proof` | **13/13 checks passed on a clean clone** — deployed bytecode == this source, pool solvent, all 18 demo txs real, the agent's buys real (each tied to its on-chain policy), settled outcomes match |
 | Agent authorization vs the live product | `npm run verify:agent` | **over-limit buy refused, in-limit buy permitted; the shipped `createAgent` path agrees** |
 | Public console needs no local agent | `npm run verify:connectivity` | **13/13 checks passed** — no localhost default, read-only verdict == shared engine on the live quote, invalid bodies rejected, limits enforced, no owner-only method reachable, buy_cover the only signing path |
 | Live production URL | `npm run verify:live` | **5 widths (320–1440 px), 0 console errors, 0 horizontal overflow** |

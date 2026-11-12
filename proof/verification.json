@@ -1,6 +1,6 @@
 {
   "contract": "contract.attestor-overcover.testnet",
-  "at": "2026-11-12T14:51:12.328Z",
+  "at": "2026-11-12T16:41:26.579Z",
   "pool": {
     "capital": "14050000000000000000000000",
     "reserved": "10500000000000000000000000",
@@ -15,23 +15,23 @@
     "solvent": true,
     "paused": false
   },
-  "passed": 12,
-  "total": 12,
+  "passed": 13,
+  "total": 13,
   "checks": [
     {
-      "name": "deployed module matches the published sha256",
+      "name": "legacy deployed module matches the published sha256",
       "ok": true,
       "detail": "344857 bytes, 1f30ccf1d4c735ad…"
     },
     {
-      "name": "deployed code_hash matches SUBMISSION.md",
+      "name": "legacy deployed code_hash matches SUBMISSION.md",
       "ok": true,
       "detail": "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R"
     },
     {
-      "name": "repository is contract v3; the deployed v1 module is the live product",
+      "name": "hardened v3 deployed module is exactly this repository's source",
       "ok": true,
-      "detail": "local build a97034e65fb0c53f… — deploy + re-pin to assert byte equality"
+      "detail": "500023 bytes, a97034e65fb0c53f…"
     },
     {
       "name": "pool is solvent (reserved <= capital)",
@@ -62,6 +62,11 @@
       "name": "autonomous-agent purchases are real buy_cover txs with a matching policy",
       "ok": true,
       "detail": "2/2"
+    },
+    {
+      "name": "agent purchases on the hardened v3 contract are real buy_cover txs with a matching policy",
+      "ok": true,
+      "detail": "1/1"
     },
     {
       "name": "settled_paid policies paid a positive amount",

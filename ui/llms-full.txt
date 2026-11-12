@@ -7,8 +7,9 @@ queue. It is a hackathon prototype on NEAR testnet with test funds only.
 
 - Canonical site: https://overcover.vercel.app/
 - Source repository: https://github.com/itzebe/overcover
-- Live contract: contract.attestor-overcover.testnet (NEAR testnet)
-- Block explorer: https://testnet.nearblocks.io/address/contract.attestor-overcover.testnet
+- Contract (hardened, default for new cover): contract.ovc-v3-ctl-2f6c4c.testnet (NEAR testnet)
+- Legacy address (original v1 module, readable but not a purchase destination): contract.attestor-overcover.testnet
+- Block explorer: https://testnet.nearblocks.io/address/contract.ovc-v3-ctl-2f6c4c.testnet
 - License: MIT
 - Track: NEAR Hackathon 2026 — Business (primary), Swarms, DeFi
 

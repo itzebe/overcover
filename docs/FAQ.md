@@ -6,7 +6,8 @@ No. A bet lets either side choose the terms to gamble. Here the **product** — 
 not the buyer — fixes the index, the trigger and the payout, and it is immutable. A buyer can only
 choose a payout within the product's bounds and an observation date. Parametric insurance is a
 standard category: cover pays on an objective index rather than on an assessed loss, precisely
-because it needs no adjuster. The demo uses rainfall because it is free, public and verifiable; the
+because it needs no adjuster. The demo uses rainfall on the legacy address and a temperature
+trigger on the hardened default; both are free, public and verifiable, and the
 mechanism is index-agnostic.
 
 ## Who is the buyer?

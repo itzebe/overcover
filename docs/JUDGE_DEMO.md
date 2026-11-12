@@ -1,6 +1,6 @@
 # Judge demonstration
 
-**Live console:** https://overcover.vercel.app/ · **Contract:** `contract.attestor-overcover.testnet`
+**Live console:** https://overcover.vercel.app/ · **Default contract:** `contract.ovc-v3-ctl-2f6c4c.testnet`
 **Length:** 2–3 minutes. **Everything shown is real**: live contract reads and real testnet
 transactions. Nothing is staged.
 
@@ -10,20 +10,19 @@ transactions. Nothing is staged.
 > earlier because it needs a wallet extension or a funded operator account.
 > Never present a RECORDED item as if it just happened.
 
-> **Version note.** The live console and `contract.attestor-overcover.testnet` currently run the
-> **v1** product (single attestor, owner-resolved disputes). The repository source is **contract v3**
-> (metric-agnostic products, a domain-separated multi-operator oracle quorum, independent dispute
+> **Version note.** The console now reads and signs against the **hardened v3** contract
+> `contract.ovc-v3-ctl-2f6c4c.testnet` **by default**. v3 is metric-agnostic (rainfall *and*
+> temperature products), with a domain-separated multi-operator oracle quorum, independent dispute
 > resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, a permissionless
-> product factory, and a state-preserving in-place `migrate`). v3 is proven end-to-end on a real local
-> `neard` node (`npm run verify:sandbox`, 21/21), its in-place upgrade is proven state-preserving
-> against the exact live v1 bytecode (`npm run verify:upgrade-preservation`), and it is **deployed and
-> verified on NEAR testnet** at `contract.ovc-v3-ctl-2f6c4c.testnet` (`npm run verify:controlled-v3`,
-> **40/40**; the sandbox equivalent is 39/39). It is **not deployed to the legacy live address** — that
-> account's FullAccess key is not held here and is not recoverable from the chain (see
-> `docs/AUTHORITY_RECOVERY.md`), so closing SEC-1 on that address is the operator's step, or the
-> controlled deployment stands up a fresh, SEC-1-closed contract instead (already done on testnet). The
-> demo below runs against whatever is deployed — the console renders v1 with a version gate. Where a
-> check's numbers differ between the two, both are given.
+> product factory, and a state-preserving in-place `migrate`. It is deployed and verified on NEAR
+> testnet (`npm run verify:controlled-v3`, 40/40) and its deployed bytes are **byte-identical to this
+> repository's source** (sha256 `a97034e65fb0c53f…`, 500,023 bytes — `npm run verify:proof`). The
+> legacy address `contract.attestor-overcover.testnet` still runs the original **v1** module
+> (single attestor, owner-resolved disputes, and an unauthenticated `migrate()`); the console can
+> still read it, labels it **Legacy build**, and **disables buying there**. Open
+> **https://overcover.vercel.app/?contract=contract.attestor-overcover.testnet** to show that
+> disclosure. The demo below runs against the default (v3); where a check's numbers differ between
+> the two contracts, both are given.
 
 ---
 
@@ -50,18 +49,22 @@ transactions. Nothing is staged.
 Open **https://overcover.vercel.app/**. Do not narrate the technology; narrate the product.
 
 - Point at the **security banner** under the header: *"Before you trust anything here, the page tells
-  you which build it is reading. This address runs the original module — `migrate()` there is
-  unauthenticated — and the page says so, points at the hardened build, and shows the switch. It does
-  not dress it up."* (Open **https://overcover.vercel.app/?contract=contract.ovc-v3-ctl-2f6c4c.testnet**
-  to show the same banner read "Hardened build" from the deployed code hash.)
+  you which build it is reading. The default address is the hardened v3 build, verified by its
+  `code_hash` — not a claim written into the page — and the page names the legacy address it refuses
+  to sell from."* (Open
+  **https://overcover.vercel.app/?contract=contract.attestor-overcover.testnet** to show the banner
+  flip to "Legacy build" and the buy controls disabled there.)
 - Point at the hero: *"Insurance for businesses that cannot afford to wait."*
 - Point at the **cover strip**: it is already reading the contract —
   *"capital backing policies, reserved for payouts, policies in force, settlements paid."*
 - Open **Cover available now** and read one card aloud: the covered event, the trigger, the premium,
-  the payout bounds, and the parametric limitation. *"This is what you would actually buy."*
+  the payout bounds, and the parametric limitation. *"This is what you would actually buy."* (The
+  live product is `heat-lagos` — a **temperature** trigger, `at or above 40.0 °C` — which is the
+  point: the product states its own index and unit, and the page derives the wording from the
+  contract rather than hardcoding rainfall.)
 
 *Why it is credible:* every number is a `get_pool` / `list_products` read from
-`contract.attestor-overcover.testnet`, and the banner's build label is a read of that account's
+`contract.ovc-v3-ctl-2f6c4c.testnet`, and the banner's build label is a read of that account's
 `code_hash` — not a claim written into the page. Refresh it; it changes when the chain changes.
 
 Optional, if a judge asks how software finds the cover: open
@@ -72,9 +75,13 @@ it; nothing here is hand-written."*
 ## 2. How a claim settles (15 s) — LIVE
 
 Walk **From buying cover to getting paid**: cover is defined before purchase; the payout is
-**reserved** at purchase; the oracle's reading is **challengeable with a bond**; the owner resolves a
-dispute; settlement is one comparison, run once. Then open **Observations & disputes** and point at
-the **nullified** reading — *"a report that was successfully challenged on-chain."*
+**reserved** at purchase; the oracle's reading is **challengeable with a bond**; a resolver resolves a
+dispute; settlement is one comparison, run once. On the hardened contract, point at the settled
+policy (policy 1, `settled_paid`) under **Policies written** — *"this policy's payout was reserved at
+purchase and paid out when the reading met the trigger."* The **nullified** reading example (a report
+successfully challenged on-chain) is on the **legacy v1** contract — open
+**https://overcover.vercel.app/?contract=contract.attestor-overcover.testnet** and open
+**Observations & disputes** to show it, labelled as that contract's history.
 
 ## 3. The human buys cover (30 s) — LIVE (needs a funded testnet account)
 
@@ -82,8 +89,9 @@ the **nullified** reading — *"a report that was successfully challenged on-cha
 2. Choose **HERE Wallet** (email/social sign-in inside HERE, no extension needed) or **Meteor
    Wallet** (if the extension is installed). Approve the connection. The header shows your
    `*.testnet` account.
-3. In **Price a policy**, pick *Lagos rainfall*, move the payout slider. The premium updates from the
-   contract's own `quote` — *"this is the contract quoting, not the page."*
+3. In **Price a policy**, pick the live product (*Lagos temperature* on the hardened default), move
+   the payout slider. The premium updates from the contract's own `quote` — *"this is the contract
+   quoting, not the page."*
 4. Click **Buy this cover with your own wallet**. The page re-reads the premium from the contract and
    asks your wallet to approve exactly one `buy_cover` call.
 5. Approve in the wallet. The page shows **"Transaction confirmed"** with the real hash, and the new
@@ -93,10 +101,14 @@ the **nullified** reading — *"a report that was successfully challenged on-cha
 is the honesty guarantee — a purchase is only ever claimed from the wallet's own confirmed hash.
 
 **RECORDED (if no funded account is available):** the console's exact `buy_cover` shape is already
-proven on-chain — tx
+proven on-chain. On the hardened default, a real agent bought cover:
+[`45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn`](https://testnet.nearblocks.io/txns/45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn)
+→ policy 3 (`heat-lagos`, 0.1 NEAR payout, 0.005 NEAR premium, `active`, signer
+`oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet`). On the legacy v1 contract, a human-shaped purchase is
+tx
 [`87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i`](https://testnet.nearblocks.io/txns/87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i)
-→ policy 15 (`rain-lagos`, 1 NEAR payout, 0.05 NEAR premium, `active`). Say plainly that this was
-signed with the page's exact arguments, not by an extension, if you show it instead of doing step 3.
+→ policy 15 (`rain-lagos`, 1 NEAR payout, 0.05 NEAR premium, `active`). Say plainly that these were
+signed with the page's exact arguments, not by an extension, if you show them instead of doing step 3.
 
 **TESTED OFFLINE:** `tests/wallet-journey.test.mjs` (run by `npm run test:console`) executes the
 page's **real** inline script against a frozen contract snapshot with a mock wallet and asserts the
@@ -115,8 +127,9 @@ defaults to **Public (read-only)**: it runs the *same* spending-policy engine in
 signs nothing. To let the agent actually buy, an operator runs its service on their own machine:
 
 ```bash
-export OVERCOVER_AGENT_ACCOUNT=oc-agent-mwb87z4k.testnet
+export OVERCOVER_AGENT_ACCOUNT=oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet
 export OVERCOVER_AGENT_SECRET_KEY=ed25519:...        # the agent's own key; never committed
+export OVERCOVER_AGENT_CONTRACT=contract.ovc-v3-ctl-2f6c4c.testnet
 node agent/server.mjs
 ```
 
@@ -136,12 +149,15 @@ In **Public (read-only)** mode (the default a judge sees), the panel still evalu
 against the same engine and shows the allow/deny verdict, but there is no key and no buy button —
 that is the honest default for a public page.
 
-**RECORDED:** the agent has already bought cover on the live contract under these limits:
+**RECORDED:** the agent has already bought cover on the hardened default contract under these limits:
+[tx 45A1s3](https://testnet.nearblocks.io/txns/45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn) →
+policy 3 (`heat-lagos`, 0.1 NEAR payout), signed by `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet`.
+On the legacy v1 contract it also bought
 [tax 11](https://testnet.nearblocks.io/txns/7iG4WWy1ixqCSPEEddA9dZJr8JvgE7SVyHhhBqj5DmRJ) →
 policy 11 (`rain-lagos`, 1 NEAR = product max) and
 [tx 12](https://testnet.nearblocks.io/txns/26UvFN3AZ3143sYFhsmbsrcAP2uPyKvgEHSrNXth1And) →
-policy 12 (`rain-bergen-dry`, 0.5 NEAR). Both signed by `oc-agent-mwb87z4k.testnet`. `npm run
-verify:proof` re-checks both against the chain.
+policy 12 (`rain-bergen-dry`, 0.5 NEAR), both signed by `oc-agent-mwb87z4k.testnet`. `npm run
+verify:proof` re-checks all three against the chain.
 
 ## 5. The security boundary (25 s) — LIVE
 
@@ -182,15 +198,16 @@ itself is live (the page fetched `factory.json`, generated from the real API).
 activation is **proven on the real deployed v3 contract** `contract.ovc-v3-ctl-2f6c4c.testnet` on
 NEAR **testnet** (`npm run verify:controlled-v3`, **40/40**, 2026-11-12) — a non-owner proposal
 activated a product with no owner transaction, an invalid proposal was refused, and a buyer purchased
-cover on the factory product. The **legacy live address** `contract.attestor-overcover.testnet`
+cover on the factory product. The **legacy address** `contract.attestor-overcover.testnet`
 remains v1, so do not say a `propose_product` call on *that* address succeeded — it would be refused
-with `MethodNotFound`. Say instead:
+with `MethodNotFound`. The console can be pointed at it (`?contract=…`) but defaults to the v3
+contract where the factory is live. Say instead:
 
 - *"The whole factory — a non-owner proposal activating a product, every rule refusing, the proposer's
   stake entering the pool, and a buyer purchasing cover on the permissionlessly-created product — is
   proven end-to-end against the real deployed v3 contract on NEAR testnet
-  (`npm run verify:controlled-v3`, 40/40). The product the console shows here is read from the legacy
-  v1 contract; the permissionless factory lives on the fresh v3 contract."*
+  (`npm run verify:controlled-v3`, 40/40) — and that contract is the console's default, so the
+  permissionless factory is on the address a judge is looking at."*
 
 *Why it is credible:* the discovery agent's determinism and evidence hashing are unit-tested
 (`npm run test:factory`, 11/11), and the console's honesty rule — a proposal is never shown ACTIVE
@@ -212,28 +229,31 @@ without the contract — is regression-tested (`npm run test:console`).
 | 2 | It reads the contract, not a fixture | `get_pool` matches the page | Copy the `curl` in **Check it for yourself** |
 | 3 | The page is honest on failure | Shows **stale**/"no data", never a stale number as live | Block the network and reload |
 | 4 | Human purchase shape | `buy_cover` args match the ABI | `npm run test:console` |
-| 5 | Human purchase on-chain | Policy 15 exists with the right buyer | Open the policy 15 explorer link / `get_policy` |
-| 6 | Agent has an independent account | Signer is `oc-agent-mwb87z4k.testnet` | Open tx 11/12 on the explorer |
+| 5 | Human purchase on-chain (legacy v1) | Policy 15 exists with the right buyer | Open the policy 15 explorer link / `get_policy` |
+| 6 | Agent has an independent account | Signer is `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet` (v3) / `oc-agent-mwb87z4k.testnet` (v1) | Open tx 45A1s3 / tx 11–12 on the explorer |
 | 7 | Spending limits enforced | Over-limit buy refused with reasons, before the network | `npm run verify:agent`; the agent panel |
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
-| 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 66/0, contract 76/0, console 101/0, agent 51/0, sim 71/0, agent-eval 32/0, factory 11/0 | `npm test` |
+| 10 | Deployed v3 code == this source | `a97034e6…` (500023 bytes) | `npm run verify:proof` |
+| 11 | Tests pass | model 66/0, contract 76/0, console 105/0, agent 51/0, sim 71/0, agent-eval 33/0, factory 11/0, deploy 21/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
 | 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 39/39 sandbox · **40/40 live testnet** | `npm run verify:controlled-v3:sandbox`; `npm run verify:controlled-v3` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |
 | 15 | Anyone can add cover (permissionless factory) | a non-owner proposal activates a product; every rule refuses; a buyer buys on it | `npm run verify:factory` (22/22) |
 | 16 | The console never shows a proposal as active without the contract | PROPOSED unless the contract returns a matching product | `npm run test:console` |
-| 17 | The page discloses the build it reads | "Legacy build" on the v1 address; "Hardened build" on the v3 address; never "hardened" without a hash match | Open `?contract=contract.ovc-v3-ctl-2f6c4c.testnet`; `npm run test:console` |
+| 17 | The page discloses the build it reads | "Hardened build" by default (v3); "Legacy build" on the v1 address; never "hardened" without a hash match | Open `?contract=contract.attestor-overcover.testnet`; `npm run test:console` |
 | 18 | No high/moderate dependency advisory ships | `npm audit` → 19 low / 0 high / 0 moderate | `npm audit` |
 
 ## Honesty details a judge may probe
 
 These are deliberate, not accidents. If a judge asks, the answers are:
 
-- **The trigger direction is stated correctly.** The contract's `resolve` pays when the reading is
-  **≥** the product threshold. The hero says "at or above", and each product card derives its covered
-  event from the product's own `threshold_tenths` — never a hand-written sentence that could drift.
+- **The trigger direction and unit are stated correctly.** The contract's `resolve` pays when the
+  reading meets the product's own trigger, where the direction comes from the metric (`Above`: value
+  ≥ threshold; `Below`: value ≤ threshold). Each product card derives its covered event, its unit and
+  its direction from the product's own metric — never a hand-written sentence that could drift. The
+  live default product is a **temperature** trigger, and the page says so; the machine-readable
+  `products.json` carries the same metric (`temperature`, `degC`) rather than a hardcoded "rainfall mm".
 - **The observation date must be genuinely in the future.** `min_lead_sec` is 0 for every product
   currently published and the date is compared in whole seconds, so the page refuses a date that is
   only seconds ahead *before* it asks the wallet to sign — you cannot sign a `buy_cover` the contract
@@ -241,11 +261,13 @@ These are deliberate, not accidents. If a judge asks, the answers are:
 - **Policy status is never invented.** The contract stores only `active | settled_paid |
   settled_no_pay`. A past-due policy the contract has not settled reads **"settlement due — awaiting
   resolve()"**, derived from the settlement rule — never a fabricated "settled".
-- **A product with a broken definition is disclosed, not sold.** `rain-bergen-dry` sets its trigger at
-  the contract's own maximum plausible rainfall (500.0 mm), which `report_observation` will only ever
-  accept at exactly that value — so it can pay on that single reading and nothing else. It is grouped
-  with the other test fixtures and labelled, not offered as live cover. This is the page refusing to
-  sell you a definition that cannot work as intended.
+- **A product with a broken definition is disclosed, not sold.** A product whose trigger sits at its
+  own metric's maximum plausible reading (e.g. `rain-bergen-dry` at the v1 rainfall bound of 500.0 mm)
+  can only pay on that single reading, because `report_observation` rejects anything above the
+  metric's ceiling and the trigger is at-or-above. It is grouped with the other test fixtures and
+  labelled, not offered as live cover. The ceiling is taken from the product's own metric, so a
+  temperature product is never measured against a rainfall bound. This is the page refusing to sell
+  you a definition that cannot work as intended.
 - **A permissionless product is never shown as active without the contract.** The factory section
   shows the discovery agent's prepared proposal as **PROPOSED** until the contract itself returns an
   activated product whose on-chain `evidence_hash` matches the proposal's evidence hash. The page
@@ -256,26 +278,26 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   signed operator quorum can create one.
 - **Wallet errors are actionable.** A cancelled connection, a blocked pop-up, an unreachable wallet
   service or a wrong network each produce a plain sentence, not a raw `Error`.
-- **The deployed contract is v1 and has one known issue — and the page says so.** An internal security
-  pre-audit found that the **deployed v1** contract's `migrate()` is unauthenticated
-  (`#[init(ignore_state)]` cannot check the stored owner), so any account could overwrite all state. The
-  console discloses this on the page itself: its banner is driven by the deployed `code_hash` and reads
-  **"Legacy build"** on `contract.attestor-overcover.testnet`, naming the hardened address and the
-  `?contract=` switch. It is not possible to show "Hardened build" for an address whose hash does not
-  match the v3 module. The issue was reproduced against the exact
-  deployed bytecode and **fixed in the v2/v3 source**, verified by the attack being refused, by Rust
-  regression tests (`sec1_*`) and by `npm run verify:migration` (6/6). The fix is merged into `main`
-  and the deploy path is now safe: `npm run test:deploy` proves both deploy scripts refuse a stale
-  (guard-less) wasm, `npm run verify:upgrade` proves the guard on the compiled wasm (8/8),
-  `npm run verify:controlled-v3:sandbox` proves a third-party `migrate()` is refused on a freshly
-  **deployed** v3 module (39/39 sandbox; **40/40** on the live testnet contract
-  `contract.ovc-v3-ctl-2f6c4c.testnet`), and `node driver/upgrade.js` upgrades the live contract **in
-  place** — address, pool and policies preserved — with a `--plan` mode that sends nothing. Closing SEC-1
-  **on the live address** still needs that account's FullAccess key
+- **The default contract is hardened v3; the legacy address is disclosed, not hidden.** An internal
+  security pre-audit found that the **legacy v1** contract's `migrate()` is unauthenticated
+  (`#[init(ignore_state)]` cannot check the stored owner), so any account could overwrite all state on
+  that address. The console's banner is driven by the **deployed `code_hash`** of whichever address it
+  reads: on the default `contract.ovc-v3-ctl-2f6c4c.testnet` it reads **"Hardened build"** (matching
+  the pinned v3 hash), and on `contract.attestor-overcover.testnet` it reads **"Legacy build"** and
+  disables buying there. It is not possible to show "Hardened build" for an address whose hash does not
+  match the v3 module. The issue was reproduced against the exact deployed v1 bytecode and **fixed in
+  the v2/v3 source**, verified by the attack being refused, by Rust regression tests (`sec1_*`) and by
+  `npm run verify:migration` (6/6). The deploy path is safe: `npm run test:deploy` proves both deploy
+  scripts refuse a stale (guard-less) wasm, `npm run verify:upgrade` proves the guard on the compiled
+  wasm (8/8), `npm run verify:controlled-v3:sandbox` proves a third-party `migrate()` is refused on a
+  freshly **deployed** v3 module (39/39 sandbox; **40/40** on the live testnet contract
+  `contract.ovc-v3-ctl-2f6c4c.testnet`), and `node driver/upgrade.js` upgrades a contract **in place**
+  — address, pool and policies preserved — with a `--plan` mode that sends nothing. Closing SEC-1
+  **on the legacy address** still needs that account's FullAccess key
   (`ed25519:CwZBmKyV…`), which this environment does not hold and which cannot be recovered from the
-  chain; the alternative is the controlled deployment to a fresh, SEC-1-closed account
-  (`node proof/controlled-v3-deploy.mjs`). Do not claim the live contract is hardened until one of
-  those happens — say this plainly and point to `docs/SECURITY_PRE_AUDIT.md` and
+  chain; the alternative — already taken — is the controlled deployment to a fresh, SEC-1-closed
+  account (`node proof/controlled-v3-deploy.mjs`), which is now the console's default. Do not claim the
+  *legacy* address is hardened — say this plainly and point to `docs/SECURITY_PRE_AUDIT.md` and
   `docs/AUTHORITY_RECOVERY.md`.
 
 ## Backup procedure (if a wallet extension or testnet is unavailable)
@@ -284,9 +306,9 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   and say clearly it was signed with the page's exact arguments, then show the console's
   success/failure classifier is unit-tested (`npm run test:console`). The transaction shape is
   proven; the extension click is what was not captured.
-- **Local agent service will not start.** Show the **RECORDED** agent txs 11/12 and run
-  `npm run verify:agent`, which proves the spend-authorization engine against the **live** product
-  without any key.
+- **Local agent service will not start.** Show the **RECORDED** agent txs (v3 `45A1s3…`, legacy
+  11/12) and run `npm run verify:agent`, which proves the spend-authorization engine against the
+  **live** product without any key.
 - **NEAR testnet RPC is slow or down.** The console shows **stale** with the last good read — that is
   the designed behaviour, not a failure. Fall back to `demo-log.json` (18 real hashes) and
   `npm run verify:proof` (which re-derives everything from public RPC).

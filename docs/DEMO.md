@@ -27,7 +27,7 @@ the proof.
 
 ## What makes the demo credible
 
-- **Live, not recorded.** The page reads `contract.attestor-overcover.testnet` over public RPC while
+- **Live, not recorded.** The page reads `contract.ovc-v3-ctl-2f6c4c.testnet` over public RPC while
   the judge watches. It refreshes every 15 seconds.
 - **Honest by construction.** If a read fails, the page says **stale** (with the time of the last
   good read) or **no data**. It never shows a stale number as live. A judge can test this by

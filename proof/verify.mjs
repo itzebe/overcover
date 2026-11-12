@@ -49,6 +49,11 @@ const view = async (method, args = {}) => {
   // would make the payout/premium equality checks below fail spuriously.
   return parseBigIntJson(Buffer.from(r.result).toString("utf8"));
 };
+// The same read against an arbitrary contract (used for the hardened v3 evidence).
+const viewOn = async (account, method, args = {}) => {
+  const r = await rpc("query", { request_type: "call_function", finality: "final", account_id: account, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") });
+  return parseBigIntJson(Buffer.from(r.result).toString("utf8"));
+};
 // A historical tx is looked up on the archival endpoints (the non-archival ones
 // keep only a recent cache and return NOT_OBSERVED for the weeks-old demo txs).
 async function tx(hash, sender) {
@@ -67,29 +72,25 @@ const near = (yocto) => (Number(BigInt(yocto)) / 1e24).toFixed(4);
 
 // 1. deployed bytecode == the published hash, and (if built) == this source
 const EXPECTED_SHA = "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e";
+const HARDENED_CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
 const code = await rpc("query", { request_type: "view_code", finality: "final", account_id: CONTRACT });
 const deployed = Buffer.from(code.code_base64, "base64");
 const deployedSha = createHash("sha256").update(deployed).digest("hex");
-check("deployed module matches the published sha256", deployedSha === EXPECTED_SHA, `${deployed.length} bytes, ${deployedSha.slice(0, 16)}…`);
-check("deployed code_hash matches SUBMISSION.md", code.hash === "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R", code.hash);
+check("legacy deployed module matches the published sha256", deployedSha === EXPECTED_SHA, `${deployed.length} bytes, ${deployedSha.slice(0, 16)}…`);
+check("legacy deployed code_hash matches SUBMISSION.md", code.hash === "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R", code.hash);
+
+// The console's default purchase destination is the hardened v3 contract. If the
+// repository's source build is present, prove the deployed v3 module is byte-for-
+// byte that source — the strongest statement that the shipped code is what runs.
+const v3code = await rpc("query", { request_type: "view_code", finality: "final", account_id: HARDENED_CONTRACT });
+const v3deployed = Buffer.from(v3code.code_base64, "base64");
+const v3Sha = createHash("sha256").update(v3deployed).digest("hex");
 if (fs.existsSync(WASM)) {
   const localSha = createHash("sha256").update(fs.readFileSync(WASM)).digest("hex");
-  const repoVersion = fs.existsSync(path.join(root, "contract", "VERSION"))
-    ? fs.readFileSync(path.join(root, "contract", "VERSION"), "utf8").trim() : "1";
-  if (repoVersion === "1") {
-    check("deployed bytecode is exactly this repository's source", localSha === deployedSha, `local ${localSha.slice(0, 16)}…`);
-  } else {
-    // The repository holds a not-yet-deployed contract upgrade. The bytecode
-    // equality check belongs to the release that deploys it (see
-    // docs/DEPLOY_RUNBOOK.md, step 4), so it is reported, not failed, here.
-    check(
-      `repository is contract v${repoVersion}; the deployed v1 module is the live product`,
-      deployedSha === EXPECTED_SHA,
-      `local build ${localSha.slice(0, 16)}… — deploy + re-pin to assert byte equality`,
-    );
-  }
+  check("hardened v3 deployed module is exactly this repository's source",
+    localSha === v3Sha, `${v3deployed.length} bytes, ${v3Sha.slice(0, 16)}…`);
 } else {
-  console.log("SKIP  local source build not present (run: cargo build --release --target wasm32-unknown-unknown)");
+  console.log(`SKIP  local source build not present (v3 deployed sha256 ${v3Sha.slice(0, 16)}…)`);
 }
 
 // 2. solvency + reconciliation
@@ -137,6 +138,24 @@ for (const e of purchases.purchases) {
   } catch (err) { console.log(`      FAIL agent buy ${e.hash}: ${err.message}`); }
 }
 check("autonomous-agent purchases are real buy_cover txs with a matching policy", agentOk === purchases.purchases.length && purchases.purchases.length > 0, `${agentOk}/${purchases.purchases.length}`);
+
+// 4b. the agent also buys on the HARDENED v3 contract (the console's default
+// purchase destination). Same re-derivation, against the v3 account.
+const v3 = JSON.parse(fs.readFileSync(path.join(root, "proof", "agent-purchases-v3.json"), "utf8"));
+let v3Ok = 0;
+for (const e of v3.purchases) {
+  try {
+    const r = await tx(e.hash, v3.contract);
+    const fc = (r.transaction.actions || []).find((a) => a.FunctionCall)?.FunctionCall;
+    const tOk = r.transaction.signer_id === v3.agentAccount && r.transaction.receiver_id === v3.contract &&
+      fc && fc.method_name === "buy_cover" && fc.deposit === e.premiumYocto && !("Failure" in (r.status || {}));
+    const p = await viewOn(v3.contract, "get_policy", { id: e.policyId });
+    const pOk = p && p.buyer === v3.agentAccount && p.product_id === e.productId && p.payout === e.payoutYocto && p.premium === e.premiumYocto;
+    if (tOk && pOk) v3Ok++;
+    else console.log(`      FAIL v3 agent buy ${e.hash}: tOk=${tOk} pOk=${pOk}`);
+  } catch (err) { console.log(`      FAIL v3 agent buy ${e.hash}: ${err.message}`); }
+}
+check("agent purchases on the hardened v3 contract are real buy_cover txs with a matching policy", v3Ok === v3.purchases.length && v3.purchases.length > 0, `${v3Ok}/${v3.purchases.length}`);
 
 // 5. settled policies match the reported outcome
 const policies = await view("list_policies");

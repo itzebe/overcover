@@ -1,5 +1,12 @@
 # Deploy runbook — v2 decentralized lifecycle to NEAR testnet
 
+> **Current default.** The console's default purchase destination is now the hardened **v3**
+> contract `contract.ovc-v3-ctl-2f6c4c.testnet`. The steps below upgrade the **legacy** address
+> `contract.attestor-overcover.testnet` in place (from v1 to v2/v3); they are kept because that
+> address still runs the original v1 module and closing SEC-1 there needs the operator's key. A
+> fresh controlled v3 deployment is done by `npm run verify:controlled-v3` (see
+> `docs/FINAL_RELEASE_READINESS.md`).
+
 This is the exact, ordered set of steps to move the **v2** contract (the branch
 `feat/decentralized-insurance-lifecycle`) onto NEAR testnet. It needs the funded operator identity
 that the previous deploys used; **no faucet is involved** — the contract sub-account is funded from

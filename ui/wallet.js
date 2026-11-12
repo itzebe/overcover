@@ -21,7 +21,7 @@ const NETWORK_ID = "testnet";
 // target the same contract the page is showing — otherwise a buyer could price
 // one contract and pay another. `setup` accepts an override for exactly that
 // case; it defaults to the production contract.
-const DEFAULT_CONTRACT_ID = "contract.attestor-overcover.testnet";
+const DEFAULT_CONTRACT_ID = "contract.ovc-v3-ctl-2f6c4c.testnet";
 let contractId = DEFAULT_CONTRACT_ID;
 
 let selector = null;

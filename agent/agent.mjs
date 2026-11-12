@@ -78,7 +78,7 @@ function failureMessage(failure) {
 export async function createAgent(opts) {
   if (!opts?.accountId) throw new AgentError("accountId is required", { code: "config" });
   if (!opts?.secretKey) throw new AgentError("secretKey is required", { code: "config" });
-  const contractId = opts.contractId ?? "contract.attestor-overcover.testnet";
+  const contractId = opts.contractId ?? "contract.ovc-v3-ctl-2f6c4c.testnet";
   const limits = normalizeLimits(opts.limits ?? {});
   const auditPath = opts.auditPath ?? DEFAULT_AUDIT;
   const dryRun = opts.dryRun === true;
@@ -117,15 +117,27 @@ export async function createAgent(opts) {
     return decodeResult(r);
   }
 
-  async function balanceYocto() {
-    try {
-      const a = await near.account(opts.accountId);
-      return (await a.getAccountBalance()).total;
-    } catch {
-      // An account that has not been funded yet has no balance record; that is
-      // not an error, it is "no balance".
-      return null;
+  // Read the account's liquid balance (amount + locked) in one RPC. Queried
+  // directly rather than through the failover provider: that provider treats a
+  // missing account as a failed provider and logs the AccountDoesNotExist error
+  // to stderr before it is caught, which is alarming noise for the ordinary
+  // "not funded yet" case. A missing account is `null`; an endpoint that errors
+  // falls through to the next; a total failure is `null` (unknown), which the
+  // funds guard treats as a refusal — the safe direction.
+  async function readBalanceYocto() {
+    for (const url of RPC_ENDPOINTS) {
+      try {
+        const r = await new providers.JsonRpcProvider({ url }).query({
+          request_type: "view_account",
+          account_id: opts.accountId,
+          finality: "final",
+        });
+        return (BigInt(r.amount) + BigInt(r.locked)).toString();
+      } catch (e) {
+        if (e?.type === "AccountDoesNotExist" || /does not exist/i.test(e?.message ?? "")) return null;
+      }
     }
+    return null;
   }
 
   async function quote(productId, payoutYocto) {
@@ -175,7 +187,7 @@ export async function createAgent(opts) {
     // for it before signing. An unfunded agent would otherwise build and send a
     // transaction the network rejects for insufficient balance, spending a
     // nonce for nothing. A refusal here moves no funds and is audited.
-    const balance = await balanceYocto();
+    const balance = await readBalanceYocto();
     const shortfall = fundsShortfall(balance, decision.premiumYocto);
     if (shortfall) {
       appendAudit({ at: new Date(started).toISOString(), kind: "denied", productId, payoutYocto: String(payoutYocto), reasons: [shortfall] });
@@ -228,5 +240,5 @@ export async function createAgent(opts) {
     return limits.enabled;
   }
 
-  return { accountId: opts.accountId, contractId, status, decide, quote, product, buy, balanceYocto, setEnabled, view, _history: history };
+  return { accountId: opts.accountId, contractId, status, decide, quote, product, buy, balanceYocto: readBalanceYocto, setEnabled, view, _history: history };
 }

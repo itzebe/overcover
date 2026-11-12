@@ -13,8 +13,10 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RPC = "https://test.rpc.fastnear.com";
-const CONTRACT = "contract.attestor-overcover.testnet";
-const VIEWS = ["get_pool", "get_config", "list_products", "list_policies", "list_observations", "reconcile", "check_invariant"];
+// The default contract the console reads and signs against. The fixture mirrors
+// that default so the offline tests exercise the shipped destination.
+const CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
+const VIEWS = ["get_pool", "get_config", "list_products", "list_policies", "list_observations", "list_metrics", "list_operators", "reconcile", "check_invariant"];
 
 const rpc = async (body) =>
   (await fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
@@ -35,8 +37,8 @@ for (const m of VIEWS) views[m] = await callView(m);
 // exercise so the page's view("quote", …) call resolves offline.
 const quotes = {};
 for (const [productId, payout] of [
-  ["rain-lagos", "1000000000000000000000000"],
-  ["rain-lagos", "100000000000000000000000"],
+  ["heat-lagos", "100000000000000000000000"],
+  ["heat-lagos", "300000000000000000000000"],
 ]) {
   const r = await rpc({
     jsonrpc: "2.0", id: 1, method: "query",

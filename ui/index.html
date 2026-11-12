@@ -331,6 +331,11 @@
   .buy-note { margin-top: 18px; border: 1px solid var(--line2); background: var(--card-2); border-radius: var(--r); padding: 14px 16px; font-size: 13px; color: var(--ink2); }
   .buy-note b { color: var(--ink); }
   .buy-note code { font-family: var(--mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  /* The exact address the wallet will sign against, stated before the button. */
+  .buy-dest { margin: 18px 0 0; font-size: 13px; color: var(--ink2); }
+  .buy-dest code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+  .buy-dest a { text-decoration: underline; text-underline-offset: 2px; }
+  .buy-dest.blocked { color: var(--bad); }
   .buy-result { margin-top: 18px; border: 1px solid var(--good); background: var(--good-w); border-radius: var(--r); padding: 16px 18px; }
   .buy-result.err { border-color: var(--bad); background: var(--bad-w); }
   .buy-result h4 { margin: 0 0 8px; font-size: 14.5px; color: var(--good); }
@@ -482,7 +487,7 @@
       "isAccessibleForFree": true,
       "license": "https://github.com/itzebe/overcover/blob/main/LICENSE",
       "codeRepository": "https://github.com/itzebe/overcover",
-      "description": "A browser console that reads a NEAR testnet smart contract and lets a visitor buy parametric rainfall insurance cover. Cover terms are fixed in the contract; the payout is reserved from a capital pool; settlement follows a signed, challengeable public reading.",
+      "description": "A browser console that reads a NEAR testnet smart contract and lets a visitor buy parametric index insurance cover (rainfall or temperature). Cover terms are fixed in the contract; the payout is reserved from a capital pool; settlement follows a signed, challengeable public reading.",
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -548,7 +553,7 @@
       <div>
         <p class="eyebrow">Parametric insurance · live on NEAR testnet</p>
         <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
-        <p class="sub">Overcover covers one clearly-defined event at a time: a public rainfall reading meeting a set trigger, in a named city, on a named date. Each product states its trigger as “at or above” a threshold — the payout follows from contract rules, no adjuster, no queue.</p>
+        <p class="sub">Overcover covers one clearly-defined event at a time: a public index reading — rainfall or temperature — meeting a set trigger, in a named city, on a named date. Each product states its own trigger and direction, so the payout follows from contract rules, no adjuster, no queue.</p>
         <div class="actions">
           <button class="btn-gold" type="button" data-wallet="connect">Connect a wallet</button>
           <a class="btn-ghost" href="#cover">See the cover available</a>
@@ -643,7 +648,7 @@
     <div class="prod-grid">
       <div class="card pad">
         <h3 style="font-size:17px">The risk it covers</h3>
-        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">A named city fails to receive an agreed amount of rainfall on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
+        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">A named city's public index — rainfall or temperature — meets a trigger defined in the product on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
         <p style="margin-top:12px;color:var(--muted);font-size:13.5px">Because the trigger is a public reading rather than an assessed loss, there is nothing to argue about and no adjuster to wait for.</p>
       </div>
       <div class="card pad">
@@ -808,6 +813,8 @@
         </div>
       </div>
 
+      <p class="buy-dest" id="b-dest"></p>
+
       <div class="buy-actions">
         <button id="b-buy" class="btn-gold" type="button" disabled>Buy cover</button>
         <span class="buy-status" id="b-status" role="status" aria-live="polite"></span>
@@ -815,10 +822,10 @@
       <p class="buy-hint" id="b-hint"></p>
 
       <div class="buy-note" id="b-note">
-        <b>What happens when you press Buy:</b> your wallet asks you to approve a single
-        <code>buy_cover</code> call with exactly the premium shown above attached. If you decline, nothing
-        happens. If the contract refuses (capacity, bounds, pause), you see the contract's own reason and
-        no policy is created.
+        <b>What happens when you press Buy:</b> the page re-reads the contract's own quote and re-checks the
+        destination's deployed module, then your wallet asks you to approve a single <code>buy_cover</code> call
+        with exactly that premium attached, sent to the address shown above. If you decline, nothing happens. If
+        the contract refuses (capacity, bounds, pause), you see the contract's own reason and no policy is created.
       </div>
 
       <div class="buy-result" id="b-result" hidden></div>
@@ -1111,9 +1118,42 @@
     "https://rpc.testnet.fastnear.com",
     "https://near-testnet.drpc.org",
   ];
-  var DEFAULT_CONTRACT = "contract.attestor-overcover.testnet";
-  var CONTRACT = new URLSearchParams(location.search).get("contract") || DEFAULT_CONTRACT;
+  // The contracts this console will sign against, and the module each one runs.
+  // A signature is only ever offered for an address whose deployed code hash
+  // matches the entry here — an allowlist of (address, expected module), not a
+  // label. New purchases default to the HARDENED address; the legacy address
+  // remains readable, but its buy panel is blocked and labelled.
+  var HARDENED_CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
+  var LEGACY_CONTRACT = "contract.attestor-overcover.testnet";
+  var TRUSTED = {};
+  TRUSTED[HARDENED_CONTRACT] = "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL";
+  TRUSTED[LEGACY_CONTRACT] = "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R";
+  var DEFAULT_CONTRACT = HARDENED_CONTRACT;
+
+  // ?contract= selects which deployment to READ. A syntactically valid NEAR
+  // account id is accepted so a judge can point the console at any deployment;
+  // whether it may be SIGNED against is decided later, from its code hash.
+  // Anything that is not account-shaped is ignored (we fall back to the default)
+  // rather than fetched, so a malformed value can never steer the read.
+  var ACCOUNT_ID_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
+  var requestedContract = new URLSearchParams(location.search).get("contract");
+  var CONTRACT = (requestedContract && ACCOUNT_ID_RE.test(requestedContract) && requestedContract.length <= 64)
+    ? requestedContract : DEFAULT_CONTRACT;
   var EXPLORER = "https://testnet.nearblocks.io";
+
+  // Trust state of the contract currently being read. "unknown" until a code
+  // hash is read back and checked against TRUSTED; the buy button stays blocked
+  // until it is "hardened".
+  var trust = { contract: CONTRACT, state: "unknown", codeHash: null, reason: "" };
+  function trustFor(contractId, codeHash) {
+    var expected = TRUSTED[contractId];
+    if (!expected) return { state: "untrusted", codeHash: codeHash || null, reason: "not an approved Overcover address" };
+    if (!codeHash) return { state: "unknown", codeHash: null, reason: "its deployed module has not been read yet" };
+    if (codeHash === expected) {
+      return { state: contractId === LEGACY_CONTRACT ? "legacy" : "hardened", codeHash: codeHash, reason: "" };
+    }
+    return { state: "untrusted", codeHash: codeHash, reason: "its deployed module does not match the approved build" };
+  }
 
   // A canonical product has a human id (e.g. "rain-lagos"); the throwaway rows the
   // demo generated have machine ids like "p-1794315395272-3". They are real contract
@@ -1310,13 +1350,25 @@
       " " + suffix + " on the observation date.";
   }
 
-  // The contract's own plausibility bound is 500.0 mm (MAX_RAINFALL_TENTHS):
-  // report_observation rejects any reading ABOVE it, and resolve pays when
-  // value >= threshold. So a product whose threshold sits exactly at the ceiling
-  // can only ever pay on the single reading 500.0 mm — a definition mistake, not a
-  // real offering. Flag it from contract data rather than naming ids.
+  // A trigger pinned at its metric's own ceiling can only ever pay on the single
+  // ceiling reading: report_observation rejects any value above the metric's
+  // max_value and the trigger is at-or-above. That is a definition mistake, not a
+  // real offering. The ceiling is the metric's max_value; legacy v1 products carry
+  // no metric and use the rainfall bound (MAX_RAINFALL_TENTHS). Flag it from
+  // contract data rather than naming ids.
   var PLAUSIBLE_CEILING_TENTHS = 5000;
-  function triggerAtCeiling(p) { return Number(p.threshold_tenths) >= PLAUSIBLE_CEILING_TENTHS; }
+  function triggerAtCeiling(p) {
+    var m = METRIC[p.metric_id];
+    var ceiling = (m && m.max_value !== undefined) ? Number(m.max_value) : PLAUSIBLE_CEILING_TENTHS;
+    return Number(p.threshold_tenths) >= ceiling;
+  }
+  // The human-readable ceiling for a product's own metric (used in the disclosure
+  // copy), so a temperature product is never described in millimetres.
+  function ceilingLabel(p) {
+    var m = METRIC[p.metric_id];
+    var ceiling = (m && m.max_value !== undefined) ? Number(m.max_value) : PLAUSIBLE_CEILING_TENTHS;
+    return fmtVal(ceiling, p.metric_id) + " (" + metricLabel(p.metric_id) + ")";
+  }
   // A named product is a real, contract-backed offering. Machine-generated ids
   // (p-<ts>-<n>) are demo fixtures from the recorded cycle; a trigger pinned at the
   // plausibility ceiling is a broken definition. Neither is offered as live cover.
@@ -1363,7 +1415,7 @@
         '<div class="capbar"><div class="cf" style="width:' + Math.min(100, util).toFixed(1) + '%"></div></div>' +
         '<p class="lim">Parametric: pays on the reading meeting the trigger, not on an assessed loss.</p>' +
         (triggerAtCeiling(p)
-          ? '<p class="lim warn">Definition problem: the trigger sits at the contract\u2019s maximum plausible rainfall (500.0 mm), so this product can only pay on that one reading. Shown for completeness, not offered as cover.</p>'
+          ? '<p class="lim warn">Definition problem: the trigger sits at this product\u2019s maximum plausible reading (' + esc(ceilingLabel(p)) + '), so it can only pay on that one reading. Shown for completeness, not offered as cover.</p>'
           : "") +
         '<p class="lim">Observation date must be in the future (at least ' + Math.max(OBS_DATE_BUFFER_SEC, Number(p.min_lead_sec) || 0) + "s after purchase).</p>" +
       "</div></article>";
@@ -1374,7 +1426,7 @@
     return "<tr>" +
       "<td>" + esc(p.id) +
         (p.active === false ? ' <span class="tag paused">paused</span>' : "") +
-        (triggerAtCeiling(p) ? ' <span class="tag nullified" title="Trigger sits at the contract\'s maximum plausible rainfall (500.0 mm), so this product can only pay on that one reading">ceiling trigger</span>' : "") +
+        (triggerAtCeiling(p) ? ' <span class="tag nullified" title="Trigger sits at this product\'s maximum plausible reading, so it can only pay on that one reading">ceiling trigger</span>' : "") +
       "</td>" +
       '<td class="sub">' + esc(p.city) + "</td>" +
       '<td class="sub">' + esc(metricLabel(p.metric_id)) + "</td>" +
@@ -1586,36 +1638,48 @@
   // State the security status of the contract this page reads, from its own
   // deployed code hash — not from a claim in the markup. The legacy build's
   // `migrate()` is unauthenticated (any account could overwrite state); the
-  // hardened build refuses any caller but the contract itself. If the hash is
-  // not one we can vouch for, we say so instead of implying it is hardened.
-  var HARDENED_CODE_HASH = "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL";
-  var LEGACY_CODE_HASH = "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R";
+  // hardened build refuses any caller but the contract itself. The banner and
+  // the buy gate are both driven by the SAME trust object, so a contract that is
+  // labelled untrusted is also un-signable — the label is never the only defence.
+  var HARDENED_CODE_HASH = TRUSTED[HARDENED_CONTRACT];
+  var LEGACY_CODE_HASH = TRUSTED[LEGACY_CONTRACT];
   function renderSecurityBanner(acct) {
     var box = el("sec-banner"), tag = el("sec-tag"), text = el("sec-text");
     if (!box || !tag || !text) return;
     var hash = acct && acct.code_hash ? String(acct.code_hash) : "";
+    trust = trustFor(CONTRACT, hash);
+    trust.contract = CONTRACT;
     box.hidden = false;
     box.className = "sec-banner";
-    if (hash === HARDENED_CODE_HASH) {
+    if (trust.state === "hardened") {
       tag.textContent = "Hardened build";
       text.innerHTML = "This contract runs the hardened module (<code>" + esc(shortAcct(hash)) +
         "</code>): <code>migrate()</code> is refused unless the call comes from the contract account itself, " +
-        "so no third party can overwrite owner, oracle or pool state.";
-    } else if (hash === LEGACY_CODE_HASH) {
+        "so no third party can overwrite owner, oracle or pool state. " +
+        '<a href="' + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + '" target="_blank" rel="noopener">' +
+        esc(CONTRACT) + "</a> is the address your wallet will sign against.";
+    } else if (trust.state === "legacy") {
       tag.textContent = "Legacy build";
       box.className = "sec-banner legacy";
       text.innerHTML = "This contract runs the <b>original</b> module (<code>" + esc(shortAcct(hash)) +
-        "</code>), whose <code>migrate()</code> is unauthenticated. The hardened build is deployed at " +
-        '<a href="' + EXPLORER + "/account/contract.ovc-v3-ctl-2f6c4c.testnet" + '" target="_blank" rel="noopener">' +
-        "contract.ovc-v3-ctl-2f6c4c.testnet</a>; run this console with " +
-        "<code>?contract=contract.ovc-v3-ctl-2f6c4c.testnet</code> to read it. The legacy address still runs the " +
-        "product and its recorded history, and is the address a wallet buys on.";
-    } else {
-      tag.textContent = "Unrecognised build";
+        "</code>), whose <code>migrate()</code> is unauthenticated. Its history is preserved here for the record, " +
+        "but <b>new purchases are blocked on this address</b>. Buy on the hardened build at " +
+        '<a href="' + EXPLORER + "/account/" + encodeURIComponent(HARDENED_CONTRACT) + '" target="_blank" rel="noopener">' +
+        esc(HARDENED_CONTRACT) + "</a> — the default. To inspect this address, run the console with " +
+        "<code>?contract=" + esc(LEGACY_CONTRACT) + "</code>.";
+    } else if (trust.state === "untrusted") {
+      tag.textContent = "Untrusted build";
       box.className = "sec-banner legacy";
-      text.innerHTML = "This contract's deployed module (<code>" + esc(shortAcct(hash || "unknown")) +
-        "</code>) is not one this console can vouch for. Treat it as unverified.";
+      text.innerHTML = "This contract (<code>" + esc(shortAcct(CONTRACT)) + "</code>) is <b>not</b> an approved " +
+        "Overcover address, or its deployed module does not match the approved build. " +
+        "Nothing here is signed against it, and no purchase is offered. Treat it as unverified.";
+    } else {
+      tag.textContent = "Verifying…";
+      box.className = "sec-banner";
+      text.innerHTML = "Reading the deployed module for <code>" + esc(shortAcct(CONTRACT)) +
+        "</code> to confirm it is an approved Overcover build. Buying is disabled until the module is verified.";
     }
+    updateBuyEnabled();
   }
 
   function setInvariant(prefix, ok) {
@@ -1863,13 +1927,29 @@
   function updateBuyEnabled() {
     var b = el("b-buy");
     if (!b) return;
-    b.disabled = buyState.busy || !walletState.connected || !quoteState.selected;
+    // Buying is offered only when the contract being read is a VERIFIED hardened
+    // build. A legacy, untrusted, or not-yet-verified contract disables the
+    // control entirely — the security banner explains why.
+    var allowed = trust.state === "hardened";
+    b.disabled = buyState.busy || !walletState.connected || !quoteState.selected || !allowed;
     b.textContent = buyState.busy ? "Waiting for your wallet…" : "Buy cover";
+    // Show the exact address the wallet will sign against, from the same value
+    // the transaction uses, so the destination is never implicit.
+    var dest = el("b-dest");
+    if (dest) {
+      dest.innerHTML = "You are buying on <a href=\"" + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) +
+        "\" target=\"_blank\" rel=\"noopener\"><code>" + esc(CONTRACT) + "</code></a> · NEAR testnet" +
+        (trust.state === "hardened" ? " · verified hardened module" : " · <b>not verified for purchase</b>");
+      dest.className = "buy-dest" + (allowed ? "" : " blocked");
+    }
     // Say why the button cannot be used yet, so a first-time visitor is never
     // left pressing a dead control with no explanation.
     var h = el("b-hint");
     if (!h) return;
     if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
+    else if (!allowed) h.textContent = trust.state === "legacy"
+      ? "New purchases are disabled on this legacy address. Read or buy on the hardened build — it is the default."
+      : "Buying is disabled until the contract's deployed module is verified as an approved build.";
     else if (!quoteState.selected) h.textContent = "Pick the cover and payout you want above to enable buying.";
     else if (!walletState.connected) h.textContent = "Connect a wallet to buy this cover.";
     else h.textContent = "";
@@ -1945,6 +2025,14 @@
     var p = quoteState.selected;
     if (!p) { setBuyStatus("Choose a product to price first.", true); return; }
     if (!WALLET || !walletState.connected) { setBuyStatus("Connect a wallet first.", true); return; }
+    // Fail closed before anything else: only a verified hardened build may be
+    // signed against. This is the same gate the button uses, re-checked here so
+    // a programmatic call cannot bypass it.
+    if (trust.state !== "hardened") {
+      setBuyStatus("Buying is disabled: this contract is not a verified hardened Overcover build.", true);
+      return;
+    }
+    var destAtClick = CONTRACT;
 
     var obs = obsDateSec();
     var obsErr = obsDateError(p, obs);
@@ -1966,11 +2054,22 @@
     view("quote", { product_id: p.id, payout: payoutStr }).then(function (q) {
       var premium = String(Array.isArray(q) ? q[0] : q);
       if (big(premium) === null) throw new Error("the contract returned no premium");
-      setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
-      var args = buildBuyArgs(p, payoutStr, obs, ben);
-      return WALLET.signAndSend({
-        receiverId: CONTRACT,
-        actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
+      // Re-validate the destination IMMEDIATELY before signing: re-read the
+      // deployed module and require it to still be the verified hardened build
+      // on the same address the quote was priced against. If the address or its
+      // module changed between page load and this signature, refuse.
+      return accountState().then(function (acct) {
+        var now = trustFor(CONTRACT, acct && acct.code_hash);
+        if (CONTRACT !== destAtClick || now.state !== "hardened") {
+          throw new Error("the contract's deployed module changed or is not the verified hardened build — refusing to sign");
+        }
+        trust = now; trust.contract = CONTRACT;
+        setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
+        var args = buildBuyArgs(p, payoutStr, obs, ben);
+        return WALLET.signAndSend({
+          receiverId: CONTRACT,
+          actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
+        });
       });
     }).then(function (res) {
       var out = evaluateWalletOutcome(res);

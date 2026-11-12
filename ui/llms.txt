@@ -2,15 +2,17 @@
 
 > Overcover is an open-source, parametric insurance mutual that runs on NEAR
 > testnet. A visitor connects a NEAR wallet and buys a small policy that pays out
-> if a signed public rainfall reading meets a trigger defined in the contract
-> before purchase. Cover terms are fixed in the contract, the payout is reserved
-> from a capital pool, and settlement follows the signed reading — no adjuster,
-> no claims queue. It is a hackathon prototype on testnet with test funds only.
+> if a signed public index reading — rainfall or temperature — meets a trigger
+> defined in the contract before purchase. Cover terms are fixed in the contract,
+> the payout is reserved from a capital pool, and settlement follows the signed
+> reading — no adjuster, no claims queue. It is a hackathon prototype on testnet
+> with test funds only.
 
 Canonical site: https://overcover.vercel.app/
 Source: https://github.com/itzebe/overcover
 Network: NEAR testnet
-Contract: contract.attestor-overcover.testnet
+Contract (hardened, default for new cover): contract.ovc-v3-ctl-2f6c4c.testnet
+Legacy address (original v1 module, readable but not a purchase destination): contract.attestor-overcover.testnet
 License: MIT
 
 ## What it is
@@ -32,7 +34,7 @@ License: MIT
 2. A policy is bought: the premium is paid, and the policy's maximum payout is
    reserved from the pool the moment it is written, so it cannot be withdrawn
    while the policy is live.
-3. An attestor signs a public rainfall reading (index value) for a city and date.
+3. An attestor signs a public index reading (rainfall or temperature) for a city and date.
 4. If the reading meets the trigger, the reserved payout settles to the policy
    holder; the reading can be challenged with a bond during the challenge window,
    and a disputed reading cannot settle a policy.
@@ -82,4 +84,4 @@ License: MIT
 
 - [Full description for language models](https://overcover.vercel.app/llms-full.txt)
 - [Source repository and README](https://github.com/itzebe/overcover)
-- [NEAR testnet block explorer for the contract](https://testnet.nearblocks.io/address/contract.attestor-overcover.testnet)
+- [NEAR testnet block explorer for the contract](https://testnet.nearblocks.io/address/contract.ovc-v3-ctl-2f6c4c.testnet)

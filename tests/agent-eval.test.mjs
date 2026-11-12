@@ -25,7 +25,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const NEAR = 10n ** 24n;
 
 const product = {
-  id: "rain-lagos",
+  id: "heat-lagos",
   city: "lagos",
   min_payout: (NEAR / 10n).toString(), // 0.1
   max_payout: (NEAR * 1n).toString(), // 1.0
@@ -50,7 +50,7 @@ function ctx(over = {}) {
 
 function proposal(over = {}) {
   return {
-    productId: "rain-lagos",
+    productId: "heat-lagos",
     city: "lagos",
     payoutYocto: (NEAR / 2n).toString(),
     premiumYocto: (NEAR / 100n).toString(),
@@ -107,7 +107,7 @@ test("a city outside the allow-list is refused even when everything else is insi
 });
 
 test("a product outside the allow-list is refused (scope enforcement)", () => {
-  const v = evaluate(proposal({ productId: "rain-bergen-dry" }), product, ctx({ limits: { allowedProducts: ["rain-lagos"] } }));
+  const v = evaluate(proposal({ productId: "heat-lagos-factory" }), product, ctx({ limits: { allowedProducts: ["heat-lagos"] } }));
   assert.equal(v.allow, false);
   assert.match(v.reasons.join(" "), /not in allowedProducts/);
 });

@@ -3,8 +3,8 @@
 //   import { AgentClient } from "./agent/sdk.mjs";
 //   const c = new AgentClient({ baseUrl: "http://127.0.0.1:8787" });
 //   await c.health();
-//   await c.quote("rain-lagos", "1000000000000000000000000");
-//   await c.buy({ productId: "rain-lagos", payoutYocto: "...", obsDateSec: 1794000000, idempotencyKey: "order-42" });
+//   await c.quote("heat-lagos", "1000000000000000000000000");
+//   await c.buy({ productId: "heat-lagos", payoutYocto: "...", obsDateSec: 1794000000, idempotencyKey: "order-42" });
 //
 // The client never holds a key: the service does. It only carries requests.
 

@@ -125,7 +125,7 @@ const AUDIT_PATH = process.env.OVERCOVER_AGENT_AUDIT ?? path.join(root, "agent",
 async function main() {
   const accountId = process.env.OVERCOVER_AGENT_ACCOUNT;
   const secretKey = process.env.OVERCOVER_AGENT_SECRET_KEY;
-  const contractId = process.env.OVERCOVER_AGENT_CONTRACT ?? "contract.attestor-overcover.testnet";
+  const contractId = process.env.OVERCOVER_AGENT_CONTRACT ?? "contract.ovc-v3-ctl-2f6c4c.testnet";
   const dryRun = process.env.OVERCOVER_AGENT_DRY_RUN === "1";
 
   let limits = {};

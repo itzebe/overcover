@@ -42,8 +42,10 @@ test("an unfunded agent refuses a buy before signing, with a balance reason", as
   }
 
   const obsDateSec = Math.floor(Date.now() / 1000) + 7200;
+  // 0.1 NEAR is inside the product's own payout bounds, so policy allows it and
+  // the balance guard is the only thing that can refuse — which it must.
   await assert.rejects(
-    () => agent.buy({ productId: "rain-lagos", payoutYocto: (ONE_NEAR).toString(), obsDateSec }),
+    () => agent.buy({ productId: "heat-lagos", payoutYocto: (ONE_NEAR / 10n).toString(), obsDateSec }),
     (e) => {
       assert.equal(e.code, "denied", "an unfunded buy must be a policy denial, not a chain error");
       assert.match(e.reasons.join(" "), /balance/i, "the reason must name the balance");
@@ -57,4 +59,40 @@ test("an unfunded agent refuses a buy before signing, with a balance reason", as
   assert.ok(!lines.some((l) => l.kind === "buy"), "no buy may be recorded when funds are insufficient");
 
   fs.rmSync(auditPath, { force: true });
+});
+
+test("balanceYocto() reads a missing account as null, without throwing", async (t) => {
+  const kp = KeyPair.fromRandom("ed25519");
+  const accountId = `overcover-missing-${Date.now()}.testnet`;
+
+  let agent;
+  try {
+    agent = await createAgent({ accountId, secretKey: kp.toString(), dryRun: true, auditPath: path.join(os.tmpdir(), `overcover-bal-${Date.now()}.jsonl`) });
+  } catch (e) {
+    t.skip(`network unavailable: ${e.message}`);
+    return;
+  }
+
+  // The exported balance read is the funds guard's input. A missing account must
+  // resolve to null ("no balance"), never throw — otherwise the buy path turns a
+  // not-funded account into a chain error instead of a policy denial.
+  const balance = await agent.balanceYocto();
+  assert.equal(balance, null, "an unfunded/absent account must read as a null balance");
+});
+
+test("balanceYocto() reads a funded account's total (amount + locked) as a digit string", async (t) => {
+  const kp = KeyPair.fromRandom("ed25519");
+  // A live contract account is certainly funded, so this exercises the success path.
+  let agent;
+  try {
+    agent = await createAgent({ accountId: "contract.ovc-v3-ctl-2f6c4c.testnet", secretKey: kp.toString(), dryRun: true, auditPath: path.join(os.tmpdir(), `overcover-bal2-${Date.now()}.jsonl`) });
+  } catch (e) {
+    t.skip(`network unavailable: ${e.message}`);
+    return;
+  }
+
+  const balance = await agent.balanceYocto();
+  assert.equal(typeof balance, "string", "a funded account reads as a digit string");
+  assert.ok(/^\d+$/.test(balance), "the balance is a plain digit string, not a float");
+  assert.ok(BigInt(balance) > 0n, "a live contract account has a positive balance");
 });

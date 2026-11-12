@@ -1,8 +1,8 @@
 {
-  "url": "http://127.0.0.1:8629/",
-  "at": "2026-11-12T14:59:04.698Z",
-  "passed": 12,
-  "total": 12,
+  "url": "http://127.0.0.1:8610/",
+  "at": "2026-11-12T16:41:33.246Z",
+  "passed": 13,
+  "total": 13,
   "results": [
     {
       "name": "1  no localhost default in the shipped page",
@@ -23,6 +23,11 @@
       "name": "10 buy_cover is the only signing capability",
       "ok": true,
       "detail": "the wallet scope is buy_cover alone, bound to the read contract, and the agent's only function call is buy_cover"
+    },
+    {
+      "name": "13 the page only signs against a verified hardened contract",
+      "ok": true,
+      "detail": "the console has an (address, module) allowlist, defaults to the hardened address, and refuses to sign unless the read contract is verified hardened"
     },
     {
       "name": "11 a visitor cannot buy without a wallet authorization",
@@ -57,7 +62,7 @@
     {
       "name": "4  the read-only verdict is derived from the live contract quote",
       "ok": true,
-      "detail": "browser ALLOW == shared engine ALLOW for rain-lagos; page shows premium 0.050000 NEAR"
+      "detail": "browser ALLOW == shared engine ALLOW for heat-lagos; page shows premium 0.015000 NEAR"
     },
     {
       "name": "6  an unreachable service yields a safe, human message",

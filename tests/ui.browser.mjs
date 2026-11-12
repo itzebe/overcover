@@ -205,9 +205,9 @@ async function main() {
       check(urlHidden, "[agent] the local URL field must be hidden in public mode by default");
       await page.waitForFunction(() => {
         const s = document.querySelector("#a-product");
-        return s && [...s.options].some((o) => o.value === "rain-lagos");
+        return s && s.options.length > 0;
       }, null, { timeout: 15000 });
-      await page.selectOption("#a-product", "rain-lagos");
+      await page.selectOption("#a-product", { index: 0 });
       await page.click("#a-decide");
       await page.waitForFunction(() => /Policy verdict/.test(document.querySelector("#a-status").textContent), null, { timeout: 15000 });
       const pubStatus = await page.textContent("#a-status");

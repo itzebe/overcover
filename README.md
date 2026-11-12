@@ -1,7 +1,8 @@
 # OVERCOVER — programmable insurance for autonomous businesses
 
 > **Live console:** https://overcover.vercel.app/ · https://itzebe.github.io/overcover/
-> **Live contract:** `contract.attestor-overcover.testnet` (NEAR testnet)
+> **Live contract (hardened, default for new cover):** `contract.ovc-v3-ctl-2f6c4c.testnet` (NEAR testnet)
+> **Legacy address (original v1 module, read-only in the console):** `contract.attestor-overcover.testnet`
 > **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
 > **License:** MIT
 > **Submission pack:** [`SUBMISSION.md`](SUBMISSION.md) · X demo post in [`docs/DEMO_POST.md`](docs/DEMO_POST.md)
@@ -82,7 +83,7 @@ it says how the settlement works.
 ```bash
 # the whole pool in one view call — the same read the page makes
 curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"contract.attestor-overcover.testnet","method_name":"get_pool","args_base64":"e30="}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"contract.ovc-v3-ctl-2f6c4c.testnet","method_name":"get_pool","args_base64":"e30="}}'
 ```
 
 ## Why NEAR
@@ -147,7 +148,9 @@ python3 -m http.server 12000 --directory ui   # then open http://localhost:12000
 
 It reads honestly: a failed read shows a **stale** warning with the time of the last good read, or a
 **no data** state — never a stale number presented as live. Any contract can be inspected with
-`?contract=<id>`; the default is `contract.attestor-overcover.testnet`.
+`?contract=<id>`; the default is the hardened `contract.ovc-v3-ctl-2f6c4c.testnet`. The original
+address `contract.attestor-overcover.testnet` can still be inspected (it is labelled *legacy* and
+new purchases are disabled there).
 
 ## Buying cover with a wallet, and the autonomous agent
 
@@ -216,9 +219,9 @@ explorer links.
 npm ci --ignore-scripts
 npm run test:model      # 66 attacks, 66 defended, 0 exploitable  (reference model)
 npm run test:contract   # 76 Rust unit tests                      (contract logic)
-npm run test:console    # 101 regression + live-RPC tests         (browser console + end-to-end wallet journey)
-npm run test:agent      # 51 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
-npm run test:agent-eval # 32 product-feed schema/premium + agent-eval boundary + independent-client integration tests
+npm run test:console    # 105 regression + live-RPC tests         (browser console + end-to-end wallet journey)
+npm run test:agent      # 53 limits + API + u128-precision + funds-guard + OpenAPI + idempotency tests  (autonomous agent)
+npm run test:agent-eval # 33 product-feed schema/premium + agent-eval boundary + independent-client integration tests
 npm run test:deploy     # 21 deploy/upgrade-path regressions (a stale, guard-less wasm is refused)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract (needs a fresh deploy)
 npm run products:feed   # regenerate ui/products.json from the live contract
@@ -245,7 +248,7 @@ verify:connectivity` boots the real agent service in dry-run and drives the real
 asserting the public console needs no local service while the security boundary holds (no localhost
 default, no owner-only method reachable, limits enforced, invalid bodies rejected).
 
-`npm run test:agent` covers the spending-limits policy engine (a denied buy never touches the
+ `npm run test:agent` covers the spending-limits policy engine (a denied buy never touches the
 network) and the agent HTTP API (strict field validation, `413` on oversized bodies, idempotent
 retries). `npm run ui:qa` is an optional Playwright check of the console at 320–1440 px, exercising
 the public read-only evaluation and a live dry-run agent round-trip in local mode, plus the wallet
@@ -272,6 +275,7 @@ Everything below is independently checkable. Nothing here is asserted on trust.
 | The console is accessible | `npm run axe` (axe-core, WCAG 2.2 AA) reports 0 violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog, with no horizontal overflow. |
 | The wallet picker opens where you click, at every width | `npm run ui:qa` clicks Connect at 320–1440 px and asserts the modal is in-viewport with no overflow; `npm run test:console` covers the installed/not-installed labelling and the connect timeout. |
 | The wallet dialog closes on every path | `npm run ui:qa` asserts the Close button, Escape and a backdrop click each close the dialog and restore focus; `npm run test:console` asserts the Close control is a real `method="dialog"` submit and that the valueless `data-wallet-close` attribute is matched with `hasAttribute`, not a falsy `getAttribute`. |
+| The console can only sign against a verified hardened module | `ui/index.html` holds a `TRUSTED` allowlist of `(address → module code_hash)` pairs. The security banner and the buy gate are derived from the **contract's own** deployed `code_hash` (`get_account`), not from markup: an unknown address is `untrusted`, the legacy module is `legacy`, and the buy button is enabled only for `hardened`. `doBuy` re-reads the module **immediately before signing** and refuses if the address or its module changed. `npm run verify:connectivity` asserts the allowlist, the default and the pre-sign re-check statically. |
 | Search engines and AI crawlers can find and describe the product | `/robots.txt`, `/sitemap.xml`, `/llms.txt` and `/llms-full.txt` ship in `ui/` and are asserted by `npm run test:console`; the head carries canonical, Open Graph, Twitter and JSON-LD metadata in the served HTML. |
 | MyNearWallet is gone | `npm run test:console` asserts no `my-near-wallet`/`MyNearWallet` reference remains in the page, `ui/wallet.js`, `package.json` or `package-lock.json`, and that the bundle registers only HERE and Meteor. |
 
@@ -299,8 +303,10 @@ service-auth hardening — is in [`docs/SECURITY_PRE_AUDIT.md`](docs/SECURITY_PR
 - The demo uses a **60-second challenge window**; production uses 3600 s.
 - The demo reports the **same real Open-Meteo reading** the threshold was derived from, so the
   outcome is deterministic. The reading is genuine; it is pinned, not fabricated.
-- The live contract carries **22 products**, of which 2 are the canonical named products and 20 are
-  demo-generated test rows. The console groups the latter so the real cover stays legible.
+- The legacy v1 address carries **22 products** (2 canonical named products — `rain-lagos`,
+  `rain-bergen-dry` — plus 20 demo-generated test rows); the hardened default
+  `contract.ovc-v3-ctl-2f6c4c.testnet` carries 2 named products (`heat-lagos`,
+  `heat-lagos-factory`). The console groups demo rows so the real cover stays legible.
 - The **autonomous agent** ships in dry-run and is run by the operator, not hosted by Overcover: a
   public endpoint that signed with a funded key would let any visitor spend that balance. The
   console's public agent panel is therefore **read-only** (it evaluates with the same policy engine

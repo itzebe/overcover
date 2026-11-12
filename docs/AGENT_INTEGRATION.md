@@ -62,7 +62,7 @@ Environment variables:
 | --- | --- | --- |
 | `OVERCOVER_AGENT_ACCOUNT` | the agent's NEAR account id | required |
 | `OVERCOVER_AGENT_SECRET_KEY` | the agent's `ed25519:…` key | required |
-| `OVERCOVER_AGENT_CONTRACT` | the Overcover contract | `contract.attestor-overcover.testnet` |
+| `OVERCOVER_AGENT_CONTRACT` | the Overcover contract | `contract.ovc-v3-ctl-2f6c4c.testnet` |
 | `OVERCOVER_AGENT_DRY_RUN` | `1` = evaluate only | `1` |
 | `OVERCOVER_AGENT_LIMITS` | JSON spending policy (see below) | engine defaults |
 | `OVERCOVER_AGENT_AUDIT` | path to the append-only audit log | `agent/audit.log.jsonl` |
@@ -151,7 +151,7 @@ https://testnet.nearblocks.io/txns/<hash>
 and read the resulting policy with a keyless contract view:
 
 ```bash
-near view contract.attestor-overcover.testnet get_policy '{"id": <policy_id>}'
+near view contract.ovc-v3-ctl-2f6c4c.testnet get_policy '{"id": <policy_id>}'
 ```
 
 `npm run verify:proof` re-derives the headline claims (bytecode == source, pool

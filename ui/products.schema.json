@@ -66,16 +66,18 @@
           "properties": {
             "name": { "type": "string" },
             "unit": { "type": "string" },
-            "city": { "type": "string" }
+            "city": { "type": "string" },
+            "metric_id": { "type": ["string", "null"] }
           }
         },
         "trigger": {
           "type": "object",
-          "required": ["direction", "threshold_tenths", "threshold_mm", "statement"],
+          "required": ["direction", "threshold_tenths", "threshold_value", "statement"],
           "properties": {
-            "direction": { "const": "at-or-above" },
+            "direction": { "enum": ["at-or-above", "at-or-below"] },
             "threshold_tenths": { "type": "integer", "minimum": 0 },
-            "threshold_mm": { "type": "string" },
+            "threshold_value": { "type": "string" },
+            "unit": { "type": "string" },
             "at_plausibility_ceiling": { "type": "boolean" },
             "statement": { "type": "string" }
           }

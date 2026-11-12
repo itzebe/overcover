@@ -1,0 +1,47 @@
+{
+  "verifiedAt": "2026-11-12T20:08:38.965Z",
+  "network": "testnet",
+  "contract": "contract.attestor-overcover.testnet",
+  "tx": {
+    "hash": "87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i",
+    "signer": "human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet",
+    "receiver": "contract.attestor-overcover.testnet",
+    "method": "buy_cover",
+    "deposit": "50000000000000000000000",
+    "gas": 300000000000000,
+    "args": {
+      "product_id": "rain-lagos",
+      "payout": "1000000000000000000000000",
+      "obs_date": 1794609443,
+      "beneficiary": null
+    },
+    "status": "SuccessValue",
+    "successValue": "15",
+    "blockHash": "7RSpE9koCHyd39fGwdPU5J9CEtFAnBjmy5pqCkfsVBif",
+    "endpoint": "https://archival-rpc.testnet.near.org"
+  },
+  "policy": {
+    "id": 15,
+    "buyer": "human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet",
+    "beneficiary": "human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet",
+    "product_id": "rain-lagos",
+    "city": "lagos",
+    "threshold_tenths": 2,
+    "payout": 1e+24,
+    "premium": 5e+22,
+    "obs_date": 1794609443,
+    "issued_at": 1794350244,
+    "status": "active",
+    "paid_amount": 0,
+    "observed_value": 0,
+    "settled_at": 0
+  },
+  "checks": {
+    "txStatusSuccess": true,
+    "policyIdMatchesSuccessValue": true,
+    "buyerIsSigner": true,
+    "depositCoversPremium": true,
+    "receiverIsContract": true,
+    "methodIsBuyCover": true
+  }
+}

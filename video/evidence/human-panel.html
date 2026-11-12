@@ -1,0 +1,58 @@
+<!doctype html><meta charset="utf-8"><style>
+  * { margin:0; box-sizing:border-box; }
+  html,body { width:1920px; height:1080px; background:#10251d; color:#eef3ef;
+    font-family:"DejaVu Sans", system-ui, sans-serif; overflow:hidden; }
+  .wrap { position:absolute; inset:0; padding:64px 72px 118px 72px; display:flex; flex-direction:column; }
+  .kick { font-family:"DejaVu Sans Mono", monospace; font-size:15px; letter-spacing:.3em;
+    text-transform:uppercase; color:#e0aa55; }
+  h1 { font-family:"DejaVu Serif", Georgia, serif; font-size:46px; line-height:1.1; margin-top:14px; }
+  .sub { color:#b9c9c0; font-size:17px; margin-top:10px; }
+  .cols { display:grid; grid-template-columns:1.35fr 1fr; gap:34px; margin-top:30px; }
+  .card { border:1px solid rgba(238,243,239,.16); border-radius:10px; padding:24px 26px; background:rgba(255,255,255,.02); }
+  .card h2 { font-size:13px; letter-spacing:.22em; text-transform:uppercase; color:#e0aa55;
+    font-family:"DejaVu Sans Mono", monospace; font-weight:400; margin-bottom:16px; }
+  .row { display:flex; justify-content:space-between; gap:18px; padding:7px 0;
+    border-bottom:1px solid rgba(238,243,239,.08); font-size:16px; }
+  .row:last-child { border-bottom:none; }
+  .row .k { color:#b9c9c0; }
+  .row .v { font-family:"DejaVu Sans Mono", monospace; text-align:right; word-break:break-all; max-width:70%; }
+  .tag { display:inline-block; font-family:"DejaVu Sans Mono", monospace; font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:#10251d; background:#e0aa55; padding:2px 8px; border-radius:4px; }
+  .hash { color:#e0aa55; }
+  .checks { margin-top:26px; display:grid; grid-template-columns:1fr 1fr; gap:8px 40px; }
+  .chk { display:flex; align-items:center; gap:12px; font-size:16px; color:#eef3ef; }
+  .chk .b { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:14px; background:#2f7d54; color:#fff; flex:none; }
+  .foot { margin-top:auto; color:#b9c9c0; font-size:14px; font-family:"DejaVu Sans Mono", monospace; }
+  .badge { position:absolute; top:64px; right:72px; text-align:right; }
+</style>
+<div class="wrap">
+  <div class="badge"><span class="tag">legacy v1 build</span></div>
+  <div class="kick">The human purchase · verified on-chain</div>
+  <h1>A real person's cover — the transaction and the policy, re-read from NEAR.</h1>
+  <div class="sub">Not a screenshot. Every value below is fetched from NEAR testnet RPC when this video is built.</div>
+  <div class="cols">
+    <div class="card">
+      <h2>The transaction</h2>
+      <div class="row"><span class="k">Hash</span><span class="v hash">87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i</span></div>
+      <div class="row"><span class="k">Signer</span><span class="v">human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet</span></div>
+      <div class="row"><span class="k">Called</span><span class="v">contract.attestor-overcover.testnet · buy_cover</span></div>
+      <div class="row"><span class="k">Deposit</span><span class="v">0.0500 NEAR</span></div>
+      <div class="row"><span class="k">Result</span><span class="v">SuccessValue → policy 15</span></div>
+      <div class="row"><span class="k">Block</span><span class="v">7RSpE9koCHyd39fGwdPU5J9CEtFAnBjmy5pqCkfsVBif</span></div>
+    </div>
+    <div class="card">
+      <h2>The resulting policy</h2>
+      <div class="row"><span class="k">Policy</span><span class="v">#15</span></div>
+      <div class="row"><span class="k">Product</span><span class="v">rain-lagos</span></div>
+      <div class="row"><span class="k">Payout</span><span class="v">1.00 NEAR</span></div>
+      <div class="row"><span class="k">Premium</span><span class="v">0.0500 NEAR</span></div>
+      <div class="row"><span class="k">Buyer</span><span class="v">human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet</span></div>
+      <div class="row"><span class="k">Status</span><span class="v">active</span></div>
+    </div>
+  </div>
+  <div class="checks">
+    <div class="chk"><span class="b">✓</span>Transaction succeeded</div><div class="chk"><span class="b">✓</span>Return value is policy 15</div><div class="chk"><span class="b">✓</span>Policy buyer is the transaction signer</div><div class="chk"><span class="b">✓</span>Deposit covers the premium</div><div class="chk"><span class="b">✓</span>Called the Overcover contract</div><div class="chk"><span class="b">✓</span>Method is buy_cover</div>
+  </div>
+  <div class="foot">Verified 2026-11-12T20:08:38.965Z · testnet · contract.attestor-overcover.testnet</div>
+</div>

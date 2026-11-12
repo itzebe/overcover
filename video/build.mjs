@@ -27,11 +27,23 @@ const OUT = path.join(ROOT, "video", "out");
 const EXEC =
   process.env.CHROMIUM_PATH ||
   "/home/openhands/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome";
-const W = 1600;
-const H = 900;
+const W = Number(process.env.VIDEO_W || 1920);
+const H = Number(process.env.VIDEO_H || 1080);
 const FPS = 30;
 const FFMPEG = "ffmpeg";
 const FFPROBE = "ffprobe";
+
+// The verified human-purchase record the video cites. Written by
+// `video/verify-human-purchase.mjs`; if it is absent the build refuses to run
+// so a video can never show a human purchase that was not just re-verified.
+const EVIDENCE_PATH = path.join(ROOT, "video", "evidence", "human-purchase.json");
+if (!fs.existsSync(EVIDENCE_PATH)) {
+  console.error("run `node video/verify-human-purchase.mjs && node video/render-evidence.mjs` first");
+  process.exit(1);
+}
+const EVIDENCE = JSON.parse(fs.readFileSync(EVIDENCE_PATH, "utf8"));
+const near2 = (y) => (Number(BigInt(y)) / 1e24).toFixed(2);
+const near4 = (y) => (Number(BigInt(y)) / 1e24).toFixed(4);
 
 const T = {
   field: "#10251d",
@@ -51,10 +63,12 @@ const TITLES = {
   "03-settlement": "How a claim settles",
   "04-quote": "The contract quotes the premium",
   "05-buy": "One signature, in your own wallet",
-  "06-policies": "Verifiable on-chain policies",
-  "07-agent": "The autonomous agent, with spending limits",
-  "08-factory": "Anyone can add cover",
-  "09-proof": "Don't trust the page — reproduce it",
+  "06-human": "The human purchase — verified on-chain",
+  "07-human-policy": "Policy 15, in the live console",
+  "08-policies": "Verifiable on-chain policies",
+  "09-agent": "The autonomous agent, with spending limits",
+  "10-factory": "Anyone can add cover",
+  "11-proof": "Don't trust the page — reproduce it",
 };
 
 const run = (cmd, args) => execFileSync(cmd, args, { stdio: ["ignore", "pipe", "pipe"], encoding: "buffer" });
@@ -115,7 +129,7 @@ function closeCard() {
       font-size:14px; letter-spacing:.2em; text-transform:uppercase; color:${T.gold}; }
   `) + `<div class="badge">Overcover</div><div class="wrap">
       <h2>A person and an agent buy the same cover — and both end in a verifiable on-chain policy.</h2>
-      <div class="mono"><b>Console</b>  overcover.vercel.app<br><b>Contract</b>  contract.ovc-v3-ctl-2f6c4c.testnet<br><b>Proof</b>  npm run verify:proof</div>
+      <div class="mono"><b>Console</b>  overcover.vercel.app<br><b>Contract</b>  contract.ovc-v3-ctl-2f6c4c.testnet<br><b>Human policy</b>  #${EVIDENCE.policy.id} on ${EVIDENCE.contract} · tx ${EVIDENCE.tx.hash.slice(0, 18)}…<br><b>Proof</b>  npm run verify:proof</div>
       </div><div class="accent"></div>`;
 }
 
@@ -159,7 +173,7 @@ function compositeScene(scene, manifest, idx, total) {
 
   // Fold the title/close cards over the first / last scene.
   if (scene.id === "01-open") return overlayCard(seg, path.join(OVER, "open.png"), 0, 4.0, "in", hold);
-  if (scene.id === "09-proof") return overlayCard(seg, path.join(OVER, "close.png"), hold - 4.5, 4.5, "out", hold);
+  if (scene.id === "11-proof") return overlayCard(seg, path.join(OVER, "close.png"), hold - 4.5, 4.5, "out", hold);
   return seg;
 }
 

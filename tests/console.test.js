@@ -848,3 +848,81 @@ test("a missing quorum value degrades to a dash, never 'undefined'", () => {
   assert.doesNotMatch(html, /undefined/);
   assert.match(html, /—/, "an absent quorum renders as an em dash");
 });
+
+// ---------------------------------------------------------------------------
+// Insurance factory: the discovery feed is the agent's PREPARED proposal; it is
+// NOT contract state. A proposal may only be shown as ACTIVE when the contract
+// itself returns an activated product whose on-chain evidence_hash matches the
+// proposal's evidence hash. If the feed is missing or the contract read failed,
+// nothing may be claimed as activated.
+const factorySrc = extractFunction(SCRIPT, "renderFactory");
+const matchSrc = extractFunction(SCRIPT, "matchActivated");
+const statusSrc = extractFunction(SCRIPT, "factoryStatus");
+const renderFactory = new Function(
+  "esc, cap, metricLabel, fmtVal, utc, term, shortAcct",
+  `var esc = esc;
+   ${matchSrc};
+   ${statusSrc};
+   ${factorySrc};
+   return renderFactory;`
+)((s) => String(s), (s) => String(s), (m) => "m:" + m, (v) => "v:" + v, (s) => "T" + s,
+  (k, v) => `[${k}=${v}]`, (a) => "acct:" + a);
+
+const feedOne = {
+  generatedAt: "2026-11-12T06:30:00.000Z",
+  proposals: [{
+    id: "factory-rain-miami-2026-11-17",
+    status: "PROPOSED",
+    metric: "rain", city: "miami", direction: "Above",
+    thresholdTenths: 300, premiumBp: 500, coverageStartSec: 1794472201,
+    evidence: { kind: "forecast", source: "open-meteo:forecast:precipitation_sum",
+      sourceUrl: "https://api.open-meteo.com/v1/forecast?...", observedAt: "2026-11-17",
+      valueTenths: 615, unit: "mm/10", raw: 61.5, hash: "sha256:abc123" },
+    risk: { emerging: true, direction: "Above", rationale: "excess rainfall: forecast 615 mm/10 crosses threshold 300" },
+  }],
+};
+
+test("a prepared proposal with no matching contract product is shown as PROPOSED, never ACTIVE", () => {
+  const html = renderFactory(feedOne, [], null);
+  assert.match(html, /PROPOSED/, "the proposal status is PROPOSED");
+  assert.doesNotMatch(html, /class="tag available"/, "it is never shown as an active/available product");
+  assert.doesNotMatch(html, /Activated on-chain/, "activation is never claimed without the contract");
+});
+
+test("a proposal is shown as ACTIVE only when the contract returns a matching evidence hash", () => {
+  const products = [{ id: "factory-rain-miami-2026-11-17", proposed_by: "proposer.testnet", evidence_hash: "sha256:abc123", active: true }];
+  const html = renderFactory(feedOne, products, null);
+  assert.match(html, /class="tag available"/, "a contract-matched product is shown as active");
+  assert.match(html, /Activated on-chain as product/, "the activation cites the on-chain product");
+  assert.match(html, /proposer\.testnet/, "the activation names the proposer from the contract");
+});
+
+test("a forecast is labelled a forecast and never as an event that occurred", () => {
+  const html = renderFactory(feedOne, [], null);
+  assert.match(html, /forecast/, "the evidence is labelled a forecast");
+  assert.match(html, /not an observation of an event that occurred/, "the honesty note is present");
+});
+
+test("the evidence hash is shown, so the on-chain provenance can be checked", () => {
+  const html = renderFactory(feedOne, [], null);
+  assert.match(html, /sha256:abc123/, "the exact evidence hash is rendered");
+  assert.match(html, /api\.open-meteo\.com/, "the source URL is rendered");
+});
+
+test("a missing feed is reported honestly and never as active cover", () => {
+  const html = renderFactory({ error: "HTTP 404", proposals: [] }, [], "HTTP 404");
+  assert.match(html, /Discovery feed unavailable/, "a missing feed is stated plainly");
+  assert.doesNotMatch(html, /class="tag available"/, "nothing is shown as active");
+  assert.doesNotMatch(html, /undefined/, "no 'undefined' leaks into the page");
+});
+
+test("no emerging risk renders an explicit empty state, not a blank panel", () => {
+  const html = renderFactory({ proposals: [] }, [], null);
+  assert.match(html, /No emerging risk right now/, "an empty feed explains itself");
+});
+
+test("a contract-read failure never shows a proposal as active", () => {
+  const html = renderFactory(feedOne, [], null);
+  assert.doesNotMatch(html, /Activated on-chain/);
+  assert.doesNotMatch(html, /undefined/);
+});

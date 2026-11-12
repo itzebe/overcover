@@ -1324,3 +1324,255 @@ fn reading_message_matches_the_pinned_v3_layout() {
             .replace(['\n', ' '], "")
     );
 }
+
+// ==========================================================================
+// Permissionless insurance factory
+//
+// These tests prove that a non-owner can introduce a product, that the
+// *contract* (not the owner) decides qualification under fixed rules, and that
+// each guard, when removed, fails the test that covers it.
+// ==========================================================================
+
+/// A funded pool plus one registered, active "heat" metric and a non-owner
+/// proposer. The owner never calls `propose_product` here.
+fn factory_setup() -> (Overcover, AccountId) {
+    ctx(owner(), 0, 0);
+    let mut c = Overcover::new(owner(), pubkey(9), U128(ONE / 10), 0, 3600);
+    // Fund the pool so capital constraints are meaningful.
+    let lp: AccountId = "liquidity.testnet".parse().unwrap();
+    ctx(lp.clone(), 1000 * ONE, 0);
+    c.deposit();
+    // Owner registers one index the contract is willing to underwrite.
+    ctx(owner(), 0, 0);
+    c.add_metric(
+        "heat".to_string(),
+        "temperature".to_string(),
+        "degC/10".to_string(),
+        600,          // max plausible 60.0 C
+        10,
+        Direction::Above,
+    );
+    let proposer = "alice.testnet".parse().unwrap();
+    (c, proposer)
+}
+
+/// A valid proposal in every respect. Tests mutate exactly one field.
+fn propose_valid(c: &mut Overcover, proposer: &AccountId, id: &str) -> Product {
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    c.propose_product(
+        id.to_string(),
+        "lagos".to_string(),
+        "heat".to_string(),
+        400,                 // 40.0 C threshold
+        500,                 // 5% premium
+        U128(ONE),           // min payout 1 NEAR
+        U128(100 * ONE),     // max payout 100 NEAR
+        3600 + 7200,         // prospective
+        "sha256:deadbeef".to_string(),
+    )
+}
+
+#[test]
+fn factory_1_a_non_owner_can_propose_and_it_activates_without_the_owner() {
+    let (mut c, proposer) = factory_setup();
+    let p = propose_valid(&mut c, &proposer, "heat-lagos-permissionless");
+    // Activated in the same transaction, marked with the proposer, no owner step.
+    assert!(p.active);
+    assert_eq!(p.proposed_by, proposer.to_string());
+    assert_eq!(p.category, "temperature");
+    let stored = c.get_product("heat-lagos-permissionless".to_string()).unwrap();
+    assert!(stored.active);
+    assert_eq!(stored.proposed_by, proposer.to_string());
+}
+
+#[test]
+fn factory_2_an_unknown_metric_is_rejected() {
+    let (mut c, proposer) = factory_setup();
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "bad".to_string(), "lagos".to_string(), "not-a-metric".to_string(),
+            400, 500, U128(ONE), U128(100 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err(), "an unregistered metric must be refused");
+    assert!(c.get_product("bad".to_string()).is_none());
+}
+
+#[test]
+fn factory_3_an_implausible_threshold_is_rejected() {
+    let (mut c, proposer) = factory_setup();
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // Metric max_value is 600; 999 exceeds it.
+        c.propose_product(
+            "bad".to_string(), "lagos".to_string(), "heat".to_string(),
+            999, 500, U128(ONE), U128(100 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err(), "a threshold above the metric bound must be refused");
+}
+
+#[test]
+fn factory_4_an_out_of_band_premium_is_rejected() {
+    let (mut c, proposer) = factory_setup();
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "bad".to_string(), "lagos".to_string(), "heat".to_string(),
+            400, 9000, U128(ONE), U128(100 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err(), "a premium above the protocol band must be refused");
+}
+
+#[test]
+fn factory_5_an_excessive_payout_is_rejected() {
+    let (mut c, proposer) = factory_setup();
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // max_payout 10_000 NEAR -> capacity 50_000 NEAR, far above the pool.
+        c.propose_product(
+            "bad".to_string(), "lagos".to_string(), "heat".to_string(),
+            400, 500, U128(ONE), U128(10_000 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err(), "a payout that outruns the pool must be refused");
+}
+
+#[test]
+fn factory_6_a_non_prospective_coverage_start_is_rejected() {
+    let (mut c, proposer) = factory_setup();
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 1000); // now = 1000
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "bad".to_string(), "lagos".to_string(), "heat".to_string(),
+            400, 500, U128(ONE), U128(100 * ONE), 1000, "ev".to_string(), // start == now
+        )
+    }));
+    assert!(r.is_err(), "coverage must start in the future");
+}
+
+#[test]
+fn factory_7_a_duplicate_product_is_rejected() {
+    let (mut c, proposer) = factory_setup();
+    propose_valid(&mut c, &proposer, "dup");
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "dup".to_string(), "lagos".to_string(), "heat".to_string(),
+            400, 500, U128(ONE), U128(100 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err(), "a product id may not be reused");
+}
+
+#[test]
+fn factory_8_an_active_products_terms_cannot_be_modified() {
+    let (mut c, proposer) = factory_setup();
+    let p = propose_valid(&mut c, &proposer, "immutable");
+    // Re-proposing the same id with different terms is refused, and the stored
+    // terms are exactly what was first activated.
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "immutable".to_string(), "lagos".to_string(), "heat".to_string(),
+            500, 900, U128(ONE), U128(50 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err());
+    let stored = c.get_product("immutable".to_string()).unwrap();
+    assert_eq!(stored.threshold_tenths, p.threshold_tenths);
+    assert_eq!(stored.premium_bp, p.premium_bp);
+    assert_eq!(stored.max_payout, p.max_payout);
+}
+
+#[test]
+fn factory_9_insufficient_stake_is_rejected() {
+    let (mut c, proposer) = factory_setup();
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE - 1, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "bad".to_string(), "lagos".to_string(), "heat".to_string(),
+            400, 500, U128(ONE), U128(100 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err(), "the anti-spam stake is mandatory");
+}
+
+#[test]
+fn factory_10_concurrent_proposals_cannot_overcommit_the_pool() {
+    let (mut c, proposer) = factory_setup();
+    // Pool is 1000 NEAR. Each product's capacity is 5x its max payout. The
+    // first with 100 NEAR max payout -> 500 NEAR capacity; a second identical
+    // proposal would need 500 more, leaving < 1/5 free -> refused.
+    propose_valid(&mut c, &proposer, "p1");
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "p2".to_string(), "lagos".to_string(), "heat".to_string(),
+            400, 500, U128(ONE), U128(100 * ONE), 3600 + 7200, "ev".to_string(),
+        )
+    }));
+    assert!(r.is_err(), "a second full-size proposal must not overcommit the pool");
+}
+
+#[test]
+fn factory_11_the_stake_enters_the_pool_and_reconciles() {
+    let (mut c, proposer) = factory_setup();
+    let before = c.get_pool().capital.0;
+    propose_valid(&mut c, &proposer, "funded");
+    let after = c.get_pool().capital.0;
+    assert_eq!(after, before + PROPOSAL_MIN_STAKE);
+    assert!(c.reconcile(), "pool accounting must reconcile after a proposal");
+    assert!(c.check_invariant());
+}
+
+#[test]
+fn factory_12_existing_purchase_and_settlement_still_work_on_a_proposed_product() {
+    let (mut c, proposer) = factory_setup();
+    let p = propose_valid(&mut c, &proposer, "buyable");
+    // A buyer purchases cover on the permissionlessly-created product.
+    let buyer: AccountId = "bob.testnet".parse().unwrap();
+    let payout = p.max_payout;
+    let premium = Overcover::premium_for(&p, payout);
+    ctx(buyer.clone(), premium, 0);
+    let policy_id = c.buy_cover("buyable".to_string(), U128(payout), 3600 + 7200, None);
+    let pol = c.get_policy(policy_id).unwrap();
+    assert_eq!(pol.buyer, buyer);
+    assert_eq!(pol.payout, payout);
+    assert!(c.check_invariant());
+    assert!(c.reconcile());
+}
+
+#[test]
+fn factory_13_the_evidence_hash_is_stored_and_immutable() {
+    let (mut c, proposer) = factory_setup();
+    let p = propose_valid(&mut c, &proposer, "with-evidence");
+    assert_eq!(p.evidence_hash, "sha256:deadbeef");
+    let stored = c.get_product("with-evidence".to_string()).unwrap();
+    assert_eq!(stored.evidence_hash, "sha256:deadbeef");
+    // Re-proposing the same id (even with different evidence) cannot rewrite it.
+    ctx(proposer.clone(), PROPOSAL_MIN_STAKE, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.propose_product(
+            "with-evidence".to_string(), "lagos".to_string(), "heat".to_string(),
+            400, 500, U128(ONE), U128(100 * ONE), 3600 + 7200, "sha256:attacker".to_string(),
+        )
+    }));
+    assert!(r.is_err());
+    assert_eq!(c.get_product("with-evidence".to_string()).unwrap().evidence_hash, "sha256:deadbeef");
+}
+
+#[test]
+fn factory_14_an_owner_created_product_records_no_proposer_evidence() {
+    let (mut c, _proposer) = factory_setup();
+    ctx(owner(), 0, 0);
+    c.add_metric_product(
+        "owner-made".to_string(), "lagos".to_string(), "heat".to_string(),
+        400, 500, U128(ONE), U128(10 * ONE), 0, U128(10 * ONE),
+    );
+    let stored = c.get_product("owner-made".to_string()).unwrap();
+    assert_eq!(stored.proposed_by, owner().to_string());
+    assert_eq!(stored.evidence_hash, "");
+}

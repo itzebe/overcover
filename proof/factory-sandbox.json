@@ -1,0 +1,134 @@
+{
+  "mode": "SANDBOX",
+  "network": "local",
+  "wasmSha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1",
+  "wasmBytes": 500023,
+  "txs": {
+    "create:owner": "2559bE86qCoMFGyh9AtKeWAmyCdw8wpiaU2q6UvpYzhN",
+    "create:proposer": "Euarx4P4rGvAZ7pBTGznWE1oEQDff9cnAxXvy8ccw51D",
+    "create:buyer": "F6TFzW2RHxkGRtpANWSqybM6D3m6t8tHoPCzZj4pgsiQ",
+    "create:attacker": "5FmVorPxhNwjqL5BocvqB26NBu1yMk1sn5q8VL2AKfL3",
+    "create:contract": "2PbaYSKtXA3DJ9HNMHV53Rpby62k3Knqef9FQ1KMphnQ",
+    "deposit": "Cx4EpLKAgkWoRaS9prc1pmgAscHsgsMR3qs7adad1te2",
+    "propose_product": "4fBd3SDuzRLTY4MrGz1vjGAGjYcJDJoaLja1DCj31euk"
+  },
+  "checks": [
+    {
+      "name": "deployed the factory wasm to a fresh sandbox contract",
+      "ok": true,
+      "detail": "500023 bytes, sha256 a97034e65fb0c53f…"
+    },
+    {
+      "name": "initialised with the controlled owner",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "pool seeded with capital",
+      "ok": true,
+      "detail": "capital=10000000000000000000000000"
+    },
+    {
+      "name": "a NON-OWNER proposal activates a product with no owner transaction",
+      "ok": true,
+      "detail": "active=true"
+    },
+    {
+      "name": "the product records the proposer (not the owner)",
+      "ok": true,
+      "detail": "proposed_by=proposer.test.near"
+    },
+    {
+      "name": "the product records the immutable evidence reference",
+      "ok": true,
+      "detail": "evidence=sha256:open-meteo-heat-lagos"
+    },
+    {
+      "name": "the product is written against the registered metric",
+      "ok": true,
+      "detail": "metric=heat"
+    },
+    {
+      "name": "the product appears in the public product list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "an unknown metric is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "an out-of-band premium is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "an implausible threshold is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "an excessive payout is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "a non-prospective coverage start is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "a duplicate product id is refused (terms immutable)",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "an under-funded stake is refused",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "a second full-size proposal cannot overcommit the pool",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionEr"
+    },
+    {
+      "name": "the proposer's stake entered the pool",
+      "ok": true,
+      "detail": "capital=10100000000000000000000000"
+    },
+    {
+      "name": "pool accounting reconciles after a proposal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a buyer purchases cover on the permissionlessly-created product",
+      "ok": true,
+      "detail": "policy=1 buyer=buyer.test.near"
+    },
+    {
+      "name": "the payout is reserved and the pool stays solvent",
+      "ok": true,
+      "detail": "reserved=500000000000000000000000 solvent=true"
+    },
+    {
+      "name": "the pool still reconciles after the purchase",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the owner path (add_metric_product) still works unchanged",
+      "ok": true,
+      "detail": "active=true"
+    }
+  ],
+  "contractId": "contract.test.near",
+  "ownerId": "owner.test.near",
+  "proposerId": "proposer.test.near",
+  "passed": 22,
+  "total": 22,
+  "productId": "heat-lagos-factory",
+  "policyId": 1
+}

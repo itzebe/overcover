@@ -155,6 +155,29 @@ underfunded agent refuses rather than sending a doomed transaction.
 Also show the **kill switch**: `POST /api/v1/agent/control {"enabled":false}` stops all buying
 immediately; a further buy returns `403` with "agent is disabled".
 
+## 6. The insurance factory — anyone can add cover (25 s) — LIVE
+
+Scroll to **The insurance factory**. The discovery agent has read a real public forecast and prepared
+a proposal. Point at it: the city and index, the trigger, the premium rate, the coverage start, and
+the **evidence** — the Open-Meteo source URL and the sha256 of exactly what the agent saw.
+
+- *"The agent read this forecast from Open-Meteo. It is labelled a forecast, not an observation of an
+  event that has happened — the agent is not allowed to claim something occurred."*
+- *"The proposal is not yet cover. Anyone can submit it with `propose_product` and a small anti-spam
+  stake. The **contract** decides if it qualifies: is the metric registered, is the premium in band,
+  is the threshold plausible, is the coverage start in the future, does it fit under the pool's
+  capacity. If it qualifies, it activates — with no owner transaction and no approval."*
+- Point at the **lifecycle track** (DISCOVERED → PROPOSED → … → ACTIVE). *"Right now it stops at
+  PROPOSED, because the contract has not activated it yet. The page only shows ACTIVE when the
+  contract itself returns the product — it will not tell you a proposal is live when it is not."*
+
+*Why it is credible:* the whole factory — a non-owner proposal activating a product, every rule
+refusing, the proposer's stake entering the pool, and a buyer purchasing cover on the
+permissionlessly-created product — is proven end-to-end against the **compiled wasm on a real neard
+node** (`npm run verify:factory`, 22/22), and the discovery agent's determinism and evidence hashing
+are unit-tested (`npm run test:factory`, 9/9). The console's honesty rule — a proposal is never shown
+ACTIVE without the contract — is regression-tested (`npm run test:console`).
+
 ## Closing payoff (10 s)
 
 > "A person and an autonomous agent both buy the same cover, and both end in a **verifiable on-chain
@@ -177,10 +200,12 @@ immediately; a further buy returns `403` with "agent is disabled".
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
 | 10 | Deployed code == this source | `1f30ccf1…` (344857 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 66/0, contract 62/0, console 90/0, agent 51/0, sim 71/0, agent-eval 32/0 | `npm test` |
+| 11 | Tests pass | model 66/0, contract 76/0, console 97/0, agent 51/0, sim 71/0, agent-eval 32/0, factory 9/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
 | 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 29/29 checks | `npm run verify:controlled-v3:sandbox` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |
+| 15 | Anyone can add cover (permissionless factory) | a non-owner proposal activates a product; every rule refuses; a buyer buys on it | `npm run verify:factory` (22/22) |
+| 16 | The console never shows a proposal as active without the contract | PROPOSED unless the contract returns a matching product | `npm run test:console` |
 
 ## Honesty details a judge may probe
 
@@ -201,6 +226,14 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   accept at exactly that value — so it can pay on that single reading and nothing else. It is grouped
   with the other test fixtures and labelled, not offered as live cover. This is the page refusing to
   sell you a definition that cannot work as intended.
+- **A permissionless product is never shown as active without the contract.** The factory section
+  shows the discovery agent's prepared proposal as **PROPOSED** until the contract itself returns an
+  activated product whose on-chain `evidence_hash` matches the proposal's evidence hash. The page
+  cannot mark a proposal live on its own word; the contract is the only authority on activation.
+- **A forecast is never presented as a fact.** The discovery agent's evidence is labelled `forecast`
+  and its coverage start is prospective. It motivates a product whose cover begins in the future; it
+  never claims an event already occurred. An event that has occurred is an *observation*, and only a
+  signed operator quorum can create one.
 - **Wallet errors are actionable.** A cancelled connection, a blocked pop-up, an unreachable wallet
   service or a wrong network each produce a plain sentence, not a raw `Error`.
 - **The deployed contract is v1 and has one known issue.** An internal security pre-audit found that

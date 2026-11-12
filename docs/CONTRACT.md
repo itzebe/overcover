@@ -26,8 +26,11 @@ a millimetre** (`u64`), time is **unix seconds** (`u64`). Deployed as
 
 ### Product
 
-`id`, `city`, `threshold_tenths`, `premium_bp`, `min_payout`, `max_payout`, `min_lead_sec`,
-`max_total_coverage`, `reserved` (outstanding liability for this product), `active`.
+`id`, `city`, `metric_id`, `category`, `threshold_tenths`, `premium_bp`, `min_payout`, `max_payout`,
+`min_lead_sec`, `max_total_coverage`, `reserved` (outstanding liability for this product), `active`,
+`proposed_by` (the account that created it — the owner for the owner path, the proposer for the
+permissionless path), `evidence_hash` (immutable reference to the evidence a permissionless proposer
+committed to; empty for owner-created products).
 
 ### Policy
 
@@ -56,6 +59,8 @@ a millimetre** (`u64`), time is **unix seconds** (`u64`). Deployed as
 | Method | Who | Notes |
 | --- | --- | --- |
 | `add_product(id, city, threshold_tenths, premium_bp, min_payout, max_payout, min_lead_sec, max_total_coverage)` | owner | Publishes an immutable product. `premium_bp` ≤ 5000 (50%). |
+| `add_metric_product(id, city, metric_id, category, threshold_tenths, premium_bp, min_payout, max_payout, min_lead_sec, max_total_coverage)` | owner | Publishes an immutable product against a registered metric. |
+| `propose_product(id, city, metric_id, threshold_tenths, premium_bp, min_payout, max_payout, coverage_start, evidence_hash)` | **anyone** (payable) | Permissionless path. Requires an attached stake ≥ `PROPOSAL_MIN_STAKE` (0.1 NEAR), which enters the pool (anti-spam, not refunded). The contract validates the proposal against fixed rules: non-empty id/city, no duplicate id, the metric must be registered **and active**, `threshold_tenths ≤ metric.max_value`, `premium_bp ∈ [1, 5000]`, `min_payout > 0`, `max_payout ≥ min_payout` and `max_payout ≥ 10 × min_premium`, `coverage_start ≥ now + 3600s` (prospective), product capacity `max_payout × 5 ≤ available`, and a cumulative bound so that `Σ all product capacity ≤ capital × (1 − 1/5)` (20% headroom held back). A qualifying proposal activates immediately with no owner transaction and records `proposed_by` and `evidence_hash`. |
 | `set_product_active(id, active)` | owner | Withdraw a product from sale without changing its terms. |
 
 ### Capital

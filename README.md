@@ -39,6 +39,13 @@ indices and settles it autonomously in seconds.
   resolves. The loser's bond is forfeited into the pool.
 - **Settlement is deterministic.** Once the challenge window has elapsed, `resolve(policy_id)` pays
   the beneficiary iff the validated reading meets the threshold — once, and only once.
+- **Cover is permissionless to create.** A discovery agent reads a real public forecast and prepares
+  a *prospective* proposal; anyone — not just the owner — submits it with `propose_product` and a
+  small anti-spam stake. The **contract** judges it against fixed underwriting rules (known metric,
+  bounded premium, plausible threshold, prospective coverage start, no duplicate id, and a cumulative
+  capacity bound so proposals cannot overcommit the pool). A qualifying proposal activates
+  immediately as an immutable product, with the proposer and an immutable evidence hash recorded
+  on-chain. There is no owner transaction and no discretionary approval in the path.
 
 ## Try it in 60 seconds
 
@@ -119,6 +126,13 @@ curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
   the full-cycle demo.
 - **Reference model** (`research/model/`, `sim/`): an executable BigInt model of the accounting rules
   plus the full-lifecycle and adversarial simulation (`npm run simulate:full`, `sim/evidence.json`).
+- **Discovery agent** (`agent/discovery.mjs`): a PROPOSER, not a financial authority. It reads a real
+  public forecast (Open-Meteo), applies a deterministic risk rule, and emits a structured proposal
+  whose coverage start is prospective. It invents nothing: the premium is the contract's own formula,
+  a forecast is labelled a forecast (never an observation of an event that occurred), and the evidence
+  is preserved with a sha256 that the contract records on-chain when the product activates. The
+  console's "Insurance factory" section shows the prepared proposal and marks it ACTIVE only when the
+  contract returns an activated product with the matching evidence hash.
 
 ## The console
 

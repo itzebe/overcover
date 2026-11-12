@@ -50,6 +50,32 @@ const NS_PER_SEC: u64 = 1_000_000_000;
 /// A dispute is "open" until its `resolved_at` is set to this sentinel.
 const DISPUTE_OPEN: u64 = u64::MAX;
 
+// ---------------------------------------------------------------------------
+// Permissionless insurance factory (hackathon feature)
+//
+// A non-owner may propose a product. The contract, not the owner, decides
+// whether it qualifies, under the fixed underwriting rules below. These are
+// protocol constants, deliberately not owner-settable, so the rules a proposer
+// is judged by cannot be moved after the fact.
+// ---------------------------------------------------------------------------
+
+/// Minimum stake a proposer must attach. It is paid to the pool and is the
+/// anti-spam cost of publishing a product, so it is not refunded.
+const PROPOSAL_MIN_STAKE: Yocto = 100_000_000_000_000_000_000_000; // 0.1 NEAR
+/// A proposal must be dated at least this far ahead (prospective coverage).
+const PROPOSAL_MIN_LEAD_SEC: u64 = 3600;
+/// Premium bounds for a permissionless product: 1 bp .. 50% (matches MAX_PREMIUM_BP).
+const PROPOSAL_MIN_PREMIUM_BP: u32 = 1;
+/// A product's total capacity may not exceed this multiple of the pool's
+/// available capital, so one product cannot pledge the whole pool.
+const PROPOSAL_MAX_CAPITAL_MULTIPLE: u128 = 5;
+/// Each proposal must reserve at least this fraction of the pool's available
+/// capital as headroom, so a burst of proposals cannot collectively overcommit.
+const PROPOSAL_MIN_FREE_CAPITAL_FRACTION: u128 = 5; // keep 1/5 free
+/// A product's payout must be at least 10x its minimum premium — the premium
+/// must be meaningful relative to the risk.
+const PROPOSAL_MIN_PREMIUM_RATIO: u128 = 10;
+
 /// Abort with a message the NEAR runtime keeps in the receipt. std's wasm panic
 /// handler turns panics into a bare `unreachable` trap and discards the message,
 /// so every user-facing refusal calls the `panic_utf8` host function directly.
@@ -154,6 +180,16 @@ pub struct Product {
     /// Outstanding liability currently reserved for this product.
     pub reserved: Yocto,
     pub active: bool,
+    /// Account that created the product. Set by the owner path to the owner and
+    /// by the permissionless path to the proposer. `#[serde(default)]` keeps old
+    /// products (serialized before this field existed) deserializable.
+    #[serde(default)]
+    pub proposed_by: String,
+    /// Reference to the evidence the proposer committed to (e.g. a sha256 of the
+    /// public weather bundle). Empty for owner-created products. Immutable once
+    /// set, so the provenance of a permissionless product cannot be rewritten.
+    #[serde(default)]
+    pub evidence_hash: String,
 }
 
 #[near(serializers = [borsh, json])]
@@ -629,6 +665,8 @@ impl Overcover {
                 max_total_coverage: lp.max_total_coverage,
                 reserved: lp.reserved,
                 active: lp.active,
+                proposed_by: String::new(),
+                evidence_hash: String::new(),
             };
             s.products.insert_raw(&to_vec(&id).unwrap(), &to_vec(&p).unwrap());
         }
@@ -774,6 +812,7 @@ impl Overcover {
         self.insert_product(
             id, city, metric_id, m.category, threshold_tenths, premium_bp,
             min_payout, max_payout, min_lead_sec, max_total_coverage,
+            self.owner.to_string(), String::new(),
         );
     }
 
@@ -797,6 +836,7 @@ impl Overcover {
         self.insert_product(
             id, city, String::new(), "precipitation".to_string(), threshold_tenths, premium_bp,
             min_payout, max_payout, min_lead_sec, max_total_coverage,
+            self.owner.to_string(), String::new(),
         );
     }
 
@@ -813,6 +853,8 @@ impl Overcover {
         max_payout: U128,
         min_lead_sec: u64,
         max_total_coverage: U128,
+        proposed_by: String,
+        evidence_hash: String,
     ) {
         ensure!(self.products.get(&id).is_none(), "product already exists");
         ensure!(premium_bp <= MAX_PREMIUM_BP, "premium_bp too high");
@@ -835,6 +877,8 @@ impl Overcover {
             max_total_coverage: max_total_coverage.0,
             reserved: 0,
             active: true,
+            proposed_by,
+            evidence_hash,
         };
         self.products.insert(&id, &p);
         self.product_ids.insert(&id);
@@ -846,6 +890,164 @@ impl Overcover {
         let mut p = self.products.get(&id).unwrap_or_else(|| fail("no such product"));
         p.active = active;
         self.products.insert(&id, &p);
+    }
+
+    /// PERMISSIONLESS PRODUCT PROPOSAL (hackathon feature).
+    ///
+    /// Anyone may call this. The contract, not the owner, decides whether the
+    /// proposal qualifies, against the fixed protocol rules in
+    /// `validate_proposal`. A qualifying proposal is activated as an immutable
+    /// product in the same transaction — no owner step, no queued approval.
+    ///
+    /// This is the *only* permissionless path. It deliberately does not make
+    /// `add_metric`, operator or resolver registration permissionless, and it
+    /// cannot be used to re-open or mutate an existing product.
+    ///
+    /// The proposer attaches `PROPOSAL_MIN_STAKE`; it is paid to the pool as the
+    /// anti-spam cost and is not refunded, so a spam run funds the very capital
+    /// it is trying to exhaust. The proposal references a *registered, active*
+    /// metric and a *future* observation date: a forecast may motivate cover but
+    /// can never be represented as an event that already happened.
+    #[payable]
+    #[allow(clippy::too_many_arguments)]
+    pub fn propose_product(
+        &mut self,
+        id: String,
+        city: String,
+        metric_id: String,
+        threshold_tenths: u64,
+        premium_bp: u32,
+        min_payout: U128,
+        max_payout: U128,
+        coverage_start: u64,
+        evidence_hash: String,
+    ) -> Product {
+        ensure!(!self.paused, "contract is paused");
+        let proposer = env::predecessor_account_id();
+        let stake = env::attached_deposit().as_yoctonear();
+        ensure!(stake >= PROPOSAL_MIN_STAKE, "proposal stake below minimum");
+
+        let p = self.validate_proposal(
+            id, city, metric_id, threshold_tenths, premium_bp,
+            min_payout, max_payout, coverage_start, evidence_hash.clone(),
+        );
+
+        // The stake is anti-spam cost, not a refundable deposit: it enters the
+        // pool, which makes repeated spam self-defeating.
+        self.capital = self.capital.checked_add(stake).unwrap_or_else(|| fail("overflow"));
+        self.total_deposited = self.total_deposited.checked_add(stake).unwrap_or_else(|| fail("overflow"));
+        let mut pr = self.providers.get(&proposer).unwrap_or(Provider { deposited: 0, withdrawn: 0 });
+        pr.deposited = pr.deposited.checked_add(stake).unwrap_or_else(|| fail("overflow"));
+        self.providers.insert(&proposer, &pr);
+
+        self.products.insert(&p.id, &p);
+        self.product_ids.insert(&p.id);
+        self.check_invariant_or_panic();
+        log_event(
+            "product_proposed",
+            &[
+                ("id", &p.id),
+                ("proposer", &proposer.to_string()),
+                ("metric_id", &p.metric_id),
+                ("city", &p.city),
+                ("evidence_hash", &evidence_hash),
+            ],
+        );
+        p
+    }
+
+    /// The deterministic, publicly inspectable underwriting rule set. Every
+    /// condition is a protocol constant or live pool state; nothing here is
+    /// owner-discretionary and nothing is caller-supplied beyond the proposal
+    /// itself. Returns the product to insert, or refuses with a reason.
+    #[allow(clippy::too_many_arguments)]
+    fn validate_proposal(
+        &self,
+        id: String,
+        city: String,
+        metric_id: String,
+        threshold_tenths: u64,
+        premium_bp: u32,
+        min_payout: U128,
+        max_payout: U128,
+        coverage_start: u64,
+        evidence_hash: String,
+    ) -> Product {
+        // 1. Duplicate products cannot be created; terms are immutable.
+        ensure!(self.products.get(&id).is_none(), "product already exists");
+        ensure!(!id.is_empty(), "product id must not be empty");
+        ensure!(!city.is_empty(), "city must not be empty");
+
+        // 2. The metric must be registered and active. The contract does not
+        //    trust the proposer to invent an index.
+        let m = self.metrics.get(&metric_id).unwrap_or_else(|| fail("no such metric"));
+        ensure!(m.active, "metric is inactive");
+
+        // 3. The threshold must be plausible for that metric.
+        ensure!(threshold_tenths <= m.max_value, "threshold above metric max_value");
+
+        // 4. Premium must be within the protocol band (and <= MAX_PREMIUM_BP).
+        ensure!(
+            premium_bp >= PROPOSAL_MIN_PREMIUM_BP && premium_bp <= MAX_PREMIUM_BP,
+            "premium_bp out of range"
+        );
+
+        // 5. Payout bounds must be sane and the payout must be a meaningful
+        //    multiple of its own minimum premium.
+        let min_payout = min_payout.0;
+        let max_payout = max_payout.0;
+        ensure!(min_payout > 0, "min payout must be > 0");
+        ensure!(max_payout >= min_payout, "max payout below min");
+        let min_premium = Self::premium_for_bp(premium_bp, min_payout);
+        ensure!(
+            min_premium.checked_mul(PROPOSAL_MIN_PREMIUM_RATIO).map_or(false, |x| x <= max_payout),
+            "payout too small relative to premium"
+        );
+
+        // 6. Coverage must be prospective.
+        let now = now_sec();
+        ensure!(
+            coverage_start >= now.saturating_add(PROPOSAL_MIN_LEAD_SEC),
+            "coverage start too soon (must be prospective)"
+        );
+
+        // 7. Capital constraints. A product's capacity is bounded by the pool,
+        //    AND the SUM of every product's declared capacity is bounded by the
+        //    pool's capital with mandatory headroom. Summing is what stops a
+        //    burst of proposals from each independently declaring the whole pool
+        //    and collectively overcommitting it.
+        let available = self.available();
+        let max_total_coverage = max_payout.checked_mul(PROPOSAL_MAX_CAPITAL_MULTIPLE).unwrap_or_else(|| fail("overflow"));
+        ensure!(max_total_coverage <= available, "product capacity exceeds available capital");
+        let mut committed: u128 = 0;
+        for pid in self.product_ids.iter() {
+            if let Some(prod) = self.products.get(&pid) {
+                committed = committed.saturating_add(prod.max_total_coverage);
+            }
+        }
+        let headroom = self.capital / PROPOSAL_MIN_FREE_CAPITAL_FRACTION;
+        let ceiling = self.capital.saturating_sub(headroom);
+        ensure!(
+            committed.checked_add(max_total_coverage).map_or(false, |c| c <= ceiling),
+            "proposal would overcommit the pool's capital"
+        );
+
+        Product {
+            id,
+            city,
+            metric_id,
+            category: m.category,
+            threshold_tenths,
+            premium_bp,
+            min_payout,
+            max_payout,
+            min_lead_sec: PROPOSAL_MIN_LEAD_SEC,
+            max_total_coverage,
+            reserved: 0,
+            active: true,
+            proposed_by: env::predecessor_account_id().to_string(),
+            evidence_hash,
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -1005,9 +1207,13 @@ impl Overcover {
     // ---------------------------------------------------------------------
 
     fn premium_for(p: &Product, payout: Yocto) -> Yocto {
-        // ceil(payout * bp / 10000) — never zero for a positive payout.
+        Self::premium_for_bp(p.premium_bp, payout)
+    }
+
+    /// ceil(payout * bp / 10000) — never zero for a positive payout.
+    fn premium_for_bp(bp: u32, payout: Yocto) -> Yocto {
         let num = (payout as u128)
-            .checked_mul(p.premium_bp as u128)
+            .checked_mul(bp as u128)
             .unwrap_or_else(|| fail("overflow"));
         num.div_ceil(10_000)
     }

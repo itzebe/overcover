@@ -107,6 +107,7 @@ test("testnet mode SKIPs cleanly (exit 0) when no root is supplied and not requi
 });
 
 test("--plan sends nothing and advertises the proposer step", () => {
+  if (!fs.existsSync(WASM)) return; // CI builds the wasm after test:deploy; --plan needs it present
   const r = spawnSync(process.execPath, [HARNESS, "--plan"], { cwd: root, encoding: "utf8", timeout: 60000 });
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /--plan: nothing sent/);

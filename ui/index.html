@@ -207,6 +207,30 @@
   .prod .lim::before { content: "!"; position: absolute; left: 0; top: 0; width: 11px; height: 11px; border-radius: 3px; background: var(--warn-w); color: var(--warn); font-size: 9px; font-weight: 800; display: grid; place-items: center; }
   .prod .lim + .lim { margin-top: 7px; }
 
+  /* ---------------- insurance factory ---------------- */
+  .feat { display: flex; flex-direction: column; overflow: hidden; margin-top: 0; }
+  .feat + .feat { margin-top: 20px; }
+  .feat .head { padding: 20px 22px 16px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--card-2), var(--card)); }
+  .feat .head .top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .feat .head h3 { font-size: 19px; font-weight: 700; font-family: var(--serif); }
+  .feat .head .city { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .ftrack { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 16px 0 0; padding: 0; }
+  .fstep { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; color: var(--muted); position: relative; padding-left: 15px; }
+  .fstep::before { content: ""; position: absolute; left: 0; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--line2); }
+  .fstep.on { color: var(--good); }
+  .fstep.on::before { background: var(--good); }
+  .feat .terms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); }
+  .feat .terms > div { background: var(--card); padding: 13px 16px; }
+  .feat .terms .k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  .feat .terms .v { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; margin: 0; }
+  .feat-ev { padding: 16px 22px; border-top: 1px solid var(--line); background: var(--card-2); }
+  .feat-ev .k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  .feat-ev .v { font-size: 13.5px; color: var(--ink2); margin: 0 0 12px; }
+  .feat-ev .v.mono { font-family: var(--mono); font-size: 12px; word-break: break-all; margin-bottom: 0; }
+  .feat .lim { font-size: 12.5px; color: var(--muted); margin: 0; padding: 14px 22px 18px; border-top: 1px solid var(--line); }
+  .feat .lim.ok { color: var(--good); }
+  .mono { font-family: var(--mono); }
+
   /* ---------------- tables ---------------- */
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
   .scroll { overflow-x: auto; }
@@ -693,6 +717,17 @@
     </div>
   </section>
 
+  <!-- ================= INSURANCE FACTORY (permissionless) ================= -->
+  <section class="wrap band" id="factory" aria-labelledby="factory-h">
+    <div class="sect-head">
+      <h2 id="factory-h">The insurance factory — anyone can add cover</h2>
+      <p class="sect-note">A discovery agent reads a real public weather forecast and prepares a proposal. Anyone — not just the protocol owner — submits it with <code>propose_product</code>. The <strong>contract</strong> decides whether it qualifies under fixed underwriting rules; a qualifying proposal activates as an immutable product with no owner transaction. Products shown as <em>active</em> are read from the contract, not from this page.</p>
+    </div>
+    <div id="factory-body">
+      <div class="card"><div class="skel" aria-hidden="true"><i></i><i></i><i></i></div><p class="sr">Loading the discovery feed…</p></div>
+    </div>
+  </section>
+
   <!-- ================= QUOTE ================= -->
   <section class="wrap band" aria-labelledby="quote-h">
     <div class="sect-head">
@@ -1007,6 +1042,7 @@
       <a href="#what-h">What it covers</a>
       <a href="#how-h">How a claim settles</a>
       <a href="#cover">Cover available</a>
+      <a href="#factory">Insurance factory</a>
       <a href="#quote-h">Buy cover</a>
       <a href="#agent">For agents</a>
     </div>
@@ -1350,6 +1386,83 @@
     return out;
   }
 
+  // ------------------------------------------------------------ insurance factory
+  // The discovery feed (ui/factory.json) is the agent's *prepared* proposal: a
+  // real forecast + the deterministic risk rule + the evidence hash. Activation
+  // is NOT taken from the feed — it is read from the contract. A proposal whose
+  // evidence hash matches an activated product's on-chain `evidence_hash` is
+  // shown as ACTIVE; otherwise it stays PROPOSED. Nothing is claimed as active
+  // unless the contract says so.
+  // Read the discovery feed. A failure is returned as data (not thrown) so a
+  // missing feed never blanks the contract-backed sections of the page.
+  function loadFactoryFeed() {
+    return fetch("factory.json", { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).catch(function (e) {
+      return { error: e && e.message ? e.message : String(e), proposals: [] };
+    });
+  }
+
+  function matchActivated(proposal, products) {
+    return (products || []).filter(function (p) {
+      return p.evidence_hash && p.evidence_hash === proposal.evidence.hash;
+    })[0];
+  }
+
+  function factoryStatus(proposal, products) {
+    var act = matchActivated(proposal, products);
+    if (act) return { label: "ACTIVE", cls: "available", product: act, live: true };
+    return { label: "PROPOSED", cls: "due", product: null, live: false };
+  }
+
+  function renderFactory(feed, products, err) {
+    if (err) {
+      return '<div class="card"><div class="empty"><span class="e-t">Discovery feed unavailable</span>' +
+        "The agent's prepared proposal could not be read (" + esc(err) + "). Activated products are still read from the contract above; only the discovery feed is missing.</div></div>";
+    }
+    var proposals = (feed && feed.proposals) || [];
+    if (!proposals.length) {
+      return '<div class="card"><div class="empty"><span class="e-t">No emerging risk right now</span>' +
+        "The agent monitors real forecasts and only prepares a proposal when a forecast crosses a threshold. No city currently crosses its trigger.</div></div>";
+    }
+    return proposals.map(function (pr) {
+      var st = factoryStatus(pr, products);
+      var ev = pr.evidence;
+      var steps = ["DISCOVERED", "PROPOSED", "UNDERWRITING", "AWAITING CAPITAL", "ACTIVE"];
+      var reached = st.live ? 5 : 2; // the contract is the authority on ACTIVE
+      var track = steps.map(function (s, i) {
+        var on = i < reached ? " on" : "";
+        return '<li class="fstep' + on + '"' + (i < reached ? "" : ' aria-disabled="true"') + ">" + esc(s) + "</li>";
+      }).join("");
+      var terms = '<div class="terms">' +
+        term("Index", esc(metricLabel(pr.metric))) +
+        term("Trigger", fmtVal(pr.thresholdTenths, pr.metric) + " " + (pr.direction === "Above" ? "and above" : "and below")) +
+        term("Premium rate", (pr.premiumBp / 100).toFixed(2) + "%") +
+        term("Coverage from", utc(pr.coverageStartSec)) +
+        "</div>";
+      var evidence = '<div class="feat-ev">' +
+        '<p class="k">Evidence · ' + esc(ev.kind) + " (not an observation of an event that occurred)</p>" +
+        '<p class="v"><a href="' + esc(ev.sourceUrl) + '" target="_blank" rel="noopener">' + esc(ev.source) + "</a> — " + esc(String(ev.raw)) + " " + esc(String(ev.unit).replace(/\/\s*10$/, "")) + " forecast for " + esc(ev.observedAt) + "</p>" +
+        '<p class="k">Evidence hash (recorded on-chain when activated)</p>' +
+        '<p class="v mono">' + esc(ev.hash) + "</p>" +
+        "</div>";
+      var activation = st.live
+        ? '<p class="lim ok">Activated on-chain as product <span class="mono">' + esc(st.product.id) + "</span>, proposed by <span class=\"mono\">" + esc(shortAcct(st.product.proposed_by)) + "</span>. It is purchasable above.</p>"
+        : '<p class="lim">Prepared, not yet activated. Submitting <span class="mono">propose_product</span> with a 0.1 NEAR stake lets the contract judge it. If it qualifies it activates immediately — no owner transaction.</p>';
+      return '<article class="card feat">' +
+        '<div class="head"><div class="top"><div>' +
+          "<h3>" + esc(cap(pr.city)) + " " + esc(metricLabel(pr.metric)) + " — emerging " + esc(pr.risk && pr.risk.direction === "Above" ? "excess" : "deficit") + "</h3>" +
+          '<p class="city">' + esc(pr.id) + " · " + esc(pr.risk ? pr.risk.rationale : "") + "</p>" +
+        "</div><span class=\"tag " + st.cls + "\">" + st.label + "</span></div>" +
+        '<ol class="ftrack" aria-label="Factory lifecycle">' + track + "</ol>" +
+        "</div>" +
+        terms + evidence + activation +
+        "</article>";
+    }).join("");
+  }
+
+
   // The contract stores one field, `status`, which is exactly one of:
   // "active" | "settled_paid" | "settled_no_pay". Those are the only states a
   // policy can be in. To stay honest about a past-due policy the contract has not
@@ -1489,6 +1602,10 @@
     el("products").innerHTML = box;
     el("policies").innerHTML = box;
     el("observations").innerHTML = box;
+    // The factory section is independent of the contract read: a failed contract
+    // read must not erase the agent's real discovery feed. It re-renders with an
+    // empty product list, so a proposal is never shown as ACTIVE by default.
+    if (el("factory-body")) el("factory-body").innerHTML = renderFactory(factoryFeed, [], null);
     var sel = el("q-product");
     if (sel) sel.innerHTML = "";
     ["q-premium", "q-reserve", "q-rate", "q-capacity"].forEach(function (id) { if (el(id)) el(id).textContent = "—"; });
@@ -2224,6 +2341,9 @@
   // ---------------------------------------------------------------- poll loop
 
   var state = { haveData: false, lastOk: null, busy: false };
+  // The most recent discovery feed, kept so a later contract-read failure can
+  // re-render the factory section without inventing anything.
+  var factoryFeed = null;
 
   function tick() {
     if (state.busy) return Promise.resolve();
@@ -2236,10 +2356,12 @@
       // that lacks them, rather than failing the whole read.
       view("list_metrics").catch(function () { return []; }),
       view("list_operators").catch(function () { return []; }),
+      loadFactoryFeed(),
     ]).then(function (r) {
       var pool = r[0], products = r[1], policies = r[2], obs = r[3], cfg = r[4];
       var reconciled = r[5] === true, invariant = r[6] === true, acct = r[7];
-      var metrics = r[8], operators = r[9];
+      var metrics = r[8], operators = r[9], feed = r[10];
+      factoryFeed = feed;
       METRIC = {};
       (metrics || []).forEach(function (m) { METRIC[m.id] = m; });
       OPERATORS = operators || [];
@@ -2281,6 +2403,7 @@
       el("hero-dot").className = "dot live";
 
       el("products").innerHTML = renderProducts(products);
+      el("factory-body").innerHTML = renderFactory(feed, products, feed && feed.error);
       el("policies").innerHTML = renderPolicies(policies, cfg);
       el("observations").innerHTML = renderObservations(obs);
       quoteState.products = products;

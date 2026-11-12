@@ -19,6 +19,8 @@
     "test:agent": "node --test tests/agent-limits.test.mjs tests/agent-api.test.mjs tests/json-bigint.test.mjs tests/agent-funds.test.mjs tests/agent-openapi.test.mjs",
     "test:agent-eval": "node --test tests/products-feed.test.mjs tests/agent-eval.test.mjs tests/agent-integration.test.mjs",
     "test:console": "node --test tests/console.test.js tests/wallet-journey.test.mjs",
+    "test:factory": "node --test tests/factory-discovery.test.mjs",
+    "factory:feed": "node scripts/factory-feed.mjs",
     "test:contract": "cargo +stable test --manifest-path contract/Cargo.toml",
     "test:deploy": "node --test tests/upgrade-guard-refusal.test.mjs tests/controlled-v3-funding.test.mjs",
     "test:model": "node research/model/attacks.mjs",
@@ -38,7 +40,8 @@
     "verify:controlled-v3": "node proof/controlled-v3-deploy.mjs",
     "verify:controlled-v3:plan": "node proof/controlled-v3-deploy.mjs --plan",
     "verify:controlled-v3:sandbox": "node proof/controlled-v3-deploy.mjs --sandbox",
-    "verify:controlled-v3:evidence": "node proof/controlled-v3-evidence.mjs"
+    "verify:controlled-v3:evidence": "node proof/controlled-v3-evidence.mjs",
+    "verify:factory": "node proof/factory-sandbox.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

@@ -56,6 +56,16 @@ replaces them with three primitives:
 The result: a business buys cover, an index is observed, and a claim settles in **seconds** —
 deterministically, with no discretion and no queue.
 
+A fourth primitive makes the *catalogue itself* permissionless: **anyone can add a product**. A
+discovery agent reads a real public forecast, applies a deterministic risk rule, and prepares a
+prospective proposal with the evidence (source URL + sha256) attached. Anyone submits it with
+`propose_product` and a small anti-spam stake; the **contract** judges it against fixed underwriting
+rules (metric registered, premium in band, threshold plausible, coverage prospective, capacity within
+the pool) and, if it qualifies, activates an immutable product **with no owner transaction**. The
+proposer and the evidence hash are recorded on-chain. This is the difference between an operated
+product and a permissionless one: the owner cannot silently gate or re-price what the contract will
+accept.
+
 Two actors can drive that flow. A **person** connects their own NEAR wallet and signs a single
 `buy_cover` call — the console re-reads the premium from the contract and attaches exactly that, and
 never claims a policy was bought until the wallet confirms it. An **autonomous agent** runs the same
@@ -106,6 +116,13 @@ anything; buying through the agent needs a local service the operator runs.
     → `challenge` + `resolve_dispute` txs (both outcomes).
 11. **"It reconciles."** Final state satisfies `reserved ≤ capital` and
     `capital == deposited − withdrawn + premiums + bonds − paid` — both `true`.
+12. **"Anyone can add cover — the owner is not in the loop."** A discovery agent reads a real
+    Open-Meteo forecast and prepares a prospective proposal with its evidence hash. A **non-owner**
+    account submits it with `propose_product` and a 0.1 NEAR stake; the contract judges it against
+    fixed rules and activates an immutable product **with no owner transaction**, recording the
+    proposer and the evidence hash. A buyer then purchases cover on that product. Every rule that
+    does not hold is refused with a reason. → `propose_product` + `buy_cover` txs (proven end-to-end
+    on the compiled wasm by `npm run verify:factory`).
 
 **The one thing to remember:** every refusal above is a **real on-chain error string**, not a
 client-side check. The rules live in the contract.
@@ -183,10 +200,12 @@ captured in this environment. A judge can complete it in two minutes by followin
 | Suite | Command | Result |
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **66 attacks, 0 exploitable, 66 defended** |
-| Contract unit tests | `npm run test:contract` | **62 passed, 0 failed** (includes 4 SEC-1 migrate-authorization regressions and the v3 reading-message layout pin) |
-| Console regression + live RPC | `npm run test:console` | **90 passed, 0 failed** |
+| Contract unit tests | `npm run test:contract` | **76 passed, 0 failed** (includes 14 permissionless-factory tests, 4 SEC-1 migrate-authorization regressions and the v3 reading-message layout pin) |
+| Console regression + live RPC | `npm run test:console` | **97 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **51 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
 | Product feed + agent evaluation | `npm run test:agent-eval` | **32 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
+| Discovery agent | `npm run test:factory` | **9 passed, 0 failed** — deterministic risk rule, evidence-hash reproducibility, forecast (not observation) labelling, one live API read |
+| Permissionless factory (compiled wasm) | `npm run verify:factory` | **22/22 passed** — a NON-OWNER proposal activates a product with no owner tx, every rule refuses, the stake enters the pool, and a buyer buys on the permissionlessly-created product (real `neard` node) |
 | Deploy fail-closed regression | `npm run test:deploy` | **3 passed, 0 failed** — both deploy paths refuse a stale (guard-less) wasm |
 | SEC-1 guard on the compiled wasm | `npm run verify:upgrade` | **8/8 passed** — real local `neard` node: third-party `migrate()` refused, state untouched, self-call with no legacy state fails closed |
 | In-place upgrade preserves state | `npm run verify:upgrade-preservation` | **PASS** — runs the exact deployed v1 bytecode on a real `neard` node, deploys v3 over it, self-calls `migrate()`: capital, reserved, products and policies survive and the migrated policy still settles |
@@ -211,6 +230,9 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
 - **The oracle's word is challengeable** with a bond, so trust is economic, not assumed.
 - **Every refusal carries a reason on-chain** (via `panic_utf8`), so an autonomous client can
   react to a rejection instead of guessing.
+- **The catalogue is permissionless.** A non-owner proposal activates a product judged only by
+  fixed, on-chain underwriting rules — no owner signature, no discretionary approval — with the
+  proposer and an immutable evidence hash recorded on-chain.
 
 ## 9. Honest limitations
 
@@ -226,6 +248,12 @@ Track ids for the submission form: `business` (primary), `swarms`, `defi`.
   nothing). Its rate limits and single-flight locks are **per-instance**, not a global distributed
   lock.
 - Testnet only; unaudited; not for real funds.
+- The **permissionless factory** (v3) is proven end-to-end on the compiled wasm against a real
+  `neard` node (`npm run verify:factory`, 22/22) and its underwriting rules are unit-tested, but it
+  is **not yet deployed to the live testnet address**. Deploying it needs a funded account; the
+  faucet is currently rate-limited (`429 retry in 10h`) and no funded account is held in this
+  environment. The factory is therefore demonstrable on the sandbox and through the console's feed,
+  but a live on-chain factory purchase is pending that deploy. It is not claimed as deployed.
 - The **deployed v1 contract** exports `migrate()`, which is unauthenticated because it is
   `#[init(ignore_state)]` (it runs before state is read, so it cannot check the stored owner). An
   internal security pre-audit reproduced a full state takeover against the exact deployed bytecode

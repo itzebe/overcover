@@ -1,6 +1,6 @@
 # Final release readiness register
 
-**As of:** 2026-11-11 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main`
+**As of:** 2026-11-11 · **Repository:** https://github.com/itzebe/overcover · **Branch:** `feat/permissionless-insurance-factory` (PR pending merge to `main`)
 **Contract:** `contract.attestor-overcover.testnet` (NEAR testnet) · **Production:** https://overcover.vercel.app/
 
 This register states, for every requirement, exactly what exists, what was tested, the evidence, and
@@ -16,11 +16,13 @@ Reproduce the whole thing:
 npm ci --ignore-scripts
 npm run test:model && npm run test:contract && npm run test:console && npm run test:agent
 npm run test:agent-eval     # 32 — product-feed schema/premium + agent boundary (offline) + independent-client integration
+npm run test:factory        # 9 — discovery agent: deterministic rule, evidence hash, forecast labelling
 npm run test:deploy         # 3 — the deploy/upgrade paths refuse a stale (guard-less) wasm
 npm run verify:proof        # 12/12 — needs cargo build for the bytecode check
 npm run verify:agent        # limits engine vs the live product
 npm run verify:upgrade      # 8/8 — the SEC-1 guard on the compiled wasm (real neard node)
 npm run verify:upgrade-preservation  # state PRESERVED + the migrated policy still settles (real v1 bytecode)
+npm run verify:factory      # 22/22 — permissionless factory on the COMPILED wasm (real neard node)
 npm run verify:connectivity # 12/12 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
 npm run verify:sandbox               # 21/21 — the decentralised lifecycle on a real neard
@@ -68,6 +70,24 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 | Policy retrieval | FIXED AND VERIFIED | `get_policy(id)`, `list_policies()`. | Read live; console "Policies written" reads them; `verify:proof` re-reads them. |
 | Policy status | FIXED AND VERIFIED | Contract stores `status` ∈ `active`/`settled_paid`/`settled_no_pay`; `paid_amount`, `settled_at`. The console shows the stored status verbatim and derives "settlement due — awaiting resolve()" for a past-due active policy (never a fabricated settlement). | `verify:proof`: settled_paid paid > 0, settled_no_pay paid 0. Derivation covered by `tests/console.test.js`. |
 | Insurance terms and conditions | FIXED AND VERIFIED | Product fields (threshold, premium, bounds, lead, capacity) are immutable; console states the parametric limitation on every card and the observation-date rule derived from the product's own lead. | `e1_threshold_is_owned_by_the_product` (Rust); console asserts the limitation text is shown. |
+
+## 1b. Permissionless insurance factory
+
+The product can now be extended by **anyone**, not just the owner: a non-owner proposal is judged by
+the contract against fixed underwriting rules and, if it qualifies, activates a product with **no
+owner transaction**. This is the difference between an operated product and a permissionless one.
+
+| Requirement | Status | What exists | How tested / evidence |
+| --- | --- | --- | --- |
+| Non-owner can propose a product | FIXED AND VERIFIED | `propose_product(...)` is callable by any account; `predecessor_account_id()` is recorded as `proposed_by`. | `proof/factory-sandbox.mjs` check: a **non-owner** account proposes and the product activates with the proposer recorded — on the COMPILED wasm against a real `neard` node (22/22). |
+| Activation with no owner transaction | FIXED AND VERIFIED | A qualifying proposal is inserted active inside the same call; no owner method is invoked. | `factory_*` Rust tests + the sandbox proof asserts activation with zero owner txs. |
+| Deterministic underwriting rules (fail closed) | FIXED AND VERIFIED | `validate_proposal` refuses: duplicate/empty id, unknown or inactive metric, `threshold > metric.max_value`, `premium_bp` outside `[1, 5000]`, `min_payout == 0`, `max_payout < min_payout`, `max_payout < 10 × min_premium`, coverage start < now + 3600 s, capacity `> available`, and cumulative `Σ capacity > capital × 4/5`. | 14 `factory_*` Rust tests (each rule refused with its reason); the sandbox proof re-checks the key refusals on the compiled wasm. |
+| Evidence provenance, immutable on-chain | FIXED AND VERIFIED | `Product.evidence_hash` is stored at activation and never mutated; `proposed_by` names the proposer. | `factory_13_the_evidence_hash_is_stored_and_immutable` (Rust); the sandbox proof reads the stored hash back. |
+| Anti-spam stake enters the pool | FIXED AND VERIFIED | `PROPOSAL_MIN_STAKE` (0.1 NEAR) is required and paid to the pool; below-minimum is refused. | Rust `factory_*` stake tests; sandbox proof asserts the stake raises `capital`. |
+| A permissionless product is buyable | FIXED AND VERIFIED | `buy_cover` works on a factory-created product with no special case. | The sandbox proof buys cover on the permissionlessly-created product and asserts the policy. |
+| Discovery agent finds real emerging risk | FIXED AND VERIFIED | `agent/discovery.mjs` reads a real Open-Meteo forecast and applies a deterministic rule. | `npm run test:factory` (9/9): determinism, threshold crossing, evidence hash reproducibility, forecast (not observation) labelling; one live read of the real API. |
+| Console shows the proposal honestly | FIXED AND VERIFIED | A proposal is shown **PROPOSED** until the contract returns a product whose `evidence_hash` matches; never ACTIVE on the page's own word. | 7 `renderFactory` regression tests in `tests/console.test.js`; rendered live at 390/768/1280 px with 0 axe violations and 0 console errors. |
+| Factory deployed to the live testnet address | BLOCKED BY EXTERNAL SERVICE | The compiled v3 factory wasm is proven on a real `neard` node; a fresh testnet deployment needs a funded account. | The faucet returns `429 retry in 10h` and no funded account is held here. The controlled-v3 accounts (`contract.ovc-v3-ctl-*`) are the deployment target once funded. Not claimed as deployed. |
 
 ## 2. Human wallet
 

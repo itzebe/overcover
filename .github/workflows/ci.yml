@@ -47,6 +47,11 @@ jobs:
       - name: Product feed + agent-evaluation tests
         run: npm run test:agent-eval
 
+      # The discovery agent: deterministic risk rule, evidence-hash reproducibility,
+      # a forecast labelled as a forecast (never an observation), and one live read.
+      - name: Discovery agent tests
+        run: npm run test:factory
+
       - name: Deploy fail-closed regression (stale wasm refused)
         run: npm run test:deploy
 
@@ -103,6 +108,15 @@ jobs:
         env:
           REQUIRE_SANDBOX: "1"
         run: npm run verify:controlled-v3:sandbox
+
+      # The permissionless insurance factory: a NON-OWNER proposal activates a
+      # product with no owner transaction, every fixed underwriting rule refuses,
+      # the proposer's stake enters the pool, and a buyer purchases cover on the
+      # permissionlessly-created product. Runs the COMPILED wasm on a real neard.
+      - name: Permissionless factory end-to-end on a local NEAR node
+        env:
+          REQUIRE_SANDBOX: "1"
+        run: npm run verify:factory
 
       - name: Agent spend-authorization vs the live contract
         run: npm run verify:agent

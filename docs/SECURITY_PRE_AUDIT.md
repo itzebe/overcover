@@ -108,10 +108,12 @@ contains the guard string, so a stale pre-fix artifact cannot be shipped (`npm r
 matters: a build of the tree before the fix carries the same v2 exports but no guard — a real
 `npm run deploy` would have left SEC-1 open. Always rebuild with the pinned toolchain before deploying.
 
-**Status: FIXED in source (v2); merged into `main` via PR #9, NOT YET DEPLOYED.** The live v1 contract
-remains vulnerable because patching it requires redeploying the wasm, which needs the operator key
-this environment does not hold (see §4). This is the single most important reason the v2 deploy must
-happen before the submission is presented as hardened.
+**Status: FIXED in source (v2/v3); merged into `main` via PR #9; deployed to the controlled testnet
+contract `contract.ovc-v3-ctl-2f6c4c.testnet` (proven 40/40 by `npm run verify:controlled-v3`).** The
+**legacy live address** `contract.attestor-overcover.testnet` still runs v1 and remains vulnerable
+because patching it requires redeploying the wasm, which needs the operator key this environment does
+not hold (see §4). This is the single most important reason the operator's in-place upgrade must
+happen before the legacy address is presented as hardened.
 
 ---
 

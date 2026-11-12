@@ -320,8 +320,9 @@ Console tests went 77 → 78.
     contract *is* the vulnerable build; `npm run verify:migration` proves the vulnerable shape of
     v1's `migrate()` and the guard in v2's; `contract/src/tests.rs` adds 4 behavioural regressions
     (`sec1_*`: third party refused, state untouched, repeated refused, self-call allowed). Status:
-    **FIXED IN SOURCE, NOT YET DEPLOYED** — the fix ships with the v2 deploy (needs the funded
-    operator key).
+    **FIXED IN SOURCE AND DEPLOYED** to the controlled v3 testnet contract
+    `contract.ovc-v3-ctl-2f6c4c.testnet` (40/40, `npm run verify:controlled-v3`); closing SEC-1 on the
+    **legacy live address** still needs the operator key for the in-place upgrade.
 22. **The v2 branch and `main` had diverged into an unresolvable conflict.** Root cause: the branch
     was authored before PRs #11–#15 landed on `main`; a naive merge against the *stale remote branch
     ref* silently dropped the SEC-1 guard. Fix: merged the **PR head** (`0176877a`, the only ref with

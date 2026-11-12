@@ -109,7 +109,11 @@ for (const { account, label } of CONTRACTS) {
     wasmSha256MatchesDeployedCode: deployed ? deployed.sha256 === wasmSha256 : null,
     balanceYocto: a?.amount,
     storageUsage: a?.storage_usage,
-    accessKeys: keys.map((k) => ({ publicKey: k.public_key, permission: k.access_key?.permission })),
+    accessKeys: keys.map((k) => ({
+      curve: k.public_key.split(":")[0],
+      keyHex: Buffer.from((k.public_key.split(":")[1] ?? ""), "base64").toString("hex"),
+      permission: k.access_key?.permission,
+    })),
     config: cfg,
     operators: operators ?? [],
     resolvers: resolvers ?? [],

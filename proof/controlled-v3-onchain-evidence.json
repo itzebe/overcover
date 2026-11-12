@@ -1,7 +1,7 @@
 {
   "note": "Public, independently re-derivable evidence for the controlled v3 testnet deployments. No private keys. Regenerate with `node proof/controlled-v3-evidence.mjs`.",
   "mode": "TESTNET",
-  "generatedAt": "2026-11-12T05:41:59.975Z",
+  "generatedAt": "2026-11-12T05:51:21.962Z",
   "wasm": {
     "path": "contract/target/wasm32-unknown-unknown/release/overcover.wasm",
     "bytes": 489602,
@@ -24,7 +24,8 @@
       "storageUsage": 494605,
       "accessKeys": [
         {
-          "publicKey": "ed25519:EPofvFHxRNRS5C5e8UDoQgMmgJ1hM5WZdiXLU2RTJkcg",
+          "curve": "ed25519",
+          "keyHex": "10fa1fbc51f144d452e42e5ef140e8420326809d613395997625cb536453264720",
           "permission": "FullAccess"
         }
       ],
@@ -575,7 +576,8 @@
       "storageUsage": 494244,
       "accessKeys": [
         {
-          "publicKey": "ed25519:7tqsT89hA2hcA1vPcqmHMHsnuAr6fgsrqhVYPuAvk3MN",
+          "curve": "ed25519",
+          "keyHex": "eedaac4fcf6103685c035bcf72a987307b27b80afa7e0b2baa15583ee02f93730d",
           "permission": "FullAccess"
         }
       ],

@@ -142,11 +142,11 @@ function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash, search = 
 }
 
 /** A wallet stub that records every action it is asked to sign. */
-function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith = null } = {}) {
+function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith = null, networkMismatch = false } = {}) {
   const subs = new Set();
   const state = { connected: false, accountId: null };
   const calls = [];
-  const emit = () => { for (const fn of subs) fn({ connected: state.connected, accountId: state.accountId, networkMismatch: false }); };
+  const emit = () => { for (const fn of subs) fn({ connected: state.connected, accountId: state.accountId, networkMismatch }); };
   return {
     calls,
     NETWORK_ID: "testnet",
@@ -158,7 +158,7 @@ function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith 
     status() {
       return {
         ready: true, networkId: "testnet", contractId: this.configuredContract,
-        connected: state.connected, accountId: state.accountId, networkMismatch: false,
+        connected: state.connected, accountId: state.accountId, networkMismatch,
         available: [
           { id: "here-wallet", name: "HERE Wallet", type: "injected", downloadUrl: null, present: true, extensionOnly: false },
           { id: "meteor-wallet", name: "Meteor Wallet", type: "injected", downloadUrl: "https://meteor.test", present: false, extensionOnly: true },
@@ -411,4 +411,43 @@ test("doBuy signs exactly one buy_cover and never an owner-only method", async (
   assert.equal(methods.length, 1);
   assert.equal(methods[0], "buy_cover", "the console may sign only buy_cover");
   assert.equal(wallet.calls[0].receiverId, CONTRACT);
+});
+
+// ---- adversarial: the authorization is bound to the network as well as the
+// account and module. A wallet that is not on NEAR testnet must not be able to
+// buy, and the refusal must happen before any transaction is built. ----
+
+test("a wallet on the wrong network cannot buy, and the button says why", async () => {
+  const wallet = mockWallet({ result: okResult("SHOULD-NOT-HAPPEN"), networkMismatch: true });
+  const page = bootPage({ wallet });
+  await settle(page);
+  await wallet.connect();
+  assert.equal(page.el("b-buy").disabled, true, "buying must be disabled on a non-testnet wallet");
+  assert.match(page.el("b-hint").textContent, /not on NEAR testnet/i, "the hint must state the network problem");
+});
+
+test("doBuy refuses a wrong-network wallet before building or signing any call", async () => {
+  const wallet = mockWallet({ result: okResult("SHOULD-NOT-HAPPEN"), networkMismatch: true });
+  const page = bootPage({ wallet });
+  await settle(page);
+  await wallet.connect();
+  // Even if the control were enabled programmatically, the guard must hold.
+  page.el("b-buy").dispatch("click");
+  await wait(60);
+  assert.equal(wallet.calls.length, 0, "no transaction may be signed from a non-testnet wallet");
+  assert.match(page.el("b-status").textContent, /not on NEAR testnet/i);
+});
+
+test("networkMismatch() fires on a .near (mainnet) account, not only on the selector's own network", async () => {
+  // The selector is always configured with our testnet network, so comparing it
+  // to NETWORK_ID alone is dead. The account TLD is the authoritative signal.
+  const WALLET_JS = fs.readFileSync(path.join(root, "ui", "wallet.js"), "utf8");
+  const fnBody = WALLET_JS.slice(WALLET_JS.indexOf("function networkMismatch()"));
+  const body = fnBody.slice(0, fnBody.indexOf("\n}") + 2);
+  const make = (accountId, networkId) =>
+    new Function("selector", "currentAccountId", "NETWORK_ID", `${body}; return networkMismatch();`)(
+      { options: { network: { networkId } } }, accountId, "testnet");
+  assert.equal(make("alice.near", "testnet"), true, "a mainnet .near account must be reported as a mismatch");
+  assert.equal(make("alice.testnet", "testnet"), false, "a testnet account on the testnet selector is not a mismatch");
+  assert.equal(make("alice.testnet", "mainnet"), true, "a selector configured for mainnet is a mismatch");
 });

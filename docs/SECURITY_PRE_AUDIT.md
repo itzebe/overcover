@@ -205,7 +205,7 @@ still list an affected range in their own metadata.
 `base-x` 2→3 and `decode-uri-component` 0.2→0.5, both of which are bug-fix lines with no API change
 that these consumers use). The overrides were verified not to regress the product: the shipped
 bundle was rebuilt and the real browser path re-tested — the wallet selector still initialises with
-both HERE and Meteor, the console tests (105), agent tests (53), and the live connectivity proof
+both HERE and Meteor, the console tests (108), agent tests (53), and the live connectivity proof
 (12/12) all pass against the rebuilt bundle.
 
 **Status: FIXED for every high/moderate advisory (verified).** 19 low advisories remain; recommended
@@ -292,7 +292,7 @@ The 17 cases it covers, and where each is independently defended today:
 | --- | --- | --- |
 | Reference adversarial model | `npm run test:model` | 66 attacks, 66 defended, 0 exploitable |
 | Contract unit tests | `npm run test:contract` | 76 passed |
-| Console + wallet journey | `npm run test:console` | 105 passed |
+| Console + wallet journey | `npm run test:console` | 108 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 53 passed |
 | Product feed + agent eval | `npm run test:agent-eval` | 33 passed |
 | Deploy fail-closed regression | `npm run test:deploy` | 21 passed |

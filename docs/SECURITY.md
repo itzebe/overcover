@@ -104,7 +104,7 @@ auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 - 17 adversarial tests against the **live** contract (`npm run test:onchain`): each attack is refused
   with the expected reason. These need the gitignored operator key files and do not run in CI; see
   `docs/SECURITY_PRE_AUDIT.md` §4.
-- The console: 105 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
+- The console: 108 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
   violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog.
 - The agent service: 53 tests including idempotency and limit enforcement **under concurrency**
   (`npm run test:agent`), and the OpenAPI spec is checked against the running routes.

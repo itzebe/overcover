@@ -76,14 +76,21 @@ function status() {
   };
 }
 
-/** Report whether the active account looks like it is on a different network.
- *  HERE/Meteor sign-in binds the account to the network the wallet is on; we can
- *  only observe the account id shape and the selector's own network, so this is a
- *  best-effort signal, surfaced (never hidden) rather than enforced. */
+/** Report whether the active account is on a different network.
+ *  Two signals, either of which is enough to refuse:
+ *    * the selector's configured network is not testnet (a hard mismatch), and
+ *    * the connected account id ends in the mainnet TLD `.near`. A `.near`
+ *      account is a mainnet account and can never sign a testnet transaction,
+ *      so this is an authoritative signal, not a heuristic. The account TLD is
+ *      what actually fires: the selector's own network is always the testnet
+ *      value we configured it with, so a mainnet wallet would otherwise pass
+ *      silently. Surfaced to the caller and used to block buying (fail closed). */
 function networkMismatch() {
   try {
     const net = selector && selector.options && selector.options.network;
-    return net ? net.networkId !== NETWORK_ID : false;
+    if (net && net.networkId && net.networkId !== NETWORK_ID) return true;
+    if (currentAccountId && /\.near$/.test(currentAccountId)) return true;
+    return false;
   } catch (e) { return false; }
 }
 

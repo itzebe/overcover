@@ -137,7 +137,7 @@ The console reads and signs against `contract.ovc-v3-ctl-2f6c4c.testnet` by defa
 | MyNearWallet | NOT APPLICABLE | Retired from the picker, bundle and dependency tree — it no longer accepts new application connections. | `tests/console.test.js` asserts no MyNearWallet reference ships. |
 | Wallet connection | FIXED AND VERIFIED | `<dialog>` picker; 90 s connect timeout; honest availability probe. | `ui:qa` opens the picker in-viewport; `verify:connectivity`; `tests/console.test.js`. |
 | Account identification | FIXED AND VERIFIED | `selector.store.observable` keeps the account id in sync; returned on connect. | `tests/console.test.js`; `wallet.js` status snapshot. |
-| Testnet verification | FIXED AND VERIFIED | Network fixed to `testnet`; a mainnet wallet is a reported mismatch. | `wallet.js` `NETWORK_ID`; `tests/console.test.js`. |
+| Testnet verification | FIXED AND VERIFIED | Network fixed to `testnet`; a mainnet `.near` account (or a non-testnet selector) is reported as a mismatch and **buying is disabled** on it (fail closed). | `wallet.js` `NETWORK_ID` + `networkMismatch()`; `tests/wallet-journey.test.mjs` (wrong-network buy refused, `networkMismatch()` unit cases); `tests/console.test.js`. |
 | Quote retrieval | FIXED AND VERIFIED | `doBuy` re-reads `quote` from the contract before signing. | `tests/console.test.js`; live quote shown. |
 | Contract binding | FIXED AND VERIFIED | The wallet signs against the contract the console reads (`WALLET.configure(CONTRACT)`); a `?contract=` page can never price one contract and pay another. | `tests/wallet-journey.test.mjs` (configured-contract assertion); `proof/connectivity.mjs` check 10. |
 | Transaction construction | FIXED AND VERIFIED | `buildBuyArgs` → `{product_id, payout, obs_date, beneficiary}`; deposit = contract premium; payout stays an exact u128 string. | `tests/console.test.js`: ABI match, empty beneficiary → null, payout not rounded. |
@@ -238,6 +238,28 @@ What v3 adds over v1 (all in `contract/src/lib.rs`):
 | Documentation | FIXED AND VERIFIED | `README`, `SUBMISSION`, `docs/*`, `proof/README`, `agent/README`. | Counts corrected to the real values. |
 | Submission accuracy | FIXED AND VERIFIED | The human-path section now states the programmatic-vs-extension distinction plainly. | This register; `SUBMISSION.md` §6. |
 | Judge-facing evidence | FIXED AND VERIFIED | `docs/JUDGE_DEMO.md` (script, checklist, backup) + `proof/` + explorer links. | This mission. |
+
+---
+
+## Defects found and fixed in this mission (2026-11-13, demo-readiness session)
+
+1. **The wallet network-mismatch signal was dead code, so a mainnet wallet would have been allowed
+   to try to buy on testnet.** Root cause: `networkMismatch()` in `ui/wallet.js` compared the
+   **selector's own configured network** to `NETWORK_ID` — but the console always configures the
+   selector with `network: "testnet"`, so the comparison was `"testnet" !== "testnet"` → always
+   `false`. The check could never fire. Impact: a judge (or a careless visitor) who connected a
+   **mainnet** wallet would have been told "Connected", and the buy path would have built a testnet
+   `buy_cover` the wallet could never sign — a dead-end, and the page would not have disclosed the
+   real problem. The mismatch was also only *surfaced* in text; it did not block buying. Fix:
+   `networkMismatch()` now also treats a connected account whose id ends in the mainnet TLD
+   `.near` as a mismatch (authoritative: a `.near` account cannot sign a testnet transaction), and
+   the console stores that signal in `walletState` and **fails closed** — the buy button is disabled,
+   the hint and status explain why, and `doBuy()` refuses before building or signing anything.
+   Regression: `tests/wallet-journey.test.mjs` gained three cases — "a wallet on the wrong network
+   cannot buy, and the button says why", "doBuy refuses a wrong-network wallet before building or
+   signing any call" (asserts **zero** wallet calls), and a direct unit test of `networkMismatch()`
+   across `.near`/`.testnet` and testnet/mainnet selectors. Verified: `npm run test:console` **108/108**
+   (was 105); `ui/vendor/wallet-bundle.js` rebuilt and confirmed to contain the `.near` check.
 
 ---
 
@@ -385,7 +407,8 @@ What v3 adds over v1 (all in `contract/src/lib.rs`):
 5. **Wallet connect errors were raw and unhelpful.** HERE/Meteor errors surfaced as
    `Could not connect: <raw>`. Fix: `connectErrorMessage` maps rejection / pop-up-blocked / wrong
    network / unreachable / no-account to actionable sentences and keeps the raw text for unclassified
-   cases; a possible network mismatch is surfaced. Regression: `tests/console.test.js`.
+   cases. Regression: `tests/console.test.js`. (See also defect 3 below, which made the mismatch
+   signal actually fire and fail closed.)
 6. **`npm run verify:proof` and `npm run verify:agent` crashed on a clean clone.** Both read
    `agent/audit.log.jsonl`, which is gitignored, so the two headline "independent proof" commands —
    the ones a judge runs first — died with `ENOENT` on any fresh checkout. Root cause: evidence for

@@ -4,6 +4,13 @@
 **Length:** 2–3 minutes. **Everything shown is real**: live contract reads and real testnet
 transactions. Nothing is staged.
 
+> **Recorded video:** [`video/out/overcover-demo.mp4`](../video/out/overcover-demo.mp4) — a 2:57
+> narrated cut of this script, driven against the live production console. Reproduce it with
+> `node video/capture.mjs && node video/build.mjs` (see [`video/README.md`](../video/README.md)).
+> The video shows the real wallet **approval surface**; the signature it cannot make from a headless
+> browser is the **RECORDED** human purchase listed below (hash
+> `87n1pdeAD4jv89hNDdWxQooQcWKdMpQfUiK5kRf8g14i`), never presented as a live click.
+
 > Read this first. Two kinds of evidence appear below and they are labelled apart:
 > **LIVE** — you do it now, in front of the judge, against the live contract.
 > **RECORDED** — a real testnet transaction with a hash you can open on the explorer, captured

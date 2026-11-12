@@ -6,6 +6,7 @@
 > **Tracks:** Business (primary) · Swarms (agent-operated businesses) · DeFi (underwriting pool)
 > **License:** MIT
 > **Submission pack:** [`SUBMISSION.md`](SUBMISSION.md) · X demo post in [`docs/DEMO_POST.md`](docs/DEMO_POST.md)
+> **Demo video (2:57):** [`video/out/overcover-demo.mp4`](video/out/overcover-demo.mp4) · script in [`docs/JUDGE_DEMO.md`](docs/JUDGE_DEMO.md)
 
 Overcover is a parametric risk mutual on NEAR: capital-backed cover that is defined by a product
 rather than negotiated by an underwriter, and settled by contract rules rather than a claims queue.

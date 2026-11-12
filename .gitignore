@@ -9,3 +9,12 @@ shots/
 
 # agent working notes (not part of the product)
 .openhands/
+
+# judge-demo video: raw captures + intermediates are regenerable (see video/README.md)
+video/raw/
+video/audio/
+video/overlays/
+video/out/*.webm
+video/out/narration.m4a
+video/out/concat.txt
+video/out/seg-*.mp4

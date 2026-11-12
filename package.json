@@ -61,5 +61,20 @@
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5",
     "vm-browserify": "^1.1.2"
+  },
+  "overrides": {
+    "nanoid": "^5.1.16",
+    "@here-wallet/core": {
+      "bn.js": "^5.2.3"
+    },
+    "borsh": {
+      "bn.js": "^5.2.3"
+    },
+    "bs58": {
+      "base-x": "^3.0.11"
+    },
+    "query-string": {
+      "decode-uri-component": "0.5.1"
+    }
   }
 }

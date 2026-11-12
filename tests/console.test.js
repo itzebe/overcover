@@ -349,9 +349,17 @@ test("the quote reads the contract's own quote view rather than trusting a local
 test("demo evidence in the page matches the recorded demo log", () => {
   const log = JSON.parse(fs.readFileSync(path.join(root, "demo-log.json"), "utf8"));
   const hashes = new Set(log.map((e) => e.hash));
+  // Deployed contract code hashes are legitimate on-chain values (readable via
+  // `view_account`), not transaction evidence, so they are allowed — but only
+  // these two known modules. Any other embedded hash must be a demo-log tx.
+  const codeHashes = new Set([
+    "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL", // hardened v3 module
+    "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R", // legacy v1 module
+  ]);
   const embedded = [...SCRIPT.matchAll(/"([1-9A-HJ-NP-Za-km-z]{40,})"/g)].map((m) => m[1]);
-  assert.ok(embedded.length >= 6, `expected several embedded tx hashes, found ${embedded.length}`);
-  for (const h of embedded) {
+  const txHashes = embedded.filter((h) => !codeHashes.has(h));
+  assert.ok(txHashes.length >= 6, `expected several embedded tx hashes, found ${txHashes.length}`);
+  for (const h of txHashes) {
     assert.ok(hashes.has(h), `embedded hash ${h} is not in demo-log.json (fabricated evidence)`);
   }
 });
@@ -749,8 +757,11 @@ test("the public UI can only ever sign buy_cover, never an owner-only method", (
     assert.doesNotMatch(HTML, new RegExp(forbidden), `the page must not reference ${forbidden}`);
     assert.doesNotMatch(walletJs, new RegExp(forbidden), `the wallet module must not reference ${forbidden}`);
   }
-  // The wallet's function-call access key is scoped to buy_cover alone.
-  assert.match(walletJs, /signIn\(\{\s*contractId:\s*CONTRACT_ID,\s*methodNames:\s*\["buy_cover"\]\s*\}\)/);
+  // The wallet's function-call access key is scoped to buy_cover alone, and it
+  // signs against the contract the page configured (never a hardcoded one).
+  assert.match(walletJs, /signIn\(\{\s*contractId:\s*\w+,\s*methodNames:\s*\["buy_cover"\]\s*\}\)/);
+  assert.match(walletJs, /function configure\(/, "the wallet must let the console set its contract");
+  assert.match(HTML, /WALLET\.configure\(CONTRACT\)/, "the console must bind the wallet to the contract it reads");
   assert.match(bundle, /methodNames:\["buy_cover"\]/, "the built bundle must carry the buy_cover scope");
 });
 

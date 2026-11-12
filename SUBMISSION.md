@@ -201,12 +201,12 @@ captured in this environment. A judge can complete it in two minutes by followin
 | --- | --- | --- |
 | Reference model attacks | `npm run test:model` | **66 attacks, 0 exploitable, 66 defended** |
 | Contract unit tests | `npm run test:contract` | **76 passed, 0 failed** (includes 14 permissionless-factory tests, 4 SEC-1 migrate-authorization regressions and the v3 reading-message layout pin) |
-| Console regression + live RPC | `npm run test:console` | **97 passed, 0 failed** |
+| Console regression + live RPC | `npm run test:console` | **101 passed, 0 failed** |
 | Agent limits + API + u128 precision | `npm run test:agent` | **51 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
 | Product feed + agent evaluation | `npm run test:agent-eval` | **32 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
 | Discovery agent | `npm run test:factory` | **11 passed, 0 failed** — deterministic risk rule, evidence-hash reproducibility, forecast (not observation) labelling, one live API read |
 | Permissionless factory (compiled wasm) | `npm run verify:factory` | **22/22 passed** — a NON-OWNER proposal activates a product with no owner tx, every rule refuses, the stake enters the pool, and a buyer buys on the permissionlessly-created product (real `neard` node) |
-| Deploy fail-closed regression | `npm run test:deploy` | **3 passed, 0 failed** — both deploy paths refuse a stale (guard-less) wasm |
+| Deploy fail-closed regression | `npm run test:deploy` | **21 passed, 0 failed** — both deploy paths refuse a stale (guard-less) wasm |
 | SEC-1 guard on the compiled wasm | `npm run verify:upgrade` | **8/8 passed** — real local `neard` node: third-party `migrate()` refused, state untouched, self-call with no legacy state fails closed |
 | In-place upgrade preserves state | `npm run verify:upgrade-preservation` | **PASS** — runs the exact deployed v1 bytecode on a real `neard` node, deploys v3 over it, self-calls `migrate()`: capital, reserved, products and policies survive and the migrated policy still settles |
 | Controlled v3 deploy + SEC-1 closure | `npm run verify:controlled-v3:sandbox` | **39/39 passed** — deploys the compiled v3 wasm to a fresh account on a real `neard` node, configures a 3-of-5 operator quorum and a 3-of-5 resolver quorum, and asserts sub-quorum non-finalisation, forged/non-operator refusal, owner/challenger/signer vote exclusion, resolver-quorum decision, a third-party `migrate()` refused, a NON-OWNER `propose_product` activation, and pool solvency |

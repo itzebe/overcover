@@ -1,6 +1,6 @@
 {
-  "url": "http://127.0.0.1:8614/",
-  "at": "2026-11-12T06:42:56.896Z",
+  "url": "http://127.0.0.1:8629/",
+  "at": "2026-11-12T14:59:04.698Z",
   "passed": 12,
   "total": 12,
   "results": [
@@ -22,7 +22,7 @@
     {
       "name": "10 buy_cover is the only signing capability",
       "ok": true,
-      "detail": "the wallet scope is buy_cover alone and the agent's only function call is buy_cover"
+      "detail": "the wallet scope is buy_cover alone, bound to the read contract, and the agent's only function call is buy_cover"
     },
     {
       "name": "11 a visitor cannot buy without a wallet authorization",

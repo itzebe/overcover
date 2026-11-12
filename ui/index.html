@@ -165,6 +165,18 @@
   .fail-note .fd { margin: 0; font-size: 13.5px; color: var(--ink2); }
   .fail-note code { font-family: var(--mono); font-size: 12.5px; color: var(--bad); word-break: break-all; }
 
+  /* Security status of the contract this page is reading. Slim, factual, and
+     always visible: the deployment build is not something to bury. */
+  .sec-banner { border-bottom: 1px solid var(--line2); background: var(--good-w); }
+  .sec-banner.legacy { background: var(--bad-w); border-bottom-color: var(--bad); }
+  .sec-banner .in { display: flex; align-items: baseline; gap: 12px; padding: 10px 0; font-size: 13.5px; color: var(--ink2); }
+  .sec-banner .tag { flex: none; font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--good); border: 1px solid var(--good); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .sec-banner.legacy .tag { color: var(--bad); border-color: var(--bad); }
+  .sec-banner p { margin: 0; }
+  .sec-banner a { text-decoration: underline; text-underline-offset: 2px; }
+  .sec-banner code { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  @media (max-width: 640px) { .sec-banner .in { flex-direction: column; gap: 6px; } }
+
   /* ---------------- journey timeline ---------------- */
   .journey { list-style: none; margin: 0; padding: 0; position: relative; }
   .journey > li { position: relative; display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 18px; padding-bottom: 30px; }
@@ -519,6 +531,16 @@
 
 <main id="main">
   <div class="wrap"><div id="error-slot"></div></div>
+
+  <!-- Security status of the contract this page reads. Filled from the deployed
+       module: the hardened build refuses a third-party migrate(); the legacy
+       build does not. Hidden until a read tells us which one we are on. -->
+  <section id="sec-banner" class="sec-banner" hidden aria-live="polite">
+    <div class="wrap"><div class="in">
+      <span class="tag" id="sec-tag">—</span>
+      <p id="sec-text">—</p>
+    </div></div>
+  </section>
 
   <!-- ================= HERO ================= -->
   <section class="hero" aria-labelledby="hero-h">
@@ -1561,6 +1583,41 @@
     if (obsNote) obsNote.innerHTML = "Readings finalised by a quorum of independent operators. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected by the resolver quorum and can never settle a policy.";
   }
 
+  // State the security status of the contract this page reads, from its own
+  // deployed code hash — not from a claim in the markup. The legacy build's
+  // `migrate()` is unauthenticated (any account could overwrite state); the
+  // hardened build refuses any caller but the contract itself. If the hash is
+  // not one we can vouch for, we say so instead of implying it is hardened.
+  var HARDENED_CODE_HASH = "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL";
+  var LEGACY_CODE_HASH = "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R";
+  function renderSecurityBanner(acct) {
+    var box = el("sec-banner"), tag = el("sec-tag"), text = el("sec-text");
+    if (!box || !tag || !text) return;
+    var hash = acct && acct.code_hash ? String(acct.code_hash) : "";
+    box.hidden = false;
+    box.className = "sec-banner";
+    if (hash === HARDENED_CODE_HASH) {
+      tag.textContent = "Hardened build";
+      text.innerHTML = "This contract runs the hardened module (<code>" + esc(shortAcct(hash)) +
+        "</code>): <code>migrate()</code> is refused unless the call comes from the contract account itself, " +
+        "so no third party can overwrite owner, oracle or pool state.";
+    } else if (hash === LEGACY_CODE_HASH) {
+      tag.textContent = "Legacy build";
+      box.className = "sec-banner legacy";
+      text.innerHTML = "This contract runs the <b>original</b> module (<code>" + esc(shortAcct(hash)) +
+        "</code>), whose <code>migrate()</code> is unauthenticated. The hardened build is deployed at " +
+        '<a href="' + EXPLORER + "/account/contract.ovc-v3-ctl-2f6c4c.testnet" + '" target="_blank" rel="noopener">' +
+        "contract.ovc-v3-ctl-2f6c4c.testnet</a>; run this console with " +
+        "<code>?contract=contract.ovc-v3-ctl-2f6c4c.testnet</code> to read it. The legacy address still runs the " +
+        "product and its recorded history, and is the address a wallet buys on.";
+    } else {
+      tag.textContent = "Unrecognised build";
+      box.className = "sec-banner legacy";
+      text.innerHTML = "This contract's deployed module (<code>" + esc(shortAcct(hash || "unknown")) +
+        "</code>) is not one this console can vouch for. Treat it as unverified.";
+    }
+  }
+
   function setInvariant(prefix, ok) {
     el(prefix).className = "inv " + (ok ? "ok" : "no");
     el(prefix + "-g").textContent = ok ? "\u2713" : "\u2715";
@@ -1619,6 +1676,9 @@
   // NEAR wallet extension. This code only reads its status and calls connect /
   // signAndSend. It never sees a key: signing happens inside the extension.
   var WALLET = window.OvercoverWallet || null;
+  // Bind the wallet to the contract this page is actually reading, so a
+  // signature can never target a different contract than the one shown.
+  if (WALLET && typeof WALLET.configure === "function") WALLET.configure(CONTRACT);
   var walletState = { connected: false, accountId: null };
 
   function accountChip(a) {
@@ -2411,6 +2471,7 @@
       renderAgentProducts();
 
       renderProof(cfg, acct, pool);
+      renderSecurityBanner(acct);
       state.busy = false;
     }).catch(function (e) {
       state.busy = false;

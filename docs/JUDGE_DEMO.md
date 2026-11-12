@@ -155,11 +155,12 @@ underfunded agent refuses rather than sending a doomed transaction.
 Also show the **kill switch**: `POST /api/v1/agent/control {"enabled":false}` stops all buying
 immediately; a further buy returns `403` with "agent is disabled".
 
-## 6. The insurance factory — anyone can add cover (25 s) — LIVE
+## 6. The insurance factory — anyone can add cover (25 s) — FEED LIVE, ACTIVATION SANDBOX-PROVEN
 
 Scroll to **The insurance factory**. The discovery agent has read a real public forecast and prepared
 a proposal. Point at it: the city and index, the trigger, the premium rate, the coverage start, and
-the **evidence** — the Open-Meteo source URL and the sha256 of exactly what the agent saw.
+the **evidence** — the Open-Meteo source URL and the sha256 of exactly what the agent saw. The feed
+itself is live (the page fetched `factory.json`, generated from the real API).
 
 - *"The agent read this forecast from Open-Meteo. It is labelled a forecast, not an observation of an
   event that has happened — the agent is not allowed to claim something occurred."*
@@ -171,12 +172,21 @@ the **evidence** — the Open-Meteo source URL and the sha256 of exactly what th
   PROPOSED, because the contract has not activated it yet. The page only shows ACTIVE when the
   contract itself returns the product — it will not tell you a proposal is live when it is not."*
 
-*Why it is credible:* the whole factory — a non-owner proposal activating a product, every rule
-refusing, the proposer's stake entering the pool, and a buyer purchasing cover on the
-permissionlessly-created product — is proven end-to-end against the **compiled wasm on a real neard
-node** (`npm run verify:factory`, 22/22), and the discovery agent's determinism and evidence hashing
-are unit-tested (`npm run test:factory`, 11/11). The console's honesty rule — a proposal is never shown
-ACTIVE without the contract — is regression-tested (`npm run test:console`).
+**Be precise about what is live and what is proven.** The feed on the page is live. The on-chain
+activation is **proven on the compiled wasm against a real `neard` node, not yet deployed to the live
+testnet address** (the faucet is rate-limited and no funded account is held here). Do not say a
+`propose_product` call on the live contract succeeded — it would be refused with `MethodNotFound`
+until that deploy happens. Say instead:
+
+- *"The whole factory — a non-owner proposal activating a product, every rule refusing, the proposer's
+  stake entering the pool, and a buyer purchasing cover on the permissionlessly-created product — is
+  proven end-to-end against the compiled contract on a real NEAR node (`npm run verify:factory`,
+  22/22). The contract is not yet deployed to the live testnet address; that needs a funded account.
+  I am not going to show you a live call that has not happened."*
+
+*Why it is credible:* the discovery agent's determinism and evidence hashing are unit-tested
+(`npm run test:factory`, 11/11), and the console's honesty rule — a proposal is never shown ACTIVE
+without the contract — is regression-tested (`npm run test:console`).
 
 ## Closing payoff (10 s)
 
@@ -270,6 +280,11 @@ These are deliberate, not accidents. If a judge asks, the answers are:
   on a local `neard` node (29/29) — and say plainly that only the faucet account-creation step is
   exercised on testnet. State that the legacy address's key is unrecoverable
   (`docs/AUTHORITY_RECOVERY.md`).
+- **The factory is not deployed to the live address.** The feed on the page is live; the on-chain
+  activation is not. Show it honestly: `npm run verify:factory` (22/22) proves a non-owner proposal
+  activating a product on the **compiled** contract against a real `neard` node, and
+  `npm run test:factory` (11/11) proves the agent's determinism and evidence hashing. Do not claim a
+  live `propose_product` succeeded — on the live contract it returns `MethodNotFound` until deployed.
 - **Vercel URL unreachable.** Use the mirror https://itzebe.github.io/overcover/ (byte-identical
   `index.html`).
 - **Nothing loads at all.** Run the read-only proof locally: `npm ci --ignore-scripts && npm run

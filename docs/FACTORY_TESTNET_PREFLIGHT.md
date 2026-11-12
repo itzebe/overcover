@@ -87,8 +87,7 @@ only** — no further setup:
 | Item | Value |
 | --- | --- |
 | Account id (public) | `ovc-v3-ctl-2f6c4c.testnet` (does not exist on chain yet) |
-| Public key | `ed25519:EUBFaRRaGLw5HtyguAVYReMNNsww6KgJZ98deceyssYd` |
-| Secret key | stored only in `keys/controlled-v3-root.json` (mode 0600, gitignored) — never printed, never committed |
+| Keypair | generated; the secret lives only in `keys/controlled-v3-root.json` (mode 0600, gitignored) — never printed, never committed |
 
 The harness loads it automatically (it is the default `ROOT_FILE`). After funding, the live run is a
 single command with no arguments. To use a different account, overwrite that file (or set the two env

@@ -99,6 +99,15 @@
   .btn:active { transform: translateY(1px); }
   .btn[disabled] { opacity: .55; cursor: default; }
 
+  /* ---------------- primary navigation ---------------- */
+  .nav { background: var(--card); border-bottom: 1px solid var(--line); }
+  .nav-in { display: flex; gap: 4px; align-items: stretch; overflow-x: auto; scrollbar-width: none; }
+  .nav-in::-webkit-scrollbar { display: none; }
+  .nav-in a { flex: none; display: inline-flex; align-items: center; min-height: 46px; padding: 0 13px; font-size: 13.5px; font-weight: 600; color: var(--ink2); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .nav-in a:first-child { padding-left: 0; }
+  .nav-in a:hover { color: var(--ink); border-bottom-color: var(--line2); text-decoration: none; }
+  .nav-in a:focus-visible { outline-offset: -2px; }
+
   /* ---------------- hero ---------------- */
   .hero { background: linear-gradient(168deg, var(--field) 0%, #0d1f18 62%, #12291f 100%); color: var(--on-field); position: relative; overflow: hidden; }
   .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 78% -10%, rgba(224,170,85,.14), transparent 60%); }
@@ -133,6 +142,16 @@
   /* ---------------- generic card ---------------- */
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); }
   .pad { padding: var(--s4); }
+
+  /* Two-column explanatory split (what / who). One component, no inline styles. */
+  .split { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .split { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .split .card h3 { font-size: 16px; font-weight: 680; margin: 0 0 10px; letter-spacing: -.01em; }
+  .split .card p { color: var(--ink2); font-size: 14.5px; margin: 0; }
+  .split .card p + p { margin-top: 12px; color: var(--muted); font-size: 13.5px; }
+
+  /* Anchors from the nav must not land under the sticky brand bar. */
+  main [id] { scroll-margin-top: 70px; }
 
   /* ---------------- solvency ---------------- */
   .solv-top { display: grid; gap: 18px; grid-template-columns: 1fr; }
@@ -644,6 +663,22 @@
   </div>
 </header>
 
+<!-- Primary navigation. A quiet ledger index: the page is long and evidence-dense,
+     so a reader must be able to orient and jump without hunting. Kept out of the
+     sticky brand bar so it does not eat mobile viewport height. -->
+<nav class="nav" aria-label="Sections">
+  <div class="wrap nav-in">
+    <a href="#what-h">What it covers</a>
+    <a href="#how">How it works</a>
+    <a href="#cover">Cover</a>
+    <a href="#factory">Factory</a>
+    <a href="#quote-h">Price</a>
+    <a href="#trust-h">Trust</a>
+    <a href="#status">Status</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
+
 <main id="main">
   <div class="wrap"><div id="error-slot"></div></div>
 
@@ -665,9 +700,9 @@
         <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
         <p class="sub">Overcover covers one clearly-defined event at a time: a public index reading — rainfall or temperature — meeting a set trigger, in a named city, on a named date. Each product states its own trigger and direction, so the payout follows from contract rules, no adjuster, no queue.</p>
         <div class="actions">
-          <button class="btn-gold" type="button" data-wallet="connect">Connect a wallet</button>
-          <a class="btn-ghost" href="#cover">See the cover available</a>
+          <a class="btn-gold" href="#cover">See the cover available</a>
           <a class="btn-ghost" href="#how">How a claim settles</a>
+          <button class="btn-ghost" type="button" data-wallet="connect">Connect a wallet</button>
         </div>
         <p class="proof-line">
           <span id="hero-dot" class="dot load" aria-hidden="true"></span>
@@ -755,16 +790,16 @@
       <h2 id="what-h">What Overcover covers, and who it is for</h2>
       <p class="sect-note">One risk at a time, defined in advance. No underwriting interview, no claim form.</p>
     </div>
-    <div class="prod-grid">
+    <div class="split">
       <div class="card pad">
-        <h3 style="font-size:17px">The risk it covers</h3>
-        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">A named city's public index — rainfall or temperature — meets a trigger defined in the product on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
-        <p style="margin-top:12px;color:var(--muted);font-size:13.5px">Because the trigger is a public reading rather than an assessed loss, there is nothing to argue about and no adjuster to wait for.</p>
+        <h3>The risk it covers</h3>
+        <p>A named city's public index — rainfall or temperature — meets a trigger defined in the product on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
+        <p>Because the trigger is a public reading rather than an assessed loss, there is nothing to argue about and no adjuster to wait for.</p>
       </div>
       <div class="card pad">
-        <h3 style="font-size:17px">Who it is for</h3>
-        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle: growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes, and the software agents that run them.</p>
-        <p style="margin-top:12px;color:var(--muted);font-size:13.5px">It is a poor fit for a loss that needs assessing after the fact — that is what a traditional policy is for.</p>
+        <h3>Who it is for</h3>
+        <p>Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle: growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes, and the software agents that run them.</p>
+        <p>It is a poor fit for a loss that needs assessing after the fact — that is what a traditional policy is for.</p>
       </div>
     </div>
   </section>

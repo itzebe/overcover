@@ -7,7 +7,7 @@
 // `check`/`expectThrow`/`log` are injected so the same scenarios can be run
 // by the CLI harness (sim/run.mjs) and by the test runner (node --test).
 
-import { Decentralized, ContractError, ONE_NEAR, keyPairFromSeed, sign } from "./engine.mjs";
+import { Decentralized, ContractError, ONE_NEAR, keyPairFromSeed, sign, MAX_LEAD_SEC } from "./engine.mjs";
 import { evaluate, normalizeLimits } from "../agent/limits.mjs";
 
 const N = (x) => BigInt(x) * ONE_NEAR;
@@ -638,6 +638,11 @@ console.log("\n== Adversarial matrix ==");
   const okPol = m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: day3 });
   check("A31c", "adversarial", "cover within the max lead still reserves normally", N(10).toString(),
     m.reserved.toString(), m.reserved === N(10) && m.getPolicy(okPol).status === "active");
+  // A product cannot be created with a lead above the cap (mirrors the
+  // contract's add_product `min_lead_sec <= MAX_LEAD_SEC` check): otherwise a
+  // product would be unusable, since every purchase would fail the lead cap.
+  expectThrow("A31d", "adversarial", "a product whose min lead exceeds the cap is refused", () =>
+    m.addMetricProduct("bad-lead", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: Number(MAX_LEAD_SEC) + 1, maxTotalCoverage: N(5000) }));
 }
 
 

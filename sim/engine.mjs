@@ -170,6 +170,7 @@ export class Decentralized {
   _insertProduct(id, { city, metricId, category, threshold, premiumBp, minPayout, maxPayout, minLeadSec, maxCapacity }) {
     if (this.products.has(id)) throw new ContractError("product exists");
     if (BigInt(premiumBp) > 5000n) throw new ContractError("premiumBp too high");
+    if (BigInt(minLeadSec) > MAX_LEAD_SEC) throw new ContractError("min lead above maximum");
     if (BigInt(minPayout) <= 0n || BigInt(maxPayout) < BigInt(minPayout))
       throw new ContractError("bad payout bounds");
     if (BigInt(maxCapacity) < BigInt(maxPayout)) throw new ContractError("capacity below a single max payout");

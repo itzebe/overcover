@@ -359,9 +359,20 @@ parametric product, short enough to keep `obs_date + settle_delay_sec` far from 
 bound already guarantees `obs_date >= now`). Product creation also validates `min_lead_sec <= MAX_LEAD_SEC`
 so no product can be configured with an unusable lead. Mirrored in `sim/engine.mjs`.
 
-**Regression tests.** `sec9_…` (Rust, 2 refused cases + 1 in-bound control) and model A31/A31b/A31c.
-Mutation-tested: the tests fail against the pre-fix code and against a plausible wrong fix that bounds
-the lead at an absurdly large constant.
+**Regression tests.** `sec9_…` (Rust, 2 refused cases + 1 in-bound control) and model A31/A31b/A31c/A31d.
+
+**Independent reproduction (isolated git worktree at `d086dd8`, never the release branch).** Removing
+the guard and adding an attack probe gives a complementary pair: with the guard removed the **probe
+passes** — `buy_cover(obs_date = u64::MAX)` issues policy 1, `reserved` becomes 100 NEAR, the provider's
+withdrawable capital drops to `capital − reserved`, and withdrawing the provider's full 1000 NEAR deposit
+is refused (the provider is left holding 100 NEAR it can never recover) — while the **regression test
+fails** ("an unbounded observation date must be refused"). Restoring the guard reverses both. Boundary
+probes (also in the worktree): `obs_date == now + MAX_LEAD_SEC` is accepted, `+1` is refused; a product
+whose `min_lead_sec == MAX_LEAD_SEC` is accepted, `+1` is refused at creation; a **past** `obs_date` is
+refused by the min-lead check, which runs first, so `obs_date - now` never underflows. No alternate
+path sets `obs_date` (`buy_cover` is the only policy-creation entry point; `propose_product` hardcodes
+`min_lead_sec = 3600`). Mutation-tested: the tests fail against the pre-fix code and against a plausible
+wrong fix that bounds the lead at an absurdly large constant.
 
 **Status: FIXED in source.** The **deployed** v3 module (`code_hash CQR8x1kW…`, sha256 `a97034e6…`)
 still carries the unbounded-lead behaviour; see the deployment-divergence section.

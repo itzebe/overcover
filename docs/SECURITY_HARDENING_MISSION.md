@@ -270,3 +270,120 @@ node driver/redeploy-v3.mjs --plan                  # prints the pending v3 depl
 
 The SEC-1 harness needs a local `neard` sandbox; set `REQUIRE_SANDBOX=1` to make a missing node a
 failure rather than a silent skip (CI does this).
+
+---
+
+## 10. Execution report — remaining release operations (2026-11-13)
+
+Second pass: attempt the four write operations the first report listed as blocked, and re-verify the
+whole gate on the final head. The operator credentials the mission assumed are **not present** in this
+environment (no `OVC_V3_SECRET_KEY`, no `keys/` directory, no NEAR key in any standard location, no
+`outlayer` CLI). Every operation that can be done read-only was done; every operation that needs a
+signature is reported **BLOCKED** with the exact missing prerequisite. Nothing was fabricated.
+
+**SHAs.** Starting = final = **`f5f60ec9beecdf076a337d9052f9cd601f766412`** (this pass added only
+documentation + a read-only proof script; see §10.8). Baseline merge-base `ec77247`; parent `ad1d59e`.
+
+**Network / identities.** NEAR **testnet** only, RPC `https://test.rpc.fastnear.com`.
+Legacy v1 = `contract.attestor-overcover.testnet`; hardened v3 = `contract.ovc-v3-ctl-2f6c4c.testnet`.
+Owner accounts: `owner.attestor-overcover.testnet` (v1) and `owner.ovc-v3-ctl-2f6c4c.testnet` (v3).
+No secret is printed, copied or committed.
+
+### 10.1 Live deployment state (read-only, `npm run verify:release-ops`)
+
+```
+legacy contract.attestor-overcover.testnet
+  sha256 1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e  (344857 bytes)  = v1
+  code_hash 36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R
+v3     contract.ovc-v3-ctl-2f6c4c.testnet
+  sha256 a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1  (500023 bytes)  = OLD v3
+  code_hash CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL
+legacy get_pool: paused=false solvent=true
+v3     get_pool: paused=false solvent=true
+```
+
+**Interpretation.** The legacy v1 contract is **live and not paused** — SEC-1 is not contained at the
+contract. The v3 contract still runs the **old** module (`a97034e6…`, 500023 bytes); the SEC-6/7/9 fix
+(`811e0427…`, 500342 bytes) is **not deployed**. The canonical wasm for that fix is present locally and
+its sha256 matches `811e0427…` exactly.
+
+### 10.2 Phase 1 — pause legacy v1 → **BLOCKED**
+
+`set_paused(bool)` is owner-only (`assert_owner`); the owner is `owner.attestor-overcover.testnet`.
+The owner's signing key is not in this environment, so no transaction could be, or was, sent. The live
+`paused=false` is captured above and in `proof/release-ops.json`.
+**Missing prerequisite:** the legacy owner's NEAR private key (`owner.attestor-overcover.testnet`).
+
+### 10.3 Phase 2 — redeploy hardened v3 → **BLOCKED**
+
+Plan verified read-only (`node driver/redeploy-v3.mjs --plan`, sends nothing):
+
+```
+current code : a97034e6…   new code : 811e0427… (500342 bytes)
+operation    : DeployContract(contract.ovc-v3-ctl-2f6c4c.testnet, <wasm>) — code only, reversible
+```
+
+Executed without a key, the driver **fails closed** (exit 1):
+
+```
+error: no signing key: set OVC_V3_SECRET_KEY or create keys/v3-operator.json (gitignored, mode 0600).
+```
+
+**Missing prerequisite:** the v3 contract account's key (`OVC_V3_SECRET_KEY` or
+`keys/v3-operator.json`). All other preconditions (network, target account, expected hashes, canonical
+wasm) are verified and correct.
+
+### 10.4 Phase 3 — hardened-v3 purchase → **BLOCKED**
+
+A real `buy_cover` on `contract.ovc-v3-ctl-2f6c4c.testnet` needs a funded testnet wallet that can sign.
+No such identity exists here (`keys/identities.json` absent; no wallet key). No funds were acquired and
+no transaction was sent. **Missing prerequisite:** a funded testnet account's key (a human-held wallet).
+
+### 10.5 Phase 4 — OutLayer adapter deployment → **BLOCKED**
+
+The `outlayer` CLI is not installed, and deploying a project needs a NEAR FullAccess signature plus a
+funded wallet, neither of which is present. The POC's **attestation mechanism** remains independently
+verified (recorded + a fresh live Intel TDX quote, both `UpToDate`); **no new deployment** was performed
+or claimed. **Missing prerequisites:** the `outlayer` CLI and a funded operator key with FullAccess.
+
+### 10.6 Phase 5 — full release verification (all executed on `f5f60ec`)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| SEC-1 takeover reproduction | `npm run verify:sec1-takeover` | **17/17** (v1 taken over; v2 refuses) |
+| Upgrade guard on compiled wasm | `npm run verify:upgrade` | **8/8** |
+| Upgrade preserves state | `npm run verify:upgrade-preservation` | state PRESERVED; migrated policy settled |
+| v3 lifecycle (neard sandbox) | `npm run verify:sandbox` | **28/28** |
+| Controlled v3 (neard sandbox) | `npm run verify:controlled-v3:sandbox` | **39/39** |
+| Permissionless factory | `npm run verify:factory` | **22/22** |
+| Connectivity | `npm run verify:connectivity` | **13/13** |
+| Independent proof | `npm run verify:proof` | **13/13** |
+| Live production URL | `npm run verify:live` | pass (5 widths) |
+| Agent spend-authorization | `npm run verify:agent` | pass |
+| Accessibility | `npm run axe` | 0 violations at 320–1440 px (page + wallet dialog) |
+| UI QA | `npm run ui:qa` | 7 viewports + agent dry-run OK |
+| Dependency audit | `npm audit` | 0 high / 0 critical / 0 moderate; 19 low (transitive) |
+| Live adversarial | `npm run test:onchain` | **SKIPPED/BLOCKED** — 95 pass, 1 fail (the live suite fails closed: no `keys/identities.json`) |
+| Release-ops preflight | `npm run verify:release-ops` | 4 ok, 5 blocked, 0 inconsistent |
+
+`test:onchain` is **not** reported as passing. The one failing file is `tests/adversarial.test.js`,
+which aborts at load with `missing …/keys/identities.json; run: node driver/keys.js` — an
+environment-gated prerequisite, not a contract failure. All 95 non-live tests pass.
+
+### 10.7 Remaining blockers (precise)
+
+1. **Legacy v1 pause** — needs `owner.attestor-overcover.testnet`'s key.
+2. **v3 SEC-6/7/9 redeploy** — needs `OVC_V3_SECRET_KEY` / `keys/v3-operator.json`; everything else verified.
+3. **v3 human purchase** — needs a funded testnet wallet key.
+4. **OutLayer adapter deploy** — needs the `outlayer` CLI + a funded FullAccess operator key.
+5. **`test:onchain`** — needs `keys/identities.json` (funded root).
+
+Each is a credential/authority gap, not a code or configuration gap. With the keys, the operations are
+scripted and verified: `node driver/redeploy-v3.mjs` (v3) and `driver/operator.js` / the console
+(legacy pause, purchase).
+
+### 10.8 What this pass changed
+
+Documentation only, plus one read-only proof. New: `proof/release-ops.mjs` (+ `proof/release-ops.json`)
+and `npm run verify:release-ops`, wired into CI; this §10. No contract, driver, UI or behaviour change.
+No force-push; the four earlier commits are unchanged and this pass appends.

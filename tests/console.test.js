@@ -274,6 +274,40 @@ test("each table is wrapped in its own horizontal scroll container", () => {
   assert.ok(wrappers >= 3, `expected 3 scroll wrappers, found ${wrappers}`);
 });
 
+// The deployment-status ledger is wider than a phone. It must scroll like every
+// other table; `overflow: hidden` clipped its columns with no way to reach them.
+test("the status ledger scrolls horizontally instead of clipping its columns", () => {
+  const m = HTML.match(/\.status-table\s*\{[^}]*\}/);
+  assert.ok(m, "the .status-table rule must exist");
+  assert.match(m[0], /overflow-x:\s*auto/, "the status ledger must scroll horizontally on narrow screens");
+  assert.doesNotMatch(m[0], /overflow:\s*hidden/, "the status ledger must not clip its columns");
+});
+
+// On phones the sticky brand bar is the only thing pinned to the top, so its
+// height is viewport the reader loses while scrolling. It must be compacted.
+test("the sticky brand bar is compacted on phones", () => {
+  // Pull the balanced `@media (max-width: 640px) { … }` block so the assertions
+  // cannot be satisfied by rules elsewhere in the sheet.
+  const at = HTML.indexOf("@media (max-width: 640px)");
+  assert.ok(at > -1, "the mobile breakpoint must exist");
+  let depth = 0, end = -1;
+  for (let i = HTML.indexOf("{", at); i < HTML.length; i++) {
+    if (HTML[i] === "{") depth++;
+    else if (HTML[i] === "}" && --depth === 0) { end = i + 1; break; }
+  }
+  const block = HTML.slice(at, end);
+  assert.match(block, /\.mast-in\s*\{[^}]*padding-top:\s*9px/, "the brand bar must be vertically compacted");
+  assert.match(block, /\.mast-right\s+\.btn\s*\{[^}]*min-height:\s*44px/, "the mobile controls must keep a 44px touch target");
+  // The bar is the only sticky element, so a second row of controls costs the
+  // reader real viewport. The tagline and the redundant "NEAR testnet ·" prefix
+  // must be dropped on phones so the controls stay on one row.
+  assert.match(block, /\.brand\s+\.tagline\s*\{\s*display:\s*none/, "the tagline must be dropped on phones");
+  assert.match(block, /\.net\s+\.net-net\s*\{\s*display:\s*none/, "the redundant network prefix must be dropped on phones");
+  // At 320px the three controls would otherwise wrap to two rows (three rows
+  // total). Letting the mast lay them out keeps the sticky bar to two rows.
+  assert.match(block, /\.mast-right\s*\{\s*display:\s*contents/, "the mobile controls must be laid out by the mast row");
+});
+
 test("the page ships an inline favicon (no 404 request)", () => {
   assert.match(HTML, /<link rel="icon" href="data:image\/svg\+xml/);
 });

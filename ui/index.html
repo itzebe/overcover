@@ -98,6 +98,24 @@
   .btn:hover { border-color: var(--ink2); }
   .btn:active { transform: translateY(1px); }
   .btn[disabled] { opacity: .55; cursor: default; }
+  /* On phones the brand bar is the only sticky element, so every pixel of its
+     height is viewport the reader loses while scrolling. Compact it to a single
+     row of controls and drop the decorative tagline where it would wrap. Placed
+     after the base rules so the overrides win. */
+  @media (max-width: 640px) {
+    .mast-in { gap: 8px 10px; padding-top: 9px; padding-bottom: 9px; }
+    /* `display: contents` lets the three controls be laid out by the mast's own
+       flex row, so at 320px the bar is two rows (brand, then the controls) rather
+       than three. */
+    .mast-right { display: contents; }
+    .mast-right .btn { padding: 7px 11px; font-size: 13px; min-height: 44px; }
+    .net { padding: 4px 9px; font-size: 11px; gap: 6px; }
+    /* Drop the decorative tagline and the redundant "NEAR testnet ·" prefix (the
+       page is a testnet console throughout) so the read-state pill, Connect
+       wallet and Refresh fit on one row instead of wrapping to two. */
+    .brand .tagline { display: none; }
+    .net .net-net { display: none; }
+  }
 
   /* ---------------- primary navigation ---------------- */
   .nav { background: var(--card); border-bottom: 1px solid var(--line); }
@@ -472,7 +490,7 @@
   .disclose li b { color: #3a2c0a; }
 
   /* ---------------- deployment status ledger ---------------- */
-  .status-table { border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; background: var(--card); }
+  .status-table { border: 1px solid var(--line); border-radius: var(--r2); overflow-x: auto; background: var(--card); }
   .status-table table { width: 100%; border-collapse: collapse; }
   .status-table th, .status-table td { text-align: left; padding: 11px 14px; font-size: 13.5px; vertical-align: top; border-bottom: 1px solid var(--line); }
   .status-table th { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 650; background: var(--card-2); }
@@ -1980,13 +1998,13 @@
     var dot = el("fresh-dot"), text = el("fresh-text");
     var nd = el("dot"), nl = el("netlabel");
     if (state === "live") {
-      dot.className = "dot live"; nd.className = "dot live"; nl.textContent = "NEAR testnet · live";
+      dot.className = "dot live"; nd.className = "dot live"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>live';
       text.innerHTML = "Live — read from the contract at <b>" + esc(detail) + "</b>. Re-checked every 15 seconds.";
     } else if (state === "stale") {
-      dot.className = "dot stale"; nd.className = "dot stale"; nl.textContent = "NEAR testnet · stale";
+      dot.className = "dot stale"; nd.className = "dot stale"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>stale';
       text.innerHTML = "Stale — the latest read failed, so the figures shown are the last good read at <b>" + esc(detail) + "</b>. Do not treat them as current.";
     } else {
-      dot.className = "dot failed"; nd.className = "dot failed"; nl.textContent = "NEAR testnet · unreachable";
+      dot.className = "dot failed"; nd.className = "dot failed"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>unreachable';
       text.textContent = "No data — every RPC endpoint failed. Nothing on this page is being shown as live.";
     }
   }

@@ -44,7 +44,8 @@
     "verify:controlled-v3:plan": "node proof/controlled-v3-deploy.mjs --plan",
     "verify:controlled-v3:sandbox": "node proof/controlled-v3-deploy.mjs --sandbox",
     "verify:controlled-v3:evidence": "node proof/controlled-v3-evidence.mjs",
-    "verify:factory": "node proof/factory-sandbox.mjs"
+    "verify:factory": "node proof/factory-sandbox.mjs",
+    "ui:viewports": "node tests/viewport-audit.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

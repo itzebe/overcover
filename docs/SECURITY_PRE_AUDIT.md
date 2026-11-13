@@ -48,29 +48,45 @@ Because `resolve` is the only payout path and the pool holds real (testnet) capi
 large live policy → `resolve` → drain. The unauthenticated state overwrite also wipes all policies,
 products, providers and accounting, so `verify:proof`'s pool check would then read attacker state.
 
-**Reproduction (deployed bytecode, local sandbox, no network, no funds).**
+**Reproduction (deployed bytecode, local sandbox, no network, no funds).** A fully reproducible
+harness now lives at `proof/sec1-takeover.mjs` (`npm run verify:sec1-takeover`). It reads the **live**
+v1 module from RPC, verifies its sha256 equals the pinned deployed build (`1f30ccf1…`), deploys it to
+a local neard node, builds real value at risk (a provider deposit), and then performs the attack:
 
 ```bash
-# fetch the exact deployed module
-node -e '
-const fs=require("fs");
-fetch("https://test.rpc.fastnear.com",{method:"POST",headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({jsonrpc:"2.0",id:1,method:"query",params:{request_type:"view_code",finality:"final",
-  account_id:"contract.attestor-overcover.testnet"}})}).then(r=>r.json())
-  .then(j=>fs.writeFileSync("/tmp/deployed-v1.wasm",Buffer.from(j.result.code_base64,"base64")));
-'
-# deploy it on a local sandbox and call migrate() from a third-party account
-# (see scripts/ for the sandbox helper; a minimal repro is in this doc's history)
+npm run verify:sec1-takeover        # 17/17 checks: 11 show the takeover, 6 show the fix
 ```
 
-Observed on the sandbox:
+Observed on the sandbox (abridged):
 
 ```
-initial owner: owner.test.near | attestor: Afq1eoN3nsGL9NB149yVRZ3CqMujc6GmgcSn2KMwLnKX
-PASS  contract initialised with owner
-after attacker migrate, owner: attacker.test.near | migrate error: null
-VULNERABLE  attacker became owner via migrate()
+PASS  the v1 module under test is the live deployed build  — 1f30ccf1d4c735ad…
+PASS  a provider deposited real capital into the pool  — capital=20000000000000000000000000
+PASS  control: the provider can withdraw their own capital before the attack  — withdraw ok
+PASS  SEC-1 VULN: an unprivileged third party's migrate() SUCCEEDS on v1  — migrate accepted
+PASS  SEC-1 VULN: the owner is replaced by the attacker  — owner=attacker.test.near
+PASS  SEC-1 VULN: the attacker's key becomes the attestor  — attestor=…
+PASS  SEC-1 VULN: the pool accounting is reset (capital 0, reserved 0)
+PASS  SEC-1 VULN: the provider can no longer withdraw (capital stranded)
+PASS  SEC-1 VULN: the attacker can call the owner-only add_product()  — accepted
+PASS  SEC-1 VULN: the attacker can forge a signed observation with their own key  — accepted
+PASS  FIX: the same third-party migrate() is REFUSED by the hardened v2 module
+PASS  FIX: the attacker does NOT become the owner after the refused migrate()
+PASS  FIX: the contract account's own migrate() (the real v1->v2 upgrade path) is allowed
 ```
+
+**Bounded impact (honest scope).** The takeover replaces authority and destroys the accounting. The
+attacker cannot sweep the contract's NEAR *account balance* directly: `withdraw` requires being a
+provider and is capped at what that provider deposited, and payouts are capped by the internal
+`capital` counter, which only grows with real deposits. The realistic loss is the pool's stranded
+capital and the authority to redirect any payout to an attacker-chosen beneficiary.
+
+**Live state (2026-11-12, read over public RPC).** The legacy contract is **not paused**:
+`get_pool()` returns `paused: false`. Buying is blocked on the legacy address **only in the frontend**
+(the console's buy gate refuses any non-hardened code hash) — the on-chain method remains callable.
+The mission's containment requirement is therefore met at the product boundary, but the contract-level
+control the operator should apply is `set_paused(true)` on the legacy address. That call is owner-only,
+so it requires the legacy owner key this environment does not hold (see §4).
 
 **Fix (v2, PR #9).** Restrict `migrate` to a self-call — the only authority that a
 `#[init(ignore_state)]` method can check safely:
@@ -537,7 +553,6 @@ The 17 cases it covers, and where each is independently defended today:
 | Dependency audit | `npm audit` | 19 low / 0 high / 0 moderate (SEC-5) |
 | v3 lifecycle (local sandbox) | `npm run verify:sandbox` | 28/28 passed |
 | SEC-1 guard on compiled wasm | `npm run verify:upgrade` | 8/8 passed |
-| SEC-1 reproduction (deployed v1) | local sandbox attack | VULNERABLE (pre-fix) |
-| SEC-1 fix (v2 wasm) | local sandbox attack | SAFE (post-fix) |
+| SEC-1 takeover, deployed v1 (positive repro) | `npm run verify:sec1-takeover` | 17/17 — 11 confirm the takeover, 6 confirm the fix |
 | SEC-9 mutation check | temporary mutation harness | 5/5 mutations detected (original + plausible wrong fixes) |
 | Secret scan | `git grep -nIE 'ed25519:[0-9A-Za-z]{40,}\|BEGIN .*PRIVATE KEY'` | clean |

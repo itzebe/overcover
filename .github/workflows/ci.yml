@@ -74,6 +74,15 @@ jobs:
       - name: SEC-1 migrate() authorization proof
         run: npm run verify:migration
 
+      # SEC-1 POSITIVE reproduction: deploys the exact live v1 bytecode to a real
+      # neard node and shows an unprivileged third party actually taking the
+      # contract over (owner + attestor replaced, accounting reset, capital
+      # stranded), then shows the hardened v2 module refusing the same call.
+      - name: SEC-1 unauthenticated migrate() takeover (positive reproduction)
+        env:
+          REQUIRE_SANDBOX: "1"
+        run: npm run verify:sec1-takeover
+
       # Runs the COMPILED contract through a real neard node (not the in-process
       # test VM): the full decentralized lifecycle plus the refusals. REQUIRE_SANDBOX
       # makes a missing neard a failure rather than a silent skip.

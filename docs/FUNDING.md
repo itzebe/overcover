@@ -58,7 +58,10 @@ LinkedIn, Telegram, Twitter, and a NEAR wallet address for any airdrop.
 > on-chain evidence chain (**13/13** proof checks over 18 real testnet
 > transactions). Added an attested-observation POC that binds an external
 > reading to a pinned WASM build executed in an **Intel TDX** enclave, verified
-> with the official `dcap-qvl` verifier.
+> with the official `dcap-qvl` verifier; a **real** OutLayer-hosted TDX
+> execution was run on testnet and its quote verifies (Intel TCB `UpToDate`),
+> with the canonical task hash recomputed from the record matching the quote's
+> `report_data` exactly.
 
 **Outside-of-work deep-dive** — *[human]*.
 

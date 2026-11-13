@@ -76,21 +76,39 @@ and fetches a real source (Open-Meteo); a real Intel TDX quote verifies with the
 official `dcap-qvl` verifier; operators sign the production `readingMessageV3`;
 approved measurements are read live from `worker.outlayer.testnet` (129 sets).
 
-**Test result — `npm run poc:outlayer:test`: 17 pass / 0 fail.** Attacks that are
-refused, each by a real check:
+**Test result — `npm run poc:outlayer:test`: 34 pass / 0 fail** (17 synthetic + 17
+serialization/real-evidence). Attacks that are refused, each by a real check:
 
 - tampered WASM hash, tampered input hash, tampered output hash → `report_data` binding fails;
+- a wrong caller identity → `report_data` binding fails;
 - a non-TDX quote → rejected;
 - measurements not in the approved set → rejected;
 - a **spliced `report_data`** → fails real Intel verification (the hardware signature cannot be forged);
+- a **replayed quote** → it binds one `task_id`; another `task_id` fails the hash check;
 - stale / expired / future-dated / out-of-bounds reading → refused before signing;
 - altered source payload → evidence hash changes, signature no longer matches;
 - replayed reading for the same operator+metric+city+date → duplicate.
 
-**Honest gap:** the OutLayer-hosted TDX execution itself is **SIMULATED** — it
-needs an OutLayer account/approval this environment does not have. The report
-labels that step SIMULATED; everything downstream and the verification path are
-real. This is stated in the POC README, not hidden.
+**A3 finding (fixed).** The POC's task hash wrote every integer as *unsigned*. The
+canonical OutLayer hash uses **signed i64 LE** for `task_id` and `timestamp`,
+**unsigned u64 LE** for `block_height`, folds hashes in as **lowercase hex
+strings**, and skips absent optional fields. Fixed and locked by vectors from an
+**independent Python implementation** (`poc/outlayer-attested-observation/test/vectors/task-hash.json`).
+
+**A real OutLayer-hosted execution was run.** On testnet (free trial; anonymous
+wallet via `/register`, no credentials, no funds), `connector-probe`/`whoami`
+executed in OutLayer's Intel TDX worker. The canonical task hash recomputed from
+the record equals the quote's `report_data`; the quote's measurements are in the
+**live on-chain approved set** (verified against `worker.outlayer.testnet`); and
+`dcap-qvl` verifies the Intel signature (TCB `UpToDate`). Evidence is committed
+under `fixtures/outlayer-real/` and re-checkable offline via
+`bin/verify-attestation.mjs`.
+
+**Honest scope:** the recorded execution is `connector-probe`, not the Overcover
+adapter. Running the *adapter* on OutLayer needs `outlayer deploy` (a NEAR
+FullAccess signature the operator has not authorised, and a funded wallet). The
+attestation mechanism is now proven against real hardware; the remaining gap is a
+deployment action, not an unverified path. Stated in the POC README, not hidden.
 
 ## 5. Ecosystem funding — research + drafted application
 
@@ -120,7 +138,7 @@ founder's authority and are marked `[human]`. **Nothing was submitted.**
 | `verify:connectivity` | 13/13 checks passed |
 | `verify:factory` | 22/22 checks passed (sandbox) |
 | `axe` | 0 violations at 320/360/390/768/1024/1280/1440 px |
-| `poc:outlayer:test` | 17 passed |
+| `poc:outlayer:test` | 34 passed (17 synthetic + 17 serialization/real-evidence) |
 
 Gated suites need a funded root or a local `neard`, so they were not run in
 this environment. **They ran in CI** (which provisions `neard`) and passed on the
@@ -158,10 +176,15 @@ secret one, and a public key must not look like committed key material.
 ## 7. Remaining risks and limitations
 
 - **Deployment unexecuted.** The hardened module is not on chain; the current
-  code hash is still `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`. Needs the v3 key.
-- **OutLayer execution not run on hardware.** SIMULATED in the POC; the
-  `report_data` serialisation must be confirmed against a live run.
-- **Funding not submitted.** Drafted only.
+  code hash is still `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`. The rebuilt
+  artifact matches the expected `811e0427…` (500342 B) and carries the SEC-9 guard;
+  the live module (`a97034e6…`, 500023 B) does not. Needs the v3 key (operator action).
+- **The Overcover adapter is not deployed on OutLayer.** A real OutLayer-hosted
+  execution (`connector-probe`) was run and its quote verifies, proving the
+  attestation path against real hardware; deploying the adapter itself needs
+  `outlayer deploy` (a NEAR FullAccess signature and a funded wallet).
+- **Funding not submitted.** Drafted only; the cohort year in the draft needs
+  human confirmation.
 - **No independent third-party audit.** This is internal verification; it is not
   an audit and must not be described as one.
 - The legacy v1 contract remains readable but is not a purchase destination;
@@ -169,7 +192,8 @@ secret one, and a public key must not look like committed key material.
 
 ## 8. References
 
-- Commit: `8dee212` on `feat/outlayer-attested-observation-poc`
+- Branch: `feat/outlayer-attested-observation-poc` (PR #41)
 - POC: `poc/outlayer-attested-observation/` (README + `evidence/poc-report.json`)
+- Real evidence: `poc/outlayer-attested-observation/fixtures/outlayer-real/`
 - Funding: `docs/FUNDING.md`
 - Deploy: `driver/redeploy-v3.mjs` (`--plan` sends nothing)

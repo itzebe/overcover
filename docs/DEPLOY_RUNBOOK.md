@@ -121,7 +121,7 @@ edit changes the hash — rebuild from the exact commit you intend to deploy.
 
 | Source commit | What it is | wasm sha256 | size |
 | --- | --- | --- | --- |
-| `3725f04` (main) | the **live** v3 module | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` | 500023 |
+| `3725f04` (an older `main`) | the **live** v3 module | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` | 500023 |
 | `27da91f` | + SEC-6 / SEC-7 | `40aa677e9c646f38cbaf841c53b36b56b377668751aee64289839926e8bb5da8` | 500154 |
 | `d7b2074` (HEAD) | + SEC-9 (release build) | `811e0427ec467582913a47400ecf1b7c272ddea20ff5074f04a4513d896c0a7f` | 500342 |
 

@@ -1,6 +1,6 @@
 # Issues requiring human or external authority
 
-**As of:** 2026-11-12 · **Branch:** `feat/institutional-website` · **Contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
+**As of:** 2026-11-13 · **Branch:** `main` (PR #45 merged as `c209cbf4…`) · **Contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
 
 This is the separate register of work that **cannot** be completed from an agent environment
 because it needs a private key, a human-controlled wallet, or an external service account. Nothing
@@ -66,6 +66,12 @@ against the exact deployed bytecode (`npm run verify:sec1-takeover`, 17/17) and 
 console (labelled *Legacy build*, buying disabled), but the contract-level fix needs an in-place
 upgrade.
 
+**Current live state (read over public RPC, 2026-11-13).** The legacy module exports an owner-only
+`set_paused`, but there is no `get_paused`; the flag is read via `get_pool`, which returns
+**`paused: false`** (solvent `true`). The owner is `owner.attestor-overcover.testnet` — a different
+account from the contract account, and neither key is available here. So the contract is **not**
+paused and **not** repaired; nothing here signed anything for the legacy account.
+
 **What is needed.** The `FullAccess` key on `contract.attestor-overcover.testnet`
 (`ed25519:CwZBmKyV…`), which is **not recoverable from the chain** and not in this environment — see
 `docs/AUTHORITY_RECOVERY.md`.
@@ -95,21 +101,12 @@ Console or Bing Webmaster Tools, to which this environment has no account.
 
 ---
 
-## F. Publish this work (GitHub write credential)
+## F. Publish the work (GitHub write credential) — DONE
 
-**Why.** The branch cannot be pushed and the PR cannot be opened from this environment: the stored
-tokens all return **HTTP 401** (`git ls-remote` read-only works anonymously; `POST`/`PUSH` need a
-valid token), and no `ssh` client is present.
-
-**What is needed.** A GitHub token with `contents:write` and `pull_requests:write` for
-`itzebe/overcover`, or a human to push the local branch.
-
-**Smallest human action:**
-
-```bash
-git push -u origin feat/institutional-website
-gh pr create --base main --head feat/institutional-website \
-  --title "Security closure, website coherence, and a corrected readiness register"
-```
-
-The commits are ready on the local branch; nothing else is required.
+**Resolved 2026-11-13.** A GitHub token with `contents:write` + `pull_requests:write` for
+`itzebe/overcover` is available in this environment. The publication branch
+`feat/security-closure-wallet-timeout-and-status` was pushed, its PR #45 passed CI, and it was
+**squash-merged to `main`** as `c209cbf49f24217e122a0dbcdc2c326debc015a6`. Vercel auto-deployed that
+exact commit to production (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, READY). No further action is required
+for publication; the item is retained here only to record that the earlier 401 limitation no longer
+applies.

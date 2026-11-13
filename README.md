@@ -361,6 +361,7 @@ is read-only and runs the same policy engine in the browser.
 | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | How to reproduce every claim, with exact commands |
 | [`docs/DEMO.md`](docs/DEMO.md) | 60-second judging script and the recorded demo |
 | [`docs/JUDGE_DEMO.md`](docs/JUDGE_DEMO.md) | 2–3 minute judge demonstration, checklist and backup plan |
+| [`docs/HUMAN_ACCEPTANCE_TEST.md`](docs/HUMAN_ACCEPTANCE_TEST.md) | The one open acceptance step: a live wallet purchase on v3, with exact steps and read-only RPC checks |
 | [`docs/AGENT_INTEGRATION.md`](docs/AGENT_INTEGRATION.md) | How an agent discovers cover, the spending policy, the HTTP API |
 | [`docs/BUSINESS.md`](docs/BUSINESS.md) | Market, model and economics grounded in the real contract rules |
 | [`docs/PITCH.md`](docs/PITCH.md) | Ten-second explanation, investor thesis, target market and an honest proven/not-proven line |

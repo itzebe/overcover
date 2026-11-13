@@ -52,8 +52,11 @@ purchase.
 **What is needed.** A human with a funded NEAR **testnet** wallet (HERE or Meteor) and a browser.
 
 **Smallest human action.** Open https://overcover.vercel.app/ on the hardened build, connect the
-wallet, choose a product, buy cover, and confirm the transaction in the extension. `docs/JUDGE_DEMO.md`
-§3 gives the exact steps. The wallet signs exactly one `buy_cover`; the console holds no key.
+wallet, choose a product, buy cover, and confirm the transaction in the extension. **The complete,
+copy-pasteable procedure — with the exact product, the expected premium, the success/rejection/timeout
+outcomes and the four read-only RPC checks — is `docs/HUMAN_ACCEPTANCE_TEST.md`.** `docs/JUDGE_DEMO.md`
+§3 is the shorter demo-script version. The wallet signs exactly one `buy_cover`; the console holds no
+key.
 
 **Read-only verification:** the policy appears under "Policies written" and its buyer is the wallet's
 account; the transaction resolves on https://testnet.nearblocks.io.

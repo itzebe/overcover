@@ -1218,19 +1218,24 @@
             <td>The full lifecycle runs on-chain against the contract this page reads. Every figure on this page is a direct contract read.</td>
           </tr>
           <tr>
-            <td>Hardened v3 module (SEC-1 <code>migrate()</code> guard, SEC-6/7/9 settlement fixes)</td>
+            <td>SEC-1 legacy <code>migrate()</code> guard (a third party cannot seize the contract)</td>
+            <td><span class="st live">Live · testnet</span></td>
+            <td>Deployed to <code>contract.ovc-v3-ctl-2f6c4c.testnet</code> (code hash <code>CQR8x1kW…</code>, wasm sha256 <code>a97034e6…</code>), proven 40/40 by <code>npm run verify:controlled-v3</code>. Closing it on the <em>legacy</em> v1 address still needs that account's owner key (see below).</td>
+          </tr>
+          <tr>
+            <td>SEC-6/7/9 settlement fixes (release reserved capital on a terminal, no-pay settlement)</td>
             <td><span class="st prototype">Built, not deployed</span></td>
-            <td>The module builds reproducibly to sha256 <code>811e0427…</code>. The account this page reads still runs the earlier module; the code-only deploy is prepared and reversible but needs the operator signing key.</td>
+            <td>This source builds reproducibly to wasm sha256 <code>811e0427…</code>; the live v3 module (<code>a97034e6…</code>) predates it. The code-only, state-preserving redeploy is prepared and reversible but needs the operator signing key. <code>npm run verify:proof</code> reports <code>SOURCE AHEAD OF DEPLOYMENT</code>.</td>
           </tr>
           <tr>
             <td>Legacy v1 containment (<code>set_paused</code>)</td>
             <td><span class="st blocked">Blocked</span></td>
-            <td>The legacy address is read-only here and buying is refused. Contract-level pausing needs the legacy owner key, which is not available to the deployment automation. See <a href="https://github.com/itzebe/overcover/blob/main/docs/OPERATOR_ACTIONS_REQUIRED.md" rel="noopener">operator actions</a>.</td>
+            <td>The legacy address <code>contract.attestor-overcover.testnet</code> is read-only here and buying is refused. Contract-level pausing needs the legacy owner key, which the deployment automation does not hold. See <a href="https://github.com/itzebe/overcover/blob/main/docs/OPERATOR_ACTIONS_REQUIRED.md" rel="noopener">operator actions</a>.</td>
           </tr>
           <tr>
             <td>Human purchase of cover on the hardened module</td>
-            <td><span class="st blocked">Blocked</span></td>
-            <td>Depends on the hardened module being deployed. The recorded human purchase in the project history was made against the legacy module and is not evidence of a purchase on the hardened one.</td>
+            <td><span class="st live">Available · testnet</span></td>
+            <td>The console signs one <code>buy_cover</code> against the live v3 account with the visitor's own wallet. The human purchase recorded in the project history was made against the <em>legacy</em> module; it is not evidence of a purchase on v3, and a recorded human v3 purchase is still outstanding.</td>
           </tr>
           <tr>
             <td>Hardware-attested external observations (TDX adapter)</td>

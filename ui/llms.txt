@@ -63,14 +63,19 @@ License: MIT
   capital.
 - The live demonstration uses a 60-second challenge window; production would use a
   longer one.
-- **Deployment status.** The hardened v3 module (the SEC-1 `migrate()` guard and the
-  SEC-6/7/9 settlement fixes) is **built and reproducibly verifiable but not yet
-  deployed**; the account in the line above still runs the earlier module. The
-  code-only deploy is prepared and reversible but needs the operator signing key.
+- **Deployment status.** The hardened v3 module is deployed to the account in the
+  line above (code hash `CQR8x1kW…`, wasm sha256 `a97034e6…`): it carries the SEC-1
+  `migrate()` guard, so a third party cannot seize the contract. This repository's
+  source is **ahead** of it: the SEC-6/7/9 settlement fixes build to sha256
+  `811e0427…` but are **not yet deployed**; the code-only, state-preserving redeploy
+  is prepared and reversible but needs the operator signing key.
 - **Legacy containment is pending.** The legacy v1 address is read-only in the
   console and buying there is refused, but contract-level pausing needs the legacy
   owner key, which the deployment automation does not hold. This is a documented
   external-authority blocker, not a code gap.
+- **A human purchase on v3 is still outstanding.** The human purchase recorded in
+  the project history was made against the legacy module and is not evidence of a
+  purchase on the hardened v3 account.
 - **The hardware-attested observation adapter is a tested prototype, not deployed.**
   It is optional provenance and never replaces operator signatures, quorum or
   disputes.

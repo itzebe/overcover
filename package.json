@@ -28,6 +28,7 @@
     "test:sim": "node --test tests/model.test.mjs tests/v3-message.test.mjs",
     "ui:qa": "node tests/ui.browser.mjs",
     "upgrade": "node driver/upgrade.js",
+    "redeploy:v3": "node driver/redeploy-v3.mjs",
     "verify:agent": "node proof/agent-policy.mjs",
     "verify:connectivity": "node proof/connectivity.mjs",
     "verify:live": "node proof/live-check.mjs",

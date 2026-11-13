@@ -214,11 +214,176 @@ ranges and then remove the overrides.
 
 ---
 
+### SEC-6 — HIGH — a nullified or expired observation permanently locked reserved capital
+
+**Where:** `contract/src/lib.rs`, `resolve` / `observation_settlement` (present in the deployed v3
+module).
+
+**What.** A policy reserves its payout at purchase. If the observation for its `(metric, city, date)`
+key was **nullified** by a resolver quorum, or **expired**, no replacement reading can ever be
+finalised for that key, so the policy can never pay. But `resolve` refused on *any* non-payable
+observation — including these terminal ones — and no other path released the reservation. The
+reservation stayed locked forever, and because `withdraw` fails while `capital − amount < reserved`,
+the provider capital backing that policy could **never** be withdrawn.
+
+**Impact.** Permanent, permissionless denial of provider capital. The attacker pays only the premium
+of one policy; the pool's whole payout for that policy is stranded, and `withdraw` for the affected
+providers keeps failing indefinitely. It compounds: every stranded policy reduces the withdrawable
+fraction of the pool.
+
+**Reproduction (contract test, pre-fix).** `sec6_nullified_observation_releases_the_reservation` and
+`sec6_expired_observation_releases_the_reservation` in `contract/src/tests.rs`: before the fix
+`resolve` panicked and `reserved` stayed at the payout. End-to-end on the compiled wasm,
+`tests/sandbox-lifecycle.mjs` (the SEC-6 block) nullifies a real reading on a real `neard` node and
+asserts the reservation is released and `withdraw` no longer fails.
+
+**Root cause.** `observation_settlement` returned one undifferentiated "cannot settle" for two very
+different situations — a *transient* block (missing reading, live challenge window, unresolved
+dispute) where the reservation must be held, and a *terminal* invalidity (nullified/expired) where it
+must be released.
+
+**Fix.** Introduce a `Settlement` enum (`Ok` / `Blocked` / `Invalid`). `resolve` holds the
+reservation on `Blocked` and releases it on every terminal outcome (`Invalid` → no-pay settlement).
+The release is unconditional and happens exactly once. The `reason` is emitted in the
+`policy_settled` event so the outcome is observable.
+
+**Status: FIXED in source (this branch); mirrored in the reference model (`sim/engine.mjs`
+`observationValid`, `sim/scenarios.mjs` A14b/A17/A26). Regression tests: 3 Rust tests + the sandbox
+SEC-6 block.** NOTE: the **deployed** v3 module (`code_hash CQR8x1kW…`, sha256 `a97034e6…`) still
+carries the old behaviour; closing it on the live address needs a redeploy (operator key).
+
+---
+
+### SEC-7 — HIGH — a policy whose reading is NEVER reported permanently locked reserved capital
+
+**Where:** `contract/src/lib.rs`, `observation_settlement` (missing-observation branch).
+
+**What.** A reading for date `D` may only be submitted while `D ≤ reported_at ≤ now` and
+`reported_at − D ≤ 24 h` (`REPORT_MAX_DELAY_SEC`), and it must be unexpired at submission. If **no**
+observation is finalised for a policy's key by the last instant a reading can still be accepted, the
+key is terminally empty: no reading can ever arrive, so the policy can never pay. `observation_settlement`
+nonetheless returned the *transient* "no observation" block forever, so `resolve` refused forever and
+the reservation was locked permanently. This is the same capital-lock class as SEC-6, reached through a
+**missing** reading rather than an invalid one.
+
+**Impact.** A permissionless denial of provider capital that an attacker can trigger with a
+**permissionless** product (`propose_product`) for a city no operator covers: the attacker stakes the
+proposal cost and buys a policy, and the whole payout of provider capital is stranded forever. No
+operator misbehaviour is required — an ordinary outage (no reading published) is enough.
+
+**Reproduction.** `sec7_a_reading_that_never_arrives_releases_the_reservation` (`contract/src/tests.rs`):
+pre-fix `resolve` panicked `cannot settle: no observation` and `reserved` stayed at the payout.
+`sec7_a_reading_still_possible_keeps_the_reservation` proves the guard is not over-eager.
+
+**Root cause.** `observation_settlement` returned one undifferentiated "no observation" for two very
+different situations — a *transient* block (a reading may still arrive) where the reservation must be
+held, and a *terminal* emptiness where it must be released.
+
+**Fix.** In the missing-observation branch, classify by time. The terminal instant is **not**
+`D + 24 h`: because `reported_at` is an operator-declared, signed field that may be **backdated**, a
+valid reading can legitimately be submitted up to `D + REPORT_MAX_DELAY_SEC + READING_MAX_VALIDITY_SEC`
+wall-clock (a report backdated to `D + 24 h` whose expiry sits at the validity horizon). Settling
+no-pay before that would deny a real payout. So: before that last instant it is `Blocked` (hold); after
+it, `Invalid` (release). Mirrored in `sim/engine.mjs` and `sim/scenarios.mjs` (A30 / A30b / A30b2 / A30c).
+
+> **A flaw caught during this mission.** The first version of this fix used the bound `D + 24 h`, which
+> is wrong: `sec7_a_backdated_reading_can_arrive_after_the_report_delay` (Rust) shows a breach reading
+> backdated to `D + 24 h` and submitted at `D + 24 h + 6 h` still finalises, so a `D + 24 h` release
+> would have settled it no-pay and denied the payout. The bound was corrected to
+> `D + REPORT_MAX_DELAY_SEC + READING_MAX_VALIDITY_SEC`. This is recorded deliberately: it is exactly
+> the kind of premature-settlement bug a naive "missing reading" fix introduces.
+
+**Status: FIXED in source (this branch). Regression tests: 4 Rust tests + model scenarios A30–A30c.**
+The deployed v3 module also carries the old behaviour (same redeploy caveat as SEC-6).
+
+---
+
+### SEC-8 — LOW/MEDIUM — production response headers were incomplete (no clickjacking or CSP control)
+
+**Where:** `vercel.json` (the only place headers are set for the static site).
+
+**What.** The production site returned `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and HSTS
+(added by Vercel), but **no** `X-Frame-Options` / `frame-ancestors` and **no** `Content-Security-Policy`.
+The console is a single static page that holds no key and signs nothing except, at the user's explicit
+click, one `buy_cover` through the injected NEAR wallet extension. With no framing control the page can
+be embedded in an attacker's iframe and overlapped (clickjacking); a wallet-approval surface is a
+sensible target for a UI-redress attack.
+
+**Reproduction.** `curl -sD - -o /dev/null https://overcover.vercel.app/ | grep -i 'x-frame\|content-security'`
+returned nothing before the fix.
+
+**Fix.** `vercel.json` now also sets `X-Frame-Options: DENY` and a conservative `Permissions-Policy`
+(`camera=(), microphone=(), geolocation=(), payment=()`). Both are safe for the page: it embeds no
+frames of its own and uses none of those features.
+
+**CSP — assessed, deliberately not added as a strict policy.** A `Content-Security-Policy` was
+evaluated and **not** applied, for a documented reason: the page ships one inline `<script>` (the whole
+console) and the bundled NEAR wallet selector (`ui/vendor/wallet-bundle.js`, 1.6 MB) constructs inline
+styles and reaches a broad set of wallet/RPC origins (`*.fastnear.com`, `*.near.org`, `herewallet.app`,
+`wallet.meteorwallet.app`, …). A policy strict enough to add real XSS defence would need `unsafe-inline`
+for script (defeating the purpose) or a large `connect-src`/`script-src` allowlist that breaks the
+wallet selector. The honest position: CSP is **not** a meaningful control here until the inline console
+script is externalised and the wallet's origin set is enumerated and tested. This is recorded as a
+follow-up rather than papered over with a permissive policy that only looks like a control.
+
+**Status: header gap FIXED (X-Frame-Options + Permissions-Policy).** Strict CSP assessed and deferred
+with the reason above; no permissive CSP was added merely to appear hardened.
+
+---
+
+### SEC-9 — HIGH — an unbounded observation date permanently locked reserved capital
+
+**Where:** `contract/src/lib.rs` — `buy_cover` (the lead-time check).
+
+**What.** `buy_cover` bounded `obs_date` only from **below** (`obs_date >= now + min_lead_sec`). There
+was **no upper bound**. The reservation taken at purchase is released only in `resolve`, and `resolve`
+requires `now >= obs_date + settle_delay_sec` (with `saturating_add`). So a buyer could reserve the
+payout against an arbitrarily distant `obs_date` — and `obs_date = u64::MAX` makes `now >= obs_date +
+settle_delay` **unreachable forever**. The reserved capital is then locked permanently and providers can
+never withdraw it (`withdraw` fails closed while `capital - amount < reserved`). The attacker pays only
+the premium — as low as **1 bp** on a permissionless product (`PROPOSAL_MIN_PREMIUM_BP`) — to strand the
+whole payout of provider capital.
+
+**Reproduction (Rust unit test, `contract/src/tests.rs`).**
+`sec9_cover_cannot_be_bought_with_an_unbounded_observation_date` buys cover with a century-out date and
+with `u64::MAX`. Before the fix the purchase **succeeded** (a policy was issued and 100 NEAR reserved) —
+the test failed with "an unbounded observation date must be refused". Model parity: `sim/scenarios.mjs`
+A31/A31b/A31c.
+
+**Root cause.** A missing upper bound on a caller-supplied time field that gates a funds-release path.
+The `min_lead_sec` check protects only the *lower* end of the window; nothing protected the upper end.
+
+**Fix.** A protocol maximum lead `MAX_LEAD_SEC = 365 * 24 * 3600` (one year — longer than any legitimate
+parametric product, short enough to keep `obs_date + settle_delay_sec` far from `u64` overflow).
+`buy_cover` now requires `obs_date - now <= MAX_LEAD_SEC` (the subtraction is safe because the lower
+bound already guarantees `obs_date >= now`). Product creation also validates `min_lead_sec <= MAX_LEAD_SEC`
+so no product can be configured with an unusable lead. Mirrored in `sim/engine.mjs`.
+
+**Regression tests.** `sec9_…` (Rust, 2 refused cases + 1 in-bound control) and model A31/A31b/A31c/A31d.
+
+**Independent reproduction (isolated git worktree at `d086dd8`, never the release branch).** Removing
+the guard and adding an attack probe gives a complementary pair: with the guard removed the **probe
+passes** — `buy_cover(obs_date = u64::MAX)` issues policy 1, `reserved` becomes 100 NEAR, the provider's
+withdrawable capital drops to `capital − reserved`, and withdrawing the provider's full 1000 NEAR deposit
+is refused (the provider is left holding 100 NEAR it can never recover) — while the **regression test
+fails** ("an unbounded observation date must be refused"). Restoring the guard reverses both. Boundary
+probes (also in the worktree): `obs_date == now + MAX_LEAD_SEC` is accepted, `+1` is refused; a product
+whose `min_lead_sec == MAX_LEAD_SEC` is accepted, `+1` is refused at creation; a **past** `obs_date` is
+refused by the min-lead check, which runs first, so `obs_date - now` never underflows. No alternate
+path sets `obs_date` (`buy_cover` is the only policy-creation entry point; `propose_product` hardcodes
+`min_lead_sec = 3600`). Mutation-tested: the tests fail against the pre-fix code and against a plausible
+wrong fix that bounds the lead at an absurdly large constant.
+
+**Status: FIXED in source.** The **deployed** v3 module (`code_hash CQR8x1kW…`, sha256 `a97034e6…`)
+still carries the unbounded-lead behaviour; see the deployment-divergence section.
+
+---
+
 ## 3. Controls that held
 
 | Threat | Control | Evidence |
 | --- | --- | --- |
-| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 66-attack model (66 defended); Rust tests; live `check_invariant` true |
+| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 70-attack model (70 defended); Rust tests; live `check_invariant` true |
 | Withdraw capital backing live policies | `withdraw` refuses unless `capital − amount ≥ reserved` | model A5; live `reconcile` true |
 | Buyer re-prices or underpays | Product owns threshold + premium; deposit must equal `quote` | model A4; Rust tests |
 | Forged / replayed / cross-contract observation | ed25519 signature binds city, date, value, time, nonce **and contract id** | Rust tests; live demo |
@@ -229,6 +394,9 @@ ranges and then remove the overrides.
 | UI reaches an owner-only method | page/wallet/agent never name one | `verify:connectivity` check 8 |
 | UI holds a key | page signs nothing; wallet signs one `buy_cover` scoped key | `verify:connectivity` 7, 10, 11 |
 | Secret in tracked files | no ed25519 secret, key file, or private key | `git grep` scan clean; CI check |
+| Terminal observation cannot lock capital | a nullified / expired / never-reported reading settles no-pay and releases the reservation | SEC-6 + SEC-7 Rust tests; model A30; sandbox SEC-6 block |
+| A transient block still holds the reservation | a live challenge or unresolved dispute refuses settlement and keeps the reservation | `sec6_a_transient_block_still_refuses_and_holds_the_reservation`, `sec7_a_reading_still_possible_keeps_the_reservation` |
+| An unbounded observation date cannot lock capital | `buy_cover` caps the lead at `MAX_LEAD_SEC` (1 year) | SEC-9 Rust test; model A31/A31b/A31c |
 
 ---
 
@@ -290,15 +458,16 @@ The 17 cases it covers, and where each is independently defended today:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Reference adversarial model | `npm run test:model` | 66 attacks, 66 defended, 0 exploitable |
-| Contract unit tests | `npm run test:contract` | 76 passed |
+| Reference adversarial model | `npm run test:model` | 73 attacks, 73 defended, 0 exploitable |
+| Contract unit tests | `npm run test:contract` | 83 passed |
 | Console + wallet journey | `npm run test:console` | 108 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 53 passed |
 | Product feed + agent eval | `npm run test:agent-eval` | 33 passed |
 | Deploy fail-closed regression | `npm run test:deploy` | 21 passed |
 | Dependency audit | `npm audit` | 19 low / 0 high / 0 moderate (SEC-5) |
-| v2 lifecycle (local sandbox) | `npm run verify:sandbox` | 21/21 passed |
+| v3 lifecycle (local sandbox) | `npm run verify:sandbox` | 28/28 passed |
 | SEC-1 guard on compiled wasm | `npm run verify:upgrade` | 8/8 passed |
 | SEC-1 reproduction (deployed v1) | local sandbox attack | VULNERABLE (pre-fix) |
 | SEC-1 fix (v2 wasm) | local sandbox attack | SAFE (post-fix) |
+| SEC-9 mutation check | temporary mutation harness | 5/5 mutations detected (original + plausible wrong fixes) |
 | Secret scan | `git grep -nIE 'ed25519:[0-9A-Za-z]{40,}\|BEGIN .*PRIVATE KEY'` | clean |

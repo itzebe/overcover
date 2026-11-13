@@ -107,8 +107,43 @@
       "name": "a paused contract refuses purchases",
       "ok": true,
       "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "SEC-6 a resolver quorum nullifies the reading",
+      "ok": true,
+      "detail": "nullified=true"
+    },
+    {
+      "name": "SEC-6 the nullified policy's payout is still reserved",
+      "ok": true,
+      "detail": "reserved=1000000000000000000000000"
+    },
+    {
+      "name": "SEC-6 resolve on a nullified reading returns false (no payout)",
+      "ok": true,
+      "detail": "resolve=false"
+    },
+    {
+      "name": "SEC-6 the dead policy settles no-pay",
+      "ok": true,
+      "detail": "status=settled_no_pay paid=0"
+    },
+    {
+      "name": "SEC-6 the reservation is RELEASED, not locked",
+      "ok": true,
+      "detail": "reserved 1000000000000000000000000 -> 0"
+    },
+    {
+      "name": "SEC-6 the pool still reconciles and is solvent",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "SEC-6 a locked reservation would have blocked withdraw (now it does not)",
+      "ok": true,
+      "detail": "no error"
     }
   ],
-  "passed": 21,
-  "total": 21
+  "passed": 28,
+  "total": 28
 }

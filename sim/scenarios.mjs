@@ -7,7 +7,7 @@
 // `check`/`expectThrow`/`log` are injected so the same scenarios can be run
 // by the CLI harness (sim/run.mjs) and by the test runner (node --test).
 
-import { Decentralized, ContractError, ONE_NEAR, keyPairFromSeed, sign } from "./engine.mjs";
+import { Decentralized, ContractError, ONE_NEAR, keyPairFromSeed, sign, MAX_LEAD_SEC } from "./engine.mjs";
 import { evaluate, normalizeLimits } from "../agent/limits.mjs";
 
 const N = (x) => BigInt(x) * ONE_NEAR;
@@ -357,9 +357,14 @@ console.log("\n== Adversarial matrix ==");
   m.advanceTo(day3 + 7200);
   expectThrow("A14b", "adversarial", "a disputed reading cannot settle", () => m.resolve(pol));
 
-  // Resolvers nullify the false reading; the policy then fails closed.
+  // Resolvers nullify the false reading; the policy then fails closed (no pay)
+  // and, because a nullified reading can never be replaced, the reservation is
+  // RELEASED so the capital is not locked forever.
   for (const r of RESOLVERS.slice(0, 3)) m.resolverVote({ resolver: r, metricId: "rain", city: "lagos", obsDate: day3, uphold: false });
-  expectThrow("A14c", "adversarial", "nullified reading cannot settle", () => m.resolve(pol));
+  const nullifiedRes = m.resolve(pol);
+  check("A14c", "adversarial", "a nullified reading settles no-pay and releases the reservation", "false/0",
+    `${nullifiedRes.triggered}/${m.getPolicy(pol).status}/${m.reserved}`,
+    nullifiedRes.triggered === false && m.getPolicy(pol).status === "settled_no_pay" && m.reserved === 0n);
 
   // A15: a challenge after the challenge window is rejected.
   const day4 = 4 * DAY;
@@ -407,7 +412,10 @@ console.log("\n== Adversarial matrix ==");
   m.advanceTo(day3 + 120 + 3601);
   m.timeoutDispute({ metricId: "rain", city: "lagos", obsDate: day3 });
   check("A17b", "adversarial", "timeout releases the held bond", "0", m.heldBonds.toString(), m.heldBonds === 0n);
-  expectThrow("A17c", "adversarial", "a voided reading cannot settle", () => m.resolve(pol));
+  const voidedRes = m.resolve(pol);
+  check("A17c", "adversarial", "a voided reading settles no-pay and releases the reservation", "false/0",
+    `${voidedRes.triggered}/${m.getPolicy(pol).status}/${m.reserved}`,
+    voidedRes.triggered === false && m.getPolicy(pol).status === "settled_no_pay" && m.reserved === 0n);
 }
 
 // A18: duplicate policy purchase request -> no duplicate policy.
@@ -534,7 +542,10 @@ console.log("\n== Adversarial matrix ==");
   check("A26", "adversarial", "a signed reading with an expiry is accepted", "quorum>=1",
     `${m.getObservation("rain", "lagos", day3)?.quorum}`, (m.getObservation("rain", "lagos", day3)?.quorum ?? 0) >= 1);
   m.advanceTo(day3 + 7200); // well past the expiry
-  expectThrow("A26b", "adversarial", "an expired reading cannot settle", () => m.resolve(pol));
+  const expiredRes = m.resolve(pol);
+  check("A26b", "adversarial", "an expired reading settles no-pay and releases the reservation", "false/0",
+    `${expiredRes.triggered}/${m.getPolicy(pol).status}/${m.reserved}`,
+    expiredRes.triggered === false && m.getPolicy(pol).status === "settled_no_pay" && m.reserved === 0n);
 }
 
 // A27: the owner cannot be a resolver, and an owner account cannot vote.
@@ -579,5 +590,60 @@ console.log("\n== Adversarial matrix ==");
   m.advanceTo(day3 + 7200);
   expectThrow("A29", "adversarial", "one vote cannot decide a dispute opened with a 3-vote threshold", () => m.resolve(pol));
 }
+
+// A30: a reading that is NEVER reported must not lock the reservation (SEC-7).
+// A reading for date D may be submitted with a BACKDATED reported_at, so the last
+// instant it can still be accepted is D + REPORT_MAX_DELAY_SEC +
+// READING_MAX_VALIDITY_SEC. Past that the key is terminally empty, so the policy
+// can never pay and the reservation must be released — not locked forever.
+{
+  const { m } = newBoard();
+  m.deposit("lp.testnet", N(1000));
+  m.addMetricProduct("rain", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: DAY, maxTotalCoverage: N(5000) });
+  const day3 = 3 * DAY;
+  const pol = m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: day3 });
+  check("A30", "adversarial", "the payout is reserved while the reading is outstanding", N(10).toString(),
+    m.reserved.toString(), m.reserved === N(10));
+  // Before the report bound a reading may still arrive: settlement must refuse.
+  m.advanceTo(day3 + 86400 - 60);
+  expectThrow("A30b", "adversarial", "a reading that may still arrive keeps the reservation", () => m.resolve(pol));
+  // Even after D + 24h a backdated reading may still arrive: still hold.
+  m.advanceTo(day3 + 86400 + 86400);
+  expectThrow("A30b2", "adversarial", "a backdated reading may still arrive after D + 24h", () => m.resolve(pol));
+  // Past the last instant any reading could be accepted: settle no-pay and release.
+  m.advanceTo(day3 + 86400 + 7 * 86400 + 60);
+  const dead = m.resolve(pol);
+  check("A30c", "adversarial", "a reading that never arrived settles no-pay and releases the reservation", "false/0",
+    `${dead.triggered}/${m.getPolicy(pol).status}/${m.reserved}`,
+    dead.triggered === false && m.getPolicy(pol).status === "settled_no_pay" && m.reserved === 0n);
+}
+
+// A31: an unbounded observation date must not lock the payout (SEC-9).
+// `buy_cover` bounds `obs_date` only from below. Because the reservation is
+// released only in `resolve` (which needs `now >= obs_date + settle_delay_sec`),
+// a buyer could reserve against an arbitrarily distant date — and `u64::MAX`
+// would lock provider capital forever. The contract now caps the lead.
+{
+  const { m } = newBoard();
+  m.deposit("lp.testnet", N(1000));
+  m.addMetricProduct("rain", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: DAY, maxTotalCoverage: N(5000) });
+  const day3 = 3 * DAY;
+  // A century out is refused; it would strand the payout for that whole interval.
+  expectThrow("A31", "adversarial", "cover with a far-future observation date is refused", () =>
+    m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: 100 * 365 * DAY }));
+  // `u64::MAX` is refused; it would lock the reservation forever.
+  expectThrow("A31b", "adversarial", "cover with a u64::MAX observation date is refused", () =>
+    m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: (1n << 64n) - 1n }));
+  // An in-bound lead is unaffected.
+  const okPol = m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: day3 });
+  check("A31c", "adversarial", "cover within the max lead still reserves normally", N(10).toString(),
+    m.reserved.toString(), m.reserved === N(10) && m.getPolicy(okPol).status === "active");
+  // A product cannot be created with a lead above the cap (mirrors the
+  // contract's add_product `min_lead_sec <= MAX_LEAD_SEC` check): otherwise a
+  // product would be unusable, since every purchase would fail the lead cap.
+  expectThrow("A31d", "adversarial", "a product whose min lead exceeds the cap is refused", () =>
+    m.addMetricProduct("bad-lead", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: Number(MAX_LEAD_SEC) + 1, maxTotalCoverage: N(5000) }));
+}
+
 
 }

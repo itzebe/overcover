@@ -155,3 +155,27 @@ tracked file matches `ed25519:[0-9A-Za-z]{40,}` or `BEGIN … PRIVATE KEY`
 (`.github/workflows/ci.yml`). The only `ed25519:` strings in the tree are documentation placeholders
 (`ed25519:...`) and that CI pattern. Generated testnet keys are written only to the gitignored
 `keys/` directory with mode `0600` and are never printed.
+
+---
+
+## 8. Deploying the SEC-6 / SEC-7 / SEC-9 fix to the live v3 module (operator action)
+
+**Open item, needs operator authority — not performed in this mission.** The hardening branch
+`feat/overcover-security-hardening-discoverability` fixes three capital-lock findings (SEC-6, SEC-7,
+SEC-9 — see `docs/SECURITY_PRE_AUDIT.md`), but the **live v3 module still runs the pre-fix code**:
+
+| | Live v3 `contract.ovc-v3-ctl-2f6c4c.testnet` | Branch source |
+| --- | --- | --- |
+| sha256 | `a97034e6…` (500023 bytes) | `811e0427…` (500342 bytes) |
+| `code_hash` | `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL` | — (not yet deployed) |
+
+Until the module is replaced, the live contract keeps the capital-lock behaviour on the affected
+paths. The fix changes **only contract logic** — `observation_settlement`/`resolve` and the
+`buy_cover` lead check, plus a new `const MAX_LEAD_SEC` — with **no stored-struct change**, so a plain
+`DeployContract` on the existing account preserves the pool, products, policies, providers and
+observations. It must **not** call `migrate` (that is a v1→v2 migrator and fails closed on v3 state).
+
+The exact, authorized, state-preserving steps and the rollback are in `docs/DEPLOY_RUNBOOK.md` §3c.
+This requires the v3 account's FullAccess key, held only by the operator; this environment holds no
+key material, so the redeploy is **not** attempted here. `npm run verify:proof` correctly reports
+`SOURCE AHEAD OF DEPLOYMENT` in the meantime.

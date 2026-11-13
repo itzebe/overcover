@@ -31,6 +31,14 @@ const MAX_RAINFALL_TENTHS: u64 = 5_000; // 500.0 mm
 const MAX_PREMIUM_BP: u32 = 5_000;
 /// An observation must be reported within this window after its date.
 const REPORT_MAX_DELAY_SEC: u64 = 24 * 3600;
+/// Longest lead time a policy may be written with: the observation date may not
+/// be further than this beyond the purchase instant. Without an upper bound the
+/// reservation (released only in `resolve`, which requires
+/// `now >= obs_date + settle_delay_sec`) could be locked for an arbitrarily long
+/// time — and `obs_date = u64::MAX` locks it forever (SEC-9). One year covers
+/// every legitimate parametric product while keeping `obs_date + settle_delay_sec`
+/// far from `u64` overflow.
+const MAX_LEAD_SEC: u64 = 365 * 24 * 3600;
 /// Longest challenge window the owner may configure. The production default is
 /// 24 h; the demo uses 60 s. A window is fixed per policy at purchase, so the
 /// owner can never shorten a challenge that a policy was sold with.
@@ -49,6 +57,14 @@ const MAX_EVIDENCE_BYTES: usize = 128;
 const NS_PER_SEC: u64 = 1_000_000_000;
 /// A dispute is "open" until its `resolved_at` is set to this sentinel.
 const DISPUTE_OPEN: u64 = u64::MAX;
+
+/// Why a policy's observation cannot settle, split by whether the block can
+/// ever clear. `Blocked` is transient (the reservation must be held); `Invalid`
+/// is terminal (the reservation must be released so capital is not locked).
+enum Settlement {
+    Blocked(&'static str),
+    Invalid(&'static str),
+}
 
 // ---------------------------------------------------------------------------
 // Permissionless insurance factory (hackathon feature)
@@ -858,6 +874,7 @@ impl Overcover {
     ) {
         ensure!(self.products.get(&id).is_none(), "product already exists");
         ensure!(premium_bp <= MAX_PREMIUM_BP, "premium_bp too high");
+        ensure!(min_lead_sec <= MAX_LEAD_SEC, "min lead above maximum");
         ensure!(min_payout.0 > 0, "min payout must be > 0");
         ensure!(max_payout.0 >= min_payout.0, "max payout below min");
         ensure!(
@@ -1246,6 +1263,16 @@ impl Overcover {
         ensure!(
             obs_date >= now.saturating_add(p.min_lead_sec),
             "observation date too soon (min lead not met)"
+        );
+        // Upper bound on the lead: the reservation is released only at
+        // settlement (`now >= obs_date + settle_delay_sec`), so an unbounded
+        // `obs_date` would lock provider capital for that whole interval — and a
+        // date past `now + settle_delay` (e.g. `u64::MAX`) would lock it forever
+        // (SEC-9). The subtraction cannot underflow: the check above already
+        // guarantees `obs_date >= now`.
+        ensure!(
+            obs_date - now <= MAX_LEAD_SEC,
+            "observation date too far in the future (max lead exceeded)"
         );
         ensure!(
             p.reserved.checked_add(payout).map_or(false, |r| r <= p.max_total_coverage),
@@ -1775,33 +1802,70 @@ impl Overcover {
         log_event("dispute_resolved", &[("uphold", if uphold { "true" } else { "false" })]);
     }
 
-    /// Validate an observation for settlement. `window` is the challenge window
-    /// frozen on the POLICY at purchase (not the current global config), so an
-    /// owner cannot shorten a challenge after the fact. A reading past its own
-    /// `expiry` is stale and cannot settle.
-    fn observation_valid(
+    /// Classify the observation for a policy at settlement time.
+    ///
+    /// `window` is the challenge window frozen on the POLICY at purchase (not the
+    /// current global config), so an owner cannot shorten a challenge after the
+    /// fact. A reading past its own `expiry` is stale and cannot settle.
+    ///
+    /// The distinction between `Blocked` and `Invalid` is load-bearing for
+    /// solvency:
+    ///   * `Blocked` is TRANSIENT — the observation is missing, still inside its
+    ///     challenge window, or under an unresolved dispute. Settlement must
+    ///     refuse and the reservation must stay held, because the policy can
+    ///     still pay once the reading matures or the dispute is upheld.
+    ///   * `Invalid` is TERMINAL — the reading was nullified by a resolver
+    ///     quorum, or it has expired. No replacement reading can ever be
+    ///     finalised for that `(metric, city, date)` key, so the policy can never
+    ///     pay. The reservation must be released (settled no-pay); otherwise it
+    ///     is locked forever and providers can never withdraw the capital that
+    ///     backs it.
+    fn observation_settlement(
         &self,
         metric_id: &str,
         city: &str,
         obs_date: u64,
         window: u64,
         at: u64,
-    ) -> Result<u64, &'static str> {
-        let o = self
+    ) -> Result<u64, Settlement> {
+        let o = match self
             .observations
             .get(&Self::obs_key(metric_id, city, obs_date))
-            .ok_or("no observation")?;
-        if o.nullified {
-            return Err("observation nullified");
-        }
+        {
+            Some(o) => o,
+            // No reading exists for this key. A reading for date D may be
+            // submitted at wall-clock `now` while `D <= reported_at <= now` and
+            // `reported_at - D <= REPORT_MAX_DELAY_SEC`, and it must be unexpired
+            // at submission (`expiry > now`, `expiry <= reported_at +
+            // READING_MAX_VALIDITY_SEC`). Because `reported_at` may be BACKDATED,
+            // the last wall-clock instant a reading can still be accepted is
+            // `D + REPORT_MAX_DELAY_SEC + READING_MAX_VALIDITY_SEC`. Past that the
+            // key is terminally empty and the policy can never pay: release the
+            // reservation (SEC-7). Before it, refuse and hold — releasing earlier
+            // would deny a payout a still-admissible late reading would have won.
+            None => {
+                let last_possible = obs_date
+                    .saturating_add(REPORT_MAX_DELAY_SEC)
+                    .saturating_add(READING_MAX_VALIDITY_SEC);
+                return Err(if at > last_possible {
+                    Settlement::Invalid("no reading was ever reported")
+                } else {
+                    Settlement::Blocked("no observation")
+                });
+            }
+        };
         if o.disputed {
-            return Err("observation disputed (unresolved)");
+            return Err(Settlement::Blocked("observation disputed (unresolved)"));
+        }
+        // Terminal first: a nullified reading can never be replaced for this key.
+        if o.nullified {
+            return Err(Settlement::Invalid("observation nullified"));
         }
         if at < o.reported_at.saturating_add(window) {
-            return Err("challenge window not elapsed");
+            return Err(Settlement::Blocked("challenge window not elapsed"));
         }
         if o.expiry > 0 && at > o.expiry {
-            return Err("observation expired");
+            return Err(Settlement::Invalid("observation expired"));
         }
         Ok(o.value_tenths)
     }
@@ -1811,7 +1875,10 @@ impl Overcover {
     // ---------------------------------------------------------------------
 
     /// Settle a policy exactly once. Pays iff the validated observation meets
-    /// the product's threshold. Releases the reservation in both outcomes.
+    /// the product's threshold. Releases the reservation in every terminal
+    /// outcome (paid, no-pay, or a terminally-invalid reading) so a dead policy
+    /// can never lock capital. A transient block (missing reading, live
+    /// challenge, unresolved dispute) still refuses and keeps the reservation.
     pub fn resolve(&mut self, policy_id: u64) -> bool {
         let mut pol = self.policies.get(&policy_id).unwrap_or_else(|| fail("no such policy"));
         ensure!(pol.status == "active", "policy not active");
@@ -1820,9 +1887,13 @@ impl Overcover {
             now >= pol.obs_date.saturating_add(self.settle_delay_sec),
             "too early to settle"
         );
-        let value = match self.observation_valid(&pol.metric_id, &pol.city, pol.obs_date, pol.challenge_window_sec, now) {
-            Ok(v) => v,
-            Err(e) => fail(&format!("cannot settle: {}", e)),
+        // A terminally-invalid reading (nullified / expired) settles no-pay and
+        // releases the reservation; a transient block refuses and holds it.
+        let mut invalid_reason = "";
+        let value = match self.observation_settlement(&pol.metric_id, &pol.city, pol.obs_date, pol.challenge_window_sec, now) {
+            Ok(v) => Some(v),
+            Err(Settlement::Invalid(why)) => { invalid_reason = why; None }
+            Err(Settlement::Blocked(e)) => fail(&format!("cannot settle: {}", e)),
         };
 
         // Release the reservation exactly once.
@@ -1831,11 +1902,15 @@ impl Overcover {
         p.reserved = p.reserved.checked_sub(pol.payout).unwrap_or_else(|| fail("product reserved underflow"));
         self.products.insert(&pol.product_id, &p);
 
-        let triggered = match pol.direction {
-            Direction::Above => value >= pol.threshold_tenths,
-            Direction::Below => value <= pol.threshold_tenths,
+        let triggered = match value {
+            None => false, // terminally invalid -> no payout
+            Some(value) => match pol.direction {
+                Direction::Above => value >= pol.threshold_tenths,
+                Direction::Below => value <= pol.threshold_tenths,
+            },
         };
         if triggered {
+            let value = value.unwrap_or(0);
             ensure!(pol.payout <= self.capital, "payout exceeds capital");
             self.capital -= pol.payout;
             self.total_paid = self.total_paid.checked_add(pol.payout).unwrap_or_else(|| fail("overflow"));
@@ -1843,11 +1918,12 @@ impl Overcover {
             pol.paid_amount = pol.payout;
             let _ = Promise::new(pol.beneficiary.clone())
                 .transfer(NearToken::from_yoctonear(pol.payout));
+            pol.observed_value = value;
         } else {
             pol.status = "settled_no_pay".to_string();
             pol.paid_amount = 0;
+            pol.observed_value = value.unwrap_or(0);
         }
-        pol.observed_value = value;
         pol.settled_at = now;
         self.policies.insert(&policy_id, &pol);
         self.check_invariant_or_panic();
@@ -1857,7 +1933,8 @@ impl Overcover {
                 ("id", &policy_id.to_string()),
                 ("triggered", if triggered { "true" } else { "false" }),
                 ("paid", &pol.paid_amount.to_string()),
-                ("value_tenths", &value.to_string()),
+                ("value_tenths", &pol.observed_value.to_string()),
+                ("reason", invalid_reason),
             ],
         );
         triggered

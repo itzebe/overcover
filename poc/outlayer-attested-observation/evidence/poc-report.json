@@ -14,7 +14,7 @@
     {
       "step": "normalize_observation",
       "status": "VERIFIED",
-      "evidence_hash": "e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa"
+      "evidence_hash": "69ba632c7e4e2a29e86d9777303a95cb4c7b4c83863da72fede64d5b3f1d83e8"
     },
     {
       "step": "verify_attestation",
@@ -46,30 +46,30 @@
   },
   "execution": {
     "input_hash": "2f40eccfc3c3c8dc8eac5f74d9bc7b2fa3bd2eaaf8745538925009be0791fd31",
-    "output_hash": "059a6b274905a3185e5b6a41165644144e94661399a998bc765b5f5917ce79a7",
+    "output_hash": "ad57f87f1aad3a62dda15ad4504712a75a64c996fe2ac2f4ed2f48c5838a541d",
     "source": {
       "url": "https://api.open-meteo.com/v1/forecast?latitude=6.45&longitude=3.39&current=temperature_2m",
       "name": "open-meteo",
       "http_status": 200,
       "content_type": "application/json; charset=utf-8",
-      "fetched_at": 1794556618
+      "fetched_at": 1794557217
     }
   },
   "observation": {
     "metric_id": "temperature_c",
     "city": "lagos",
     "obs_date": "2026-11-13",
-    "value_tenths": 283,
-    "reported_at": 1794555900,
-    "expiry": 1794642300,
-    "evidence_hash": "e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+    "value_tenths": 285,
+    "reported_at": 1794556800,
+    "expiry": 1794643200,
+    "evidence_hash": "69ba632c7e4e2a29e86d9777303a95cb4c7b4c83863da72fede64d5b3f1d83e8",
     "provenance": {
       "adapter": "overcover-observation-adapter",
       "adapter_version": "0.1.0",
       "value_pointer": "/current/temperature_2m",
       "value_scale": 10,
-      "source_reported_at": 1794555900,
-      "raw_sha256": "e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+      "source_reported_at": 1794556800,
+      "raw_sha256": "69ba632c7e4e2a29e86d9777303a95cb4c7b4c83863da72fede64d5b3f1d83e8",
       "attestation_binds": "wasm_hash, input_hash, output_hash, worker_identity"
     },
     "source": {
@@ -77,9 +77,9 @@
       "name": "open-meteo",
       "http_status": 200,
       "content_type": "application/json; charset=utf-8",
-      "fetched_at": 1794556618
+      "fetched_at": 1794557217
     },
-    "raw": "{\"latitude\":6.4323373,\"longitude\":3.3948028,\"generationtime_ms\":0.019669532775878906,\"utc_offset_seconds\":0,\"timezone\":\"GMT\",\"timezone_abbreviation\":\"GMT\",\"elevation\":7.0,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\"},\"current\":{\"time\":\"2026-11-13T07:45\",\"interval\":900,\"temperature_2m\":28.3}}"
+    "raw": "{\"latitude\":6.4323373,\"longitude\":3.3948028,\"generationtime_ms\":0.018835067749023438,\"utc_offset_seconds\":0,\"timezone\":\"GMT\",\"timezone_abbreviation\":\"GMT\",\"elevation\":7.0,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\"},\"current\":{\"time\":\"2026-11-13T08:00\",\"interval\":900,\"temperature_2m\":28.5}}"
   },
   "attestation": {
     "ok": true,
@@ -87,8 +87,8 @@
       "report_data_binds_task": true,
       "report_data_tail_zero": true
     },
-    "expected_report_data": "ce0aa994ecc86be5227dc0e3f23e726f07a3049f173f16e3b20ada880e9699b3",
-    "quote_report_data": "ce0aa994ecc86be5227dc0e3f23e726f07a3049f173f16e3b20ada880e9699b30000000000000000000000000000000000000000000000000000000000000000",
+    "expected_report_data": "28c3611b5d5db99d2dedb074006019bb340d6b4a9267d8912bf7cbd419fad3b8",
+    "quote_report_data": "28c3611b5d5db99d2dedb074006019bb340d6b4a9267d8912bf7cbd419fad3b80000000000000000000000000000000000000000000000000000000000000000",
     "measurements": {
       "mrtd": "91eb2b44d141d4ece09f0c75c2c53d247a3c68edd7fafe8a3520c942a604a407de03ae6dc5f87f27428b2538873118b7",
       "rtmr0": "44c0197b39157fdd7a4dcc44767f9d6b0bb3977c7a8e347b8492f827fe9d9e5c48aca29b220b80b6a540cf994b9bc9c0",
@@ -109,20 +109,20 @@
     "signatures": [
       {
         "operator": "op-alpha.testnet",
-        "public_key": "ed25519:A9En3mSd8Br5jgL1KHwyKQ6msLM5bsU67VCSXpJ1W1fK",
-        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d616c7068612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238337c313739343535353930307c313739343634323330307c307c00000020e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+        "public_key_hex": "e38ed2a57c8705c1750c6ff8dcaadf9e1ad5861c5b7007c5c8ff179f6938c3c8",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d616c7068612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238357c313739343535363830307c313739343634333230307c307c0000002069ba632c7e4e2a29e86d9777303a95cb4c7b4c83863da72fede64d5b3f1d83e8",
         "signature_len": 64
       },
       {
         "operator": "op-beta.testnet",
-        "public_key": "ed25519:6sKbz5LCRfY284Lw4G5MDd2GNfzfiYE1nyNB3bQ3ZPXi",
-        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d626574612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238337c313739343535353930307c313739343634323330307c307c00000020e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+        "public_key_hex": "59be2d5cb8ef0831512fb0775ce272990c80d4804dce1db7d7b0eeb088325618",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d626574612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238357c313739343535363830307c313739343634333230307c307c0000002069ba632c7e4e2a29e86d9777303a95cb4c7b4c83863da72fede64d5b3f1d83e8",
         "signature_len": 64
       },
       {
         "operator": "op-gamma.testnet",
-        "public_key": "ed25519:D98qG5kiTFv8qaNkD5w3Gr3mWqiufWYi9k3VUCscoXAp",
-        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d67616d6d612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238337c313739343535353930307c313739343634323330307c307c00000020e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+        "public_key_hex": "1b3265aa1477a3a014635731ff6cef8a1935a426caafcaadcf680cb78e7e07a2",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d67616d6d612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238357c313739343535363830307c313739343634333230307c307c0000002069ba632c7e4e2a29e86d9777303a95cb4c7b4c83863da72fede64d5b3f1d83e8",
         "signature_len": 64
       }
     ],

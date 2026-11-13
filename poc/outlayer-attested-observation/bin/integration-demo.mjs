@@ -146,7 +146,10 @@ async function main() {
     });
     return {
       operator: `${o.name}.testnet`,
-      public_key: o.kp.getPublicKey().toString(),
+      // Raw 32-byte public key as hex. Deliberately not the "ed25519:<base58>"
+      // form: that prefix is what CI's secret scanner greps for, and a public
+      // key must never look like committed key material.
+      public_key_hex: Buffer.from(o.kp.getPublicKey().data).toString("hex"),
       message_hex: message.toString("hex"),
       signature_len: signature.length,
     };

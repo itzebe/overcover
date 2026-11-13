@@ -316,18 +316,31 @@ returned nothing before the fix.
 (`camera=(), microphone=(), geolocation=(), payment=()`). Both are safe for the page: it embeds no
 frames of its own and uses none of those features.
 
-**CSP — assessed, deliberately not added as a strict policy.** A `Content-Security-Policy` was
-evaluated and **not** applied, for a documented reason: the page ships one inline `<script>` (the whole
-console) and the bundled NEAR wallet selector (`ui/vendor/wallet-bundle.js`, 1.6 MB) constructs inline
-styles and reaches a broad set of wallet/RPC origins (`*.fastnear.com`, `*.near.org`, `herewallet.app`,
-`wallet.meteorwallet.app`, …). A policy strict enough to add real XSS defence would need `unsafe-inline`
-for script (defeating the purpose) or a large `connect-src`/`script-src` allowlist that breaks the
-wallet selector. The honest position: CSP is **not** a meaningful control here until the inline console
-script is externalised and the wallet's origin set is enumerated and tested. This is recorded as a
-follow-up rather than papered over with a permissive policy that only looks like a control.
+**CSP — now added, pinned to the inline script.** A `Content-Security-Policy` **is** applied. The page
+ships one inline `<script>` (the whole console) plus two same-origin bundles
+(`vendor/wallet-bundle.js`, `vendor/policy.js`). Rather than allow `unsafe-inline` for script, the
+policy pins the inline script by its exact `sha256` (`script-src 'self' 'sha256-…'`); the browser
+hashes the script and only runs it if the bytes match. This is verified in a real browser, not assumed:
 
-**Status: header gap FIXED (X-Frame-Options + Permissions-Policy).** Strict CSP assessed and deferred
-with the reason above; no permissive CSP was added merely to appear hardened.
+- `tests/ui.browser.mjs` now serves the header from `vercel.json`, so `npm run ui:qa` loads the page
+  **under the deployed policy** and passes across 7 viewports — including the wallet dialog and the
+  full agent round-trip. A policy that blocked the page's own script (or the wallet's inline styles)
+  fails this run.
+- The policy also sets `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`,
+  `form-action 'none'` and `style-src 'self' 'unsafe-inline'` (the wallet selector writes inline styles;
+  allowing inline **styles** is not a script-injection vector).
+- `connect-src` is `'self' https: http://127.0.0.1:* http://localhost:*` — deliberately broad on the
+  https scheme because the wallet selector reaches a wide, evolving set of wallet/RPC origins, plus the
+  local agent service over loopback. The honest gain is the **script**, `object`, `base-uri`,
+  `frame-ancestors` and `form-action` locks; the network egress allowlist is not tight and is not claimed
+  to be. Tightening `connect-src` to a tested allowlist is a recorded follow-up.
+- `tests/console.test.js` recomputes the inline script's hash and asserts the header still contains it,
+  so editing the console without updating the policy fails the suite loudly rather than silently
+  breaking the deployed page.
+
+**Status: header gap FIXED (X-Frame-Options + Permissions-Policy + a hash-pinned CSP).** The earlier
+note that a strict CSP "would need `unsafe-inline` for script" was wrong — hashing removes that need —
+and is superseded by the browser-verified policy above.
 
 ---
 
@@ -379,6 +392,33 @@ still carries the unbounded-lead behaviour; see the deployment-divergence sectio
 
 ---
 
+### SEC-10 — LOW — a code-only hardening deploy would have locked buying in the console
+
+**Where:** `ui/index.html` — the console's approved-build map (`TRUSTED`).
+
+**What.** The console decides whether it may sign a `buy_cover` by reading the deployment's `code_hash`
+and comparing it to a hardcoded approved value. For the hardened address that value was a **single**
+hash (`CQR8x1kW…`). The planned SEC-6/7/9 hardening is a **code-only** redeploy to the same account: the
+account keeps its state but its `code_hash` changes to `9h296MCN…`. After that deploy the console would
+have read the contract fine but shown *"its deployed module does not match the approved build"* and
+**disabled buying** — a self-inflicted availability failure that looks like a trust refusal.
+
+**Reproduction.** Deploy `811e0427…` to `contract.ovc-v3-ctl-2f6c4c.testnet`, open the console: the buy
+button is disabled with the "does not match the approved build" reason, although the module is the
+correct, hardened one. (No funds move; the failure is a refused purchase.)
+
+**Root cause.** A one-value allowlist that must be edited in lockstep with a deploy, with no test tying
+the two together.
+
+**Fix.** The map is now a **list** of approved builds per address and `trustFor` accepts any member.
+Both the live module and the SEC-6/7/9 build are accepted for the hardened address; the superseded hash
+is dropped once the deploy is verified (recorded in `docs/DEPLOY_RUNBOOK.md` §4). `tests/console.test.js`
+asserts the hardened address accepts both builds and that trust is decided against the whole list.
+
+**Status: FIXED.** The deployed contract is unchanged; this is a console/runbook change.
+
+---
+
 ## 3. Controls that held
 
 | Threat | Control | Evidence |
@@ -397,6 +437,7 @@ still carries the unbounded-lead behaviour; see the deployment-divergence sectio
 | Terminal observation cannot lock capital | a nullified / expired / never-reported reading settles no-pay and releases the reservation | SEC-6 + SEC-7 Rust tests; model A30; sandbox SEC-6 block |
 | A transient block still holds the reservation | a live challenge or unresolved dispute refuses settlement and keeps the reservation | `sec6_a_transient_block_still_refuses_and_holds_the_reservation`, `sec7_a_reading_still_possible_keeps_the_reservation` |
 | An unbounded observation date cannot lock capital | `buy_cover` caps the lead at `MAX_LEAD_SEC` (1 year) | SEC-9 Rust test; model A31/A31b/A31c |
+| A hardening redeploy cannot silently disable buying | the approved-build list accepts the live module and the pending SEC-6/7/9 build | SEC-10 console test |
 
 ---
 

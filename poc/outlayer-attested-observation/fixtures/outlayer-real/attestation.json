@@ -1,0 +1,20 @@
+{
+  "id": 82962,
+  "task_id": 89277,
+  "task_type": "execute",
+  "worker_measurement": "d85416a5a567dd0313fd66c309f736ec608d1e0e0c246d069517a616bd3d01d6a6bef8f2f6467d239ce3754de16f99b6",
+  "caller_account_id": "e24c4f45097bca96e8f668f3b41c5b8744347e5bb9353679f781d5605620c911",
+  "call_id": "d79b387e-c986-4551-aea5-f92a24bed0df",
+  "payment_key_owner": "e24c4f45097bca96e8f668f3b41c5b8744347e5bb9353679f781d5605620c911",
+  "payment_key_nonce": 0,
+  "build_target": "wasm32-wasip2",
+  "wasm_hash": "3c2a2e51fa7ab5db33b69d670ab50692431f3a487bb3d8baf6eb1b2ecf4f9c47",
+  "executed_wasm_sha256": "3c2a2e51fa7ab5db33b69d670ab50692431f3a487bb3d8baf6eb1b2ecf4f9c47",
+  "input_hash": "760f9869d6bb0e4aeec9406fd10c1282aab26812817386fef124d72a926c26b8",
+  "output_hash": "3ed7955ac4432ce891c327d38b12df5452b7891fdf839456bc4bd6ab4ff18242",
+  "project_id": "connectors.outlayer.testnet/connector-probe",
+  "attached_usd": "0",
+  "timestamp": 1794560156,
+  "_source": "https://testnet-api.outlayer.ai/attestations/by-call/d79b387e-c986-4551-aea5-f92a24bed0df",
+  "_note": "Real OutLayer-hosted Intel TDX execution (connector-probe/whoami) on testnet. Public data only; contains no secret. tdx_quote stored separately as quote.bin."
+}

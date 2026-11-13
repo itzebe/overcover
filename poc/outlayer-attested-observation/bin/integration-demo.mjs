@@ -23,6 +23,7 @@ import { dirname, join } from "node:path";
 import { KeyPair } from "../../../driver/attestor.js";
 import { normalizeToObservation, preflight, operatorSign } from "../lib/observation.mjs";
 import { verifyAttestation, verifyQuoteIntel, spliceReportData, taskHash } from "../lib/attestation.mjs";
+import { attestationTaskFields } from "../lib/outlayer.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -88,11 +89,47 @@ async function main() {
   report.observation = obs;
   report.steps.push({ step: "normalize_observation", status: STATUS.VERIFIED, evidence_hash: obs.evidence_hash });
 
-  // ---- 4. Attestation: real if provided, else clearly SIMULATED ------------
-  const realQuotePath = process.env.OUTLAYER_ATTESTATION;
+  // ---- 4. Attestation: real OutLayer execution if captured, else SIMULATED --
+  // Priority: (a) a real OutLayer execution captured under fixtures/outlayer-real
+  // (the recorded evidence from a live testnet run), (b) an OUTLAYER_ATTESTATION
+  // quote supplied by the caller, (c) a clearly-labelled SIMULATED splice.
+  const realDir = join(ROOT, "fixtures/outlayer-real");
+  const realAttPath = join(realDir, "attestation.json");
+  const realQuotePath = join(realDir, "quote.bin");
+  const envQuotePath = process.env.OUTLAYER_ATTESTATION;
   let attestation;
-  if (realQuotePath && existsSync(realQuotePath)) {
+
+  if (existsSync(realAttPath) && existsSync(realQuotePath)) {
+    const record = JSON.parse(readFileSync(realAttPath, "utf8"));
     const quote = readFileSync(realQuotePath);
+    const approved = JSON.parse(readFileSync(join(ROOT, "fixtures/approved-measurements.json"), "utf8"));
+    // The recorded execution binds ITS OWN wasm/input/output; verify those exact
+    // fields (the demo's fresh run has different bytes, so it cannot reuse this
+    // quote — that is the point of the binding).
+    attestation = verifyAttestation({
+      quote,
+      expected: attestationTaskFields(record),
+      approvedMeasurements: approved,
+    });
+    const intel = verifyQuoteIntel({ quotePath: realQuotePath });
+    attestation.intel = intel;
+    attestation.real_execution = {
+      call_id: record.call_id,
+      task_id: record.task_id,
+      project_id: record.project_id,
+      wasm_hash: record.wasm_hash,
+      input_hash: record.input_hash,
+      output_hash: record.output_hash,
+      worker_measurement: record.worker_measurement,
+      source: record._source,
+    };
+    // This is a REAL OutLayer-hosted execution, independently verified. It is a
+    // different observation than the fresh local run, so it is reported as its
+    // own VERIFIED evidence, not merged into the local observation.
+    attestation.status = attestation.ok && intel.ok ? STATUS.VERIFIED : STATUS.UNAVAILABLE;
+    report.steps.push({ step: "real_outlayer_execution", status: attestation.status, call_id: record.call_id });
+  } else if (envQuotePath && existsSync(envQuotePath)) {
+    const quote = readFileSync(envQuotePath);
     const expected = {
       task_type: "observation_adapter",
       wasm_hash: wasmHash,
@@ -101,7 +138,7 @@ async function main() {
     };
     const approved = JSON.parse(readFileSync(join(ROOT, "fixtures/approved-measurements.json"), "utf8"));
     attestation = verifyAttestation({ quote, expected, approvedMeasurements: approved });
-    const intel = verifyQuoteIntel({ quotePath: realQuotePath });
+    const intel = verifyQuoteIntel({ quotePath: envQuotePath });
     attestation.intel = intel;
     attestation.status = attestation.ok && intel.ok ? STATUS.VERIFIED : STATUS.UNAVAILABLE;
   } else {
@@ -170,6 +207,9 @@ async function main() {
     operator_quorum: pf.ok ? STATUS.VERIFIED : STATUS.UNAVAILABLE,
     settlement_readiness: pf.ok && signatures.length >= threshold ? STATUS.VERIFIED : STATUS.UNAVAILABLE,
   };
+  if (attestation.real_execution) {
+    report.statuses.outlayer_hosted_execution = attestation.status;
+  }
   writeReport(report);
 }
 

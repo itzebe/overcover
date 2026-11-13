@@ -50,37 +50,66 @@ export function parseTdxQuote(buf) {
   };
 }
 
-/** SHA-256 over the task fields, per WORKER_ATTESTATION.md. */
-export function taskHash(fields) {
-  const order = [
-    "task_type",
-    "task_id",
-    "repo",
-    "commit",
-    "build_target",
-    "wasm_hash",
-    "input_hash",
-    "output_hash",
-    "block_height",
-    "caller_account_id",
-    "project_id",
-    "secrets_ref",
-    "timestamp",
-    "attached_usd",
-  ];
+// Canonical OutLayer Task Hash (V1), per WORKER_ATTESTATION.md and
+// worker/src/tdx_attestation.rs#generate_task_attestation:
+//
+//   SHA-256( task_type
+//          ‖ task_id            (i64, little-endian)
+//          ‖ repo               (optional)
+//          ‖ commit             (optional)
+//          ‖ build_target       (optional)
+//          ‖ wasm_hash          (optional, hex string)
+//          ‖ input_hash         (optional, hex string)
+//          ‖ output_hash        (hex string, always present)
+//          ‖ block_height       (optional, u64, little-endian)
+//          ‖ caller_account_id  (optional)
+//          ‖ project_id         (optional)
+//          ‖ secrets_ref        (optional)
+//          ‖ timestamp          (i64, little-endian)
+//          ‖ attached_usd       (optional) )
+//
+// Hashes are folded in as their lowercase hex STRINGS, not decoded bytes.
+// Absent optional fields are skipped entirely (no padding, no placeholders).
+// `task_id` and `timestamp` are SIGNED 64-bit little-endian; `block_height`
+// is unsigned 64-bit little-endian.
+export const TASK_HASH_FIELDS = [
+  ["task_type", "str"],
+  ["task_id", "i64"],
+  ["repo", "str"],
+  ["commit", "str"],
+  ["build_target", "str"],
+  ["wasm_hash", "str"],
+  ["input_hash", "str"],
+  ["output_hash", "str"],
+  ["block_height", "u64"],
+  ["caller_account_id", "str"],
+  ["project_id", "str"],
+  ["secrets_ref", "str"],
+  ["timestamp", "i64"],
+  ["attached_usd", "str"],
+];
+
+/** The exact byte segments concatenated before hashing (for auditing). */
+export function taskHashParts(fields) {
   const parts = [];
-  for (const k of order) {
+  for (const [k, kind] of TASK_HASH_FIELDS) {
     const v = fields[k];
-    if (v === undefined || v === null) continue; // absent optional fields are skipped
-    if (typeof v === "number") {
+    if (v === undefined || v === null) continue;
+    if (kind === "i64" || kind === "u64") {
       const b = Buffer.alloc(8);
-      b.writeBigUInt64LE(BigInt(v));
+      if (kind === "i64") b.writeBigInt64LE(BigInt(v));
+      else b.writeBigUInt64LE(BigInt(v));
       parts.push(b);
     } else {
       parts.push(Buffer.from(String(v), "utf8"));
     }
   }
-  return createHash("sha256").update(Buffer.concat(parts)).digest();
+  return parts;
+}
+
+/** SHA-256 over the canonical field concatenation, per WORKER_ATTESTATION.md. */
+export function taskHash(fields) {
+  return createHash("sha256").update(Buffer.concat(taskHashParts(fields))).digest();
 }
 
 /**

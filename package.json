@@ -48,7 +48,9 @@
     "ui:viewports": "node tests/viewport-audit.mjs",
     "poc:outlayer:build": "cargo build --manifest-path poc/outlayer-attested-observation/adapter/Cargo.toml --target wasm32-wasip2 --release",
     "poc:outlayer:demo": "node poc/outlayer-attested-observation/bin/integration-demo.mjs",
-    "poc:outlayer:test": "node --test poc/outlayer-attested-observation/test/adversarial.test.mjs"
+    "poc:outlayer:test": "node --test \"poc/outlayer-attested-observation/test/*.test.mjs\"",
+    "poc:outlayer:verify": "node poc/outlayer-attested-observation/bin/verify-attestation.mjs",
+    "poc:outlayer:execute": "node poc/outlayer-attested-observation/bin/execute-on-outlayer.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

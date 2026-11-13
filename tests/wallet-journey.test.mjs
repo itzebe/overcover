@@ -142,11 +142,15 @@ function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash, search = 
   return { el: getEl, sandbox };
 }
 
-/** A wallet stub that records every action it is asked to sign. */
-function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith = null, networkMismatch = false } = {}) {
+/** A wallet stub that records every action it is asked to sign. With
+ *  `defer: true` the signAndSend promise is held open until the test calls
+ *  `resolveSign` / `rejectSign`, which is how a slow or dead wallet (and a late
+ *  answer after the page's own deadline) is simulated. */
+function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith = null, networkMismatch = false, defer = false } = {}) {
   const subs = new Set();
   const state = { connected: false, accountId: null };
   const calls = [];
+  let pendingResolve = null, pendingReject = null;
   const emit = () => { for (const fn of subs) fn({ connected: state.connected, accountId: state.accountId, networkMismatch }); };
   return {
     calls,
@@ -174,9 +178,12 @@ function mockWallet({ accountId = "buyer-demo.testnet", result = null, failWith 
     },
     async signAndSend(payload) {
       calls.push(payload);
+      if (defer) return new Promise((res, rej) => { pendingResolve = res; pendingReject = rej; });
       if (failWith) throw new Error(failWith);
       return result;
     },
+    resolveSign(v) { if (pendingResolve) { const r = pendingResolve; pendingResolve = null; pendingReject = null; r(v); } },
+    rejectSign(e) { if (pendingReject) { const r = pendingReject; pendingResolve = null; pendingReject = null; r(e); } },
   };
 }
 
@@ -533,7 +540,78 @@ test("a wallet that never answers times out with an honest 'outcome unknown', no
   assert.match(page.el("b-result").innerHTML, /outcome unknown/i, "the outcome is reported as unknown");
   assert.doesNotMatch(page.el("b-status").textContent, /confirmed/i, "a timeout is never a confirmed purchase");
   assert.doesNotMatch(page.el("b-result").innerHTML, /Cover in force/, "a timeout never claims cover is in force");
-  assert.equal(page.el("b-buy").disabled, false, "the control is released so the user can retry");
+  // The wallet promise is still outstanding, so the outcome is genuinely
+  // unknown: buying must stay BLOCKED (disabled) until the wallet answers, or a
+  // retry could send a second signed buy_cover for the same intent.
+  assert.equal(page.el("b-buy").disabled, true, "buying stays blocked while the wallet request is unresolved");
+  assert.match(page.el("b-hint").textContent, /has not answered/i, "the block is explained, not silent");
+});
+
+// ---- adversarial: retry across the timeout boundary -------------------------
+// The exact sequence the mission asks for: purchase -> pending wallet -> the
+// page's deadline -> "outcome unknown" -> the user retries -> the ORIGINAL
+// wallet promise then resolves. Two independently signed buy_cover calls for one
+// intent must be impossible.
+test("a retry after a timeout cannot sign a second purchase while the first is unresolved", async () => {
+  const wallet = mockWallet({ defer: true });
+  const page = bootPage({ wallet, signTimeoutMs: 40 });
+  await settle(page);
+  await wallet.connect();
+
+  page.el("b-buy").dispatch("click");
+  await wait(120); // the deadline fires; the wallet is still pending
+  assert.equal(wallet.calls.length, 1, "the first purchase was requested");
+  assert.match(page.el("b-result").innerHTML, /outcome unknown/i);
+  assert.equal(page.el("b-buy").disabled, true, "the buy control is blocked, not released");
+
+  // The user tries again. It must be refused BEFORE any second signing request.
+  page.el("b-buy").dispatch("click");
+  await wait(40);
+  assert.equal(wallet.calls.length, 1, "a retry must not reach the wallet while the first is unresolved");
+  assert.match(page.el("b-status").textContent, /has not answered the previous request|has not answered yet/i);
+
+  // The original promise now resolves with a confirmed transaction. It is
+  // reconciled honestly: cover in force, from the wallet's own hash.
+  wallet.resolveSign(okResult("HASH-LATE-1"));
+  await wait(60);
+  assert.match(page.el("b-status").textContent, /confirmed/i, "a late confirmed answer is recovered, not discarded");
+  assert.match(page.el("b-result").innerHTML, /HASH-LATE-1/, "the recovered hash is the wallet's own");
+  assert.equal(wallet.calls.length, 1, "still exactly one signing request — no duplicate purchase");
+  assert.equal(page.el("b-buy").disabled, false, "buying is unblocked once the wallet has answered");
+});
+
+// ---- adversarial: a late NON-confirming answer ------------------------------
+// If the outstanding promise resolves without a transaction hash, the page must
+// not claim cover; the outcome is a definite "no cover was bought".
+test("a late wallet answer with no hash is reported as no cover, never as success", async () => {
+  const wallet = mockWallet({ defer: true });
+  const page = bootPage({ wallet, signTimeoutMs: 40 });
+  await settle(page);
+  await wallet.connect();
+
+  page.el("b-buy").dispatch("click");
+  await wait(120);
+  wallet.resolveSign({ transaction_outcome: {} }); // answered, but no hash
+  await wait(60);
+  assert.doesNotMatch(page.el("b-result").innerHTML, /Cover in force/);
+  assert.match(page.el("b-status").textContent, /No cover was bought/i);
+  assert.equal(page.el("b-buy").disabled, false, "the block is released once the wallet has answered");
+});
+
+// ---- adversarial: a late wallet REJECTION -----------------------------------
+test("a late wallet rejection is reported as no cover, and unblocks buying", async () => {
+  const wallet = mockWallet({ defer: true });
+  const page = bootPage({ wallet, signTimeoutMs: 40 });
+  await settle(page);
+  await wallet.connect();
+
+  page.el("b-buy").dispatch("click");
+  await wait(120);
+  wallet.rejectSign(new Error("User rejected the request"));
+  await wait(60);
+  assert.match(page.el("b-status").textContent, /Purchase not completed/i);
+  assert.match(page.el("b-result").innerHTML, /No cover was bought/);
+  assert.equal(page.el("b-buy").disabled, false);
 });
 
 // ---- adversarial: reload during a pending settlement ------------------------

@@ -2204,7 +2204,7 @@
 
   // ---------------------------------------------------------------- purchase
 
-  var buyState = { busy: false, result: null };
+  var buyState = { busy: false, result: null, pendingSign: false };
 
   function setBuyStatus(msg, isErr, isOk) {
     var s = el("b-status");
@@ -2219,7 +2219,7 @@
     // build. A legacy, untrusted, or not-yet-verified contract disables the
     // control entirely — the security banner explains why.
     var allowed = trust.state === "hardened" && !walletState.networkMismatch;
-    b.disabled = buyState.busy || !walletState.connected || !quoteState.selected || !allowed;
+    b.disabled = buyState.busy || buyState.pendingSign || !walletState.connected || !quoteState.selected || !allowed;
     b.textContent = buyState.busy ? "Waiting for your wallet…" : "Buy cover";
     // Show the exact address the wallet will sign against, from the same value
     // the transaction uses, so the destination is never implicit.
@@ -2234,7 +2234,8 @@
     // left pressing a dead control with no explanation.
     var h = el("b-hint");
     if (!h) return;
-    if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
+    if (buyState.pendingSign) h.textContent = "Your wallet has not answered yet. Check its window and the explorer before retrying — a second purchase is blocked until it does.";
+    else if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
     else if (walletState.networkMismatch) h.textContent = "This wallet is not on NEAR testnet. Switch it to testnet to buy — Overcover settles on testnet only.";
     else if (!allowed) h.textContent = trust.state === "legacy"
       ? "New purchases are disabled on this legacy address. Read or buy on the hardened build — it is the default."
@@ -2316,24 +2317,67 @@
   var SIGN_TIMEOUT_MS = Number(window.OVERCOVER_SIGN_TIMEOUT_MS) || 120000;
   // Race the wallet against a deadline. The wallet promise is NOT cancelled
   // (the user may still approve after the deadline), so on timeout the outcome
-  // is genuinely UNKNOWN — never a success, never a definite failure.
+  // is genuinely UNKNOWN — never a success, never a definite failure. The
+  // settled promise is returned too, so a LATE wallet answer can be recovered
+  // honestly instead of being silently discarded.
   function withSignDeadline(promise) {
-    return new Promise(function (resolve, reject) {
-      var settled = false;
-      var t = setTimeout(function () {
-        if (settled) return; settled = true;
-        reject({ code: "sign_timeout" });
-      }, SIGN_TIMEOUT_MS);
-      promise.then(function (v) {
-        if (settled) return; settled = true; clearTimeout(t); resolve(v);
-      }, function (e) {
-        if (settled) return; settled = true; clearTimeout(t); reject(e);
-      });
+    var tracked = promise.then(
+      function (v) { return { ok: true, value: v }; },
+      function (e) { return { ok: false, error: e }; }
+    );
+    var deadline = new Promise(function (_, reject) {
+      setTimeout(function () { reject({ code: "sign_timeout" }); }, SIGN_TIMEOUT_MS);
     });
+    var raced = Promise.race([tracked.then(function (r) {
+      if (r.ok) return r.value;
+      throw r.error;
+    }), deadline]);
+    return { raced: raced, settled: tracked };
+  }
+
+  // A wallet that answers AFTER the deadline: the timeout message said the
+  // outcome was unknown, so a late answer must be reconciled honestly — never
+  // left as a permanently ambiguous state, and never shown as a success unless
+  // the wallet's own result carries a transaction hash.
+  function onWalletLateAnswer(r) {
+    if (!buyState.pendingSign) return; // the normal path already handled it
+    buyState.pendingSign = false;
+    if (r.ok) {
+      var out = evaluateWalletOutcome(r.value);
+      if (out.ok) {
+        setBuyStatus("Transaction confirmed (late wallet response).", false, true);
+        showBuyResult(true,
+          "<h4>Cover in force</h4>" +
+          "<p>Your wallet answered after the deadline and the contract confirmed your <code>buy_cover</code> call. The policy appears under “Policies written”.</p>" +
+          '<p class="mono">' + esc(out.hash) + "</p>" +
+          '<p><a href="' + EXPLORER + "/txns/" + encodeURIComponent(out.hash) + '" target="_blank" rel="noopener">View the transaction on NEAR Blocks ↗</a></p>');
+      } else {
+        setBuyStatus("No cover was bought: " + out.reason + ".", true);
+        showBuyResult(false,
+          "<h4>No cover was bought</h4>" +
+          "<p>" + esc(out.reason) + ". Nothing was charged.</p>");
+      }
+    } else {
+      var m = r.error && r.error.message ? r.error.message : String(r.error);
+      setBuyStatus("Purchase not completed: " + m, true);
+      showBuyResult(false,
+        "<h4>No cover was bought</h4>" +
+        "<p>" + esc(m) + "</p>" +
+        "<p>Nothing was charged.</p>");
+    }
+    updateBuyEnabled();
+    tick();
   }
 
   function doBuy() {
     if (buyState.busy) return;
+    // A previous wallet request timed out and has not answered yet. The outcome
+    // is unknown, so a retry could send a SECOND signed buy_cover for the same
+    // intent. Refuse until the wallet actually responds.
+    if (buyState.pendingSign) {
+      setBuyStatus("Your wallet has not answered the previous request yet. Check your wallet and the explorer before retrying — a second purchase is blocked while the outcome is unknown.", true);
+      return;
+    }
     var p = quoteState.selected;
     if (!p) { setBuyStatus("Choose a product to price first.", true); return; }
     if (!WALLET || !walletState.connected) { setBuyStatus("Connect a wallet first.", true); return; }
@@ -2384,10 +2428,13 @@
         trust = now; trust.contract = CONTRACT;
         setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
         var args = buildBuyArgs(p, payoutStr, obs, ben);
-        return withSignDeadline(WALLET.signAndSend({
+        var d = withSignDeadline(WALLET.signAndSend({
           receiverId: CONTRACT,
           actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
         }));
+        // If the wallet answers only after the deadline, reconcile it honestly.
+        d.settled.then(onWalletLateAnswer);
+        return d.raced;
       });
     }).then(function (res) {
       var out = evaluateWalletOutcome(res);
@@ -2405,13 +2452,17 @@
     }).catch(function (e) {
       // A timed-out wallet is an UNKNOWN outcome, not a failure: the user may
       // still approve after the deadline, so no transaction may be claimed and
-      // none may be ruled out. Say so, and point at the explorer to check.
+      // none may be ruled out. Say so, and point at the explorer to check. The
+      // wallet promise is still outstanding, so buying stays BLOCKED until the
+      // wallet actually answers — otherwise a retry could send a second signed
+      // buy_cover while the first is unresolved.
       if (e && e.code === "sign_timeout") {
+        buyState.pendingSign = true;
         setBuyStatus("No answer from your wallet.", true);
         showBuyResult(false,
           "<h4>Transaction outcome unknown</h4>" +
           "<p>Your wallet did not respond within " + Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent — this page cannot tell, and it will not guess.</p>" +
-          "<p>Check <a href=\"" + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + "\" target=\"_blank\" rel=\"noopener\">the contract's transactions on NEAR Blocks ↗</a> before retrying. If you approve the wallet prompt after this message, the cover is still valid and will appear under “Policies written” on the next refresh.</p>");
+          "<p>Check <a href=\"" + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + "\" target=\"_blank\" rel=\"noopener\">the contract's transactions on NEAR Blocks ↗</a> before retrying. Buying is blocked until your wallet answers, so a second purchase cannot be sent while this one is unresolved. If you approve the wallet prompt after this message, the cover is still valid and will appear under “Policies written” on the next refresh.</p>");
         buyState.busy = false;
         updateBuyEnabled();
         tick();

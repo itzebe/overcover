@@ -82,7 +82,7 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 82 Rust unit tests pass; 70-attack reference model `70 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
+| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 88 Rust unit tests pass (including a stateful randomised solvency fuzzer); 74-attack reference model `74 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
 | Product discovery | FIXED AND VERIFIED | `list_products` view; console offers only *sellable* products (named, payable, active) and groups everything else as clearly-labelled fixtures. | Live `list_products` returns 22 products (2 named: `rain-lagos`, `rain-bergen-dry`; 20 demo-generated). `rain-bergen-dry` pins its trigger at the contract's plausible ceiling (500.0 mm), so it can only pay on that single reading — a broken definition shown as a fixture, not offered as cover; `rain-lagos` renders as a coverage card. `tests/console.test.js`; live probe. |
 | Premium calculation | FIXED AND VERIFIED | `quote(product_id, payout) = ceil(payout × premium_bp / 10_000)`, computed in the contract. | `quote` read live (`0.0500 NEAR` for 1 NEAR at 500 bp); console re-reads the contract's quote before buying (`tests/console.test.js`). |
 | Payout calculation | FIXED AND VERIFIED | Payout is the amount reserved at purchase; `resolve` pays iff `value_tenths ≥ threshold_tenths`. | Policy 3 settled `settled_paid` (1 NEAR paid); policy 4 `settled_no_pay` (0). `verify:proof` asserts both. The console's hero and cards state the **≥** direction, derived from `threshold_tenths`. |
@@ -271,6 +271,44 @@ Nothing is staged.
   177.2 s; audio peaks at −2.7 dB (limiter applied). Raw captures and intermediates are git-ignored.
 - Docs updated: `README.md` and `docs/JUDGE_DEMO.md` link the video; `video/README.md` documents how
   to run it and the honesty rules.
+
+---
+
+## Session 2026-11-13 — stateful invariant fuzzing (contract) + release-gate re-run
+
+This session added the stateful property/invariant testing the mission calls for, and re-ran the
+whole release gate. It changed **no** contract logic, product rule or accounting behaviour: the
+addition is test-only (`contract/src/tests.rs`).
+
+### Added — stateful randomised solvency fuzzer
+
+The named invariant `reserved <= capital` was already asserted after every mutation inside the
+contract (`check_invariant_or_panic`) and by `invariant_and_reconciliation_hold_across_a_sequence`.
+This session adds an independent, adversarial **stateful** harness (`run_stateful_fuzz`) that drives
+the public API in a randomised order — deposit, withdraw, buy, report, settle — and after **every**
+step asserts:
+
+- `reserved <= capital` (the mission's named invariant), `get_pool().solvent`,
+- `check_invariant()`, and `reconcile()` (the full accounting identity), and
+- `available == capital - reserved`, and per-product `reserved <= pool reserved`.
+
+It runs five fixed seeds (`stateful_fuzz_seed_1/2/7/1337/deadbeef`) at 400–800 steps each; the PRNG
+is deterministic so a failing sequence is reproducible.
+
+**Falsification (the point of the harness).** The fuzzer was proven to *detect* a broken invariant,
+not merely to pass: with the `available`-capital guard in `buy_cover` removed and its
+`check_invariant_or_panic` disabled, **all five seeds fail** with e.g.
+`step 1: INVARIANT broken — reserved 134…000 > capital 4…000`. The mutation was then reverted and the
+suite re-ran green. So the harness is a real guard, not decoration.
+
+### Release gate re-run (this session)
+
+All green, locally: model 74/74 (0 exploitable) · contract **88** (was 83; +5 fuzz seeds) · console
+116 · agent 53 · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
+· `verify:upgrade-preservation` PRESERVED · `verify:connectivity` 13/13 · `verify:sandbox` 28/28 ·
+`verify:factory` 22/22 · `verify:controlled-v3:sandbox` **39/39** (incl. SEC-1 refused on the compiled
+wasm, owner unchanged after the refused `migrate`). `axe` 0 violations at 7 widths. `test:onchain`
+(live adversarial) still needs the gitignored operator key + a fresh deploy — not run here.
 
 ---
 

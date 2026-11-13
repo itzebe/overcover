@@ -15,7 +15,7 @@ on-chain/local artefact. Statuses: `FIXED` · `NOT FIXED` · `BLOCKED`.
   wallet module (`ui/wallet.js` / `ui/index.html`), and the service boundary.
 - Reproduce the **exact deployed bytecode** on a local `neard` sandbox (neard 2.14, real JSON-RPC,
   real gas, real signatures) and attack it.
-- Run the pure-model adversarial suite (66 attacks) and the Rust unit tests.
+- Run the pure-model adversarial suite (74 attacks) and the Rust unit tests.
 - Enumerate the 17 live adversarial tests and state, for each, why it is or is not runnable here.
 - Static scans: secret scan over tracked files, dependency audit, "no owner-only method reachable
   from the UI" scan.
@@ -451,7 +451,7 @@ for `<`, `>`, `&`, `"`, `'`.
 
 | Threat | Control | Evidence |
 | --- | --- | --- |
-| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change | 70-attack model (70 defended); Rust tests; live `check_invariant` true |
+| Pool promises more than it holds | `reserved ≤ capital` re-checked after every state change, plus a stateful randomised fuzzer | 74-attack model (74 defended); Rust tests + 5-seed stateful fuzzer; live `check_invariant` true |
 | Withdraw capital backing live policies | `withdraw` refuses unless `capital − amount ≥ reserved` | model A5; live `reconcile` true |
 | Buyer re-prices or underpays | Product owns threshold + premium; deposit must equal `quote` | model A4; Rust tests |
 | Forged / replayed / cross-contract observation | ed25519 signature binds city, date, value, time, nonce **and contract id** | Rust tests; live demo |
@@ -527,9 +527,10 @@ The 17 cases it covers, and where each is independently defended today:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Reference adversarial model | `npm run test:model` | 73 attacks, 73 defended, 0 exploitable |
-| Contract unit tests | `npm run test:contract` | 83 passed |
-| Console + wallet journey | `npm run test:console` | 108 passed |
+| Reference adversarial model | `npm run test:model` | 74 attacks, 74 defended, 0 exploitable |
+| Contract unit tests | `npm run test:contract` | 88 passed |
+| Stateful solvency fuzzer | `npm run test:contract` | 5 seeds, 0 invariant breaks; falsified (fails when the guard is removed) |
+| Console + wallet journey | `npm run test:console` | 116 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 53 passed |
 | Product feed + agent eval | `npm run test:agent-eval` | 33 passed |
 | Deploy fail-closed regression | `npm run test:deploy` | 21 passed |

@@ -1041,3 +1041,43 @@ executed. Full evidence: `docs/SECURITY_HARDENING_MISSION.md` §10, plus `proof/
 | On-chain suite (`test:onchain`) | **SKIPPED** | 95 pass / 1 fail; live file needs `keys/identities.json` |
 | Release regression suites | **PASS** | sec1 17/17, upgrade 8/8, upgrade-preservation ok, sandbox 28/28, controlled-v3 39/39, factory 22/22, connectivity 13/13, proof 13/13, live ok, axe 0, ui:qa ok |
 | PR #43 | **DRAFT** | head `f5f60ec9beecdf076a337d9052f9cd601f766412` |
+
+### Authority re-verification and byte-level deployment proof (2026-11-13, second pass)
+
+Wallet authority was re-established from scratch rather than assumed. There is **no NEAR signing
+material anywhere in this environment**: no `~/.near-credentials`, no `keys/`, no `OVC_V3_SECRET_KEY`,
+no `near`/`outlayer` CLI, and no NEAR entry among the registered secrets. Read from NEAR RPC:
+
+| Account | Balance | Access keys | Held by this environment |
+| --- | --- | --- | --- |
+| `contract.ovc-v3-ctl-2f6c4c.testnet` | 6.62 NEAR | one `ed25519:B5iWCqs9…` **FullAccess** | no |
+| `contract.attestor-overcover.testnet` | 18.55 NEAR | one `ed25519:CwZBmKyV…` **FullAccess** | no |
+
+Both contracts have exactly one FullAccess key and this environment holds neither secret, so **no
+authorized on-chain write can be performed here** — a fact, not a limitation of effort.
+
+**Byte-level guard proof.** The deployed and source modules were fetched/built and searched directly
+(not via the wasm data-section string table, which concatenates neighbouring literals):
+
+| Guard string | Deployed `a97034e6…` | Source `811e0427…` |
+| --- | --- | --- |
+| SEC-1 `migrate may only be called by the contract account itself` | PRESENT | PRESENT |
+| expiry / min-lead / `INVARIANT: reserved > capital` | PRESENT | PRESENT |
+| resolver-independence (`an operator that signed the reading may not resolve it`) | PRESENT | PRESENT |
+| `settled_no_pay` (status name only) | PRESENT | PRESENT |
+| **SEC-7 `no reading was ever reported`** | **absent** | PRESENT |
+| **SEC-9 `observation date too far in the future (max lead exceeded)`** | **absent** | PRESENT |
+
+Two guards — the SEC-7 terminal-state message and the SEC-9 unbounded-lead message — are **absent
+from the deployed module and present in the source**. (The `settled_no_pay` status name is present in
+both; that name alone does not prove the SEC-6 reservation-release *logic* is deployed, so the
+authoritative statement remains `verify:proof` → `SOURCE AHEAD OF DEPLOYMENT` and the size gap below.)
+
+The hardened source rebuilds **byte-for-byte** to `811e0427…` (500342 B) from a `cargo clean` build
+with the pinned toolchain (1.99.1); the live module is `a97034e6…` (500023 B, 319 B smaller). This
+independently confirms the "source ahead of deployment" claim at the guard-string level. The
+code-only, state-preserving redeploy remains prepared and fails closed without the operator key.
+
+**Pre-deployment v3 state captured** (unchanged; `paused=false`, pool solvent): capital 1.4250,
+reserved 0.2000, available 1.2250 NEAR; 2 products, 3 policies, 5 operators (quorum 3), 5 resolvers,
+1 observation, 1 metric — the state a redeploy must preserve.

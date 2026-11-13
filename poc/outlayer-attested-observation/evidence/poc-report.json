@@ -1,0 +1,134 @@
+{
+  "schema": "overcover.outlayer-poc.report.v1",
+  "steps": [
+    {
+      "step": "pin_adapter_wasm",
+      "status": "LIVE",
+      "wasm_sha256": "8db646bc0a45a179398060da502d7e54a98c04aef0bfddf5ec7911c91679a9a8"
+    },
+    {
+      "step": "adapter_execution",
+      "status": "LIVE",
+      "source": "https://api.open-meteo.com/v1/forecast?latitude=6.45&longitude=3.39&current=temperature_2m"
+    },
+    {
+      "step": "normalize_observation",
+      "status": "VERIFIED",
+      "evidence_hash": "e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa"
+    },
+    {
+      "step": "verify_attestation",
+      "status": "SIMULATED",
+      "checks": {
+        "report_data_binds_task": true,
+        "report_data_tail_zero": true
+      }
+    },
+    {
+      "step": "operator_quorum",
+      "status": "VERIFIED",
+      "reached": true,
+      "preflight_ok": true,
+      "preflight_reasons": []
+    }
+  ],
+  "statuses": {
+    "adapter_execution": "LIVE",
+    "observation_normalization": "VERIFIED",
+    "attestation": "SIMULATED",
+    "operator_quorum": "VERIFIED",
+    "settlement_readiness": "VERIFIED"
+  },
+  "wasm": {
+    "path": "/workspace/project/overcover/poc/outlayer-attested-observation/adapter/target/wasm32-wasip2/release/overcover-observation-adapter.wasm",
+    "sha256": "8db646bc0a45a179398060da502d7e54a98c04aef0bfddf5ec7911c91679a9a8",
+    "size": 415213
+  },
+  "execution": {
+    "input_hash": "2f40eccfc3c3c8dc8eac5f74d9bc7b2fa3bd2eaaf8745538925009be0791fd31",
+    "output_hash": "059a6b274905a3185e5b6a41165644144e94661399a998bc765b5f5917ce79a7",
+    "source": {
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=6.45&longitude=3.39&current=temperature_2m",
+      "name": "open-meteo",
+      "http_status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "fetched_at": 1794556618
+    }
+  },
+  "observation": {
+    "metric_id": "temperature_c",
+    "city": "lagos",
+    "obs_date": "2026-11-13",
+    "value_tenths": 283,
+    "reported_at": 1794555900,
+    "expiry": 1794642300,
+    "evidence_hash": "e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+    "provenance": {
+      "adapter": "overcover-observation-adapter",
+      "adapter_version": "0.1.0",
+      "value_pointer": "/current/temperature_2m",
+      "value_scale": 10,
+      "source_reported_at": 1794555900,
+      "raw_sha256": "e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+      "attestation_binds": "wasm_hash, input_hash, output_hash, worker_identity"
+    },
+    "source": {
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=6.45&longitude=3.39&current=temperature_2m",
+      "name": "open-meteo",
+      "http_status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "fetched_at": 1794556618
+    },
+    "raw": "{\"latitude\":6.4323373,\"longitude\":3.3948028,\"generationtime_ms\":0.019669532775878906,\"utc_offset_seconds\":0,\"timezone\":\"GMT\",\"timezone_abbreviation\":\"GMT\",\"elevation\":7.0,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\"},\"current\":{\"time\":\"2026-11-13T07:45\",\"interval\":900,\"temperature_2m\":28.3}}"
+  },
+  "attestation": {
+    "ok": true,
+    "checks": {
+      "report_data_binds_task": true,
+      "report_data_tail_zero": true
+    },
+    "expected_report_data": "ce0aa994ecc86be5227dc0e3f23e726f07a3049f173f16e3b20ada880e9699b3",
+    "quote_report_data": "ce0aa994ecc86be5227dc0e3f23e726f07a3049f173f16e3b20ada880e9699b30000000000000000000000000000000000000000000000000000000000000000",
+    "measurements": {
+      "mrtd": "91eb2b44d141d4ece09f0c75c2c53d247a3c68edd7fafe8a3520c942a604a407de03ae6dc5f87f27428b2538873118b7",
+      "rtmr0": "44c0197b39157fdd7a4dcc44767f9d6b0bb3977c7a8e347b8492f827fe9d9e5c48aca29b220b80b6a540cf994b9bc9c0",
+      "rtmr1": "0084452c01668329d4bc06acdf58a7205c26743304509973949e5619bf81a6a7aea8c323c173019b3093d54e579e9378",
+      "rtmr2": "d833feef2cd945148aa38ead2c53e9b7f138190aaaebfc551dccd829fc207aa3ba80b70870d7330733642e01d48c3132",
+      "rtmr3": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "intel": {
+      "ran": false,
+      "ok": false,
+      "output": "no live OutLayer execution provided (OUTLAYER_ATTESTATION unset)"
+    },
+    "status": "SIMULATED"
+  },
+  "quorum": {
+    "threshold": 2,
+    "total": 3,
+    "signatures": [
+      {
+        "operator": "op-alpha.testnet",
+        "public_key": "ed25519:A9En3mSd8Br5jgL1KHwyKQ6msLM5bsU67VCSXpJ1W1fK",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d616c7068612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238337c313739343535353930307c313739343634323330307c307c00000020e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+        "signature_len": 64
+      },
+      {
+        "operator": "op-beta.testnet",
+        "public_key": "ed25519:6sKbz5LCRfY284Lw4G5MDd2GNfzfiYE1nyNB3bQ3ZPXi",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d626574612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238337c313739343535353930307c313739343634323330307c307c00000020e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+        "signature_len": 64
+      },
+      {
+        "operator": "op-gamma.testnet",
+        "public_key": "ed25519:D98qG5kiTFv8qaNkD5w3Gr3mWqiufWYi9k3VUCscoXAp",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d67616d6d612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238337c313739343535353930307c313739343634323330307c307c00000020e33ba17f90fc079673fa8c501043141883aa8d8ae34c0f97457d6e777e17bcaa",
+        "signature_len": 64
+      }
+    ],
+    "preflight": {
+      "ok": true,
+      "reasons": []
+    }
+  }
+}

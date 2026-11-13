@@ -45,7 +45,10 @@
     "verify:controlled-v3:sandbox": "node proof/controlled-v3-deploy.mjs --sandbox",
     "verify:controlled-v3:evidence": "node proof/controlled-v3-evidence.mjs",
     "verify:factory": "node proof/factory-sandbox.mjs",
-    "ui:viewports": "node tests/viewport-audit.mjs"
+    "ui:viewports": "node tests/viewport-audit.mjs",
+    "poc:outlayer:build": "cargo build --manifest-path poc/outlayer-attested-observation/adapter/Cargo.toml --target wasm32-wasip2 --release",
+    "poc:outlayer:demo": "node poc/outlayer-attested-observation/bin/integration-demo.mjs",
+    "poc:outlayer:test": "node --test poc/outlayer-attested-observation/test/adversarial.test.mjs"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^10.1.4",

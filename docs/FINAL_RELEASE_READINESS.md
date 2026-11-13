@@ -305,7 +305,7 @@ suite re-ran green. So the harness is a real guard, not decoration.
 ### Release gate re-run (this session)
 
 All green, locally: model 74/74 (0 exploitable) · contract **88** (was 83; +5 fuzz seeds) · console
-116 · agent 53 · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
+**127** · agent **54** · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
 · `verify:upgrade-preservation` PRESERVED · `verify:connectivity` 13/13 · `verify:sandbox` 28/28 ·
 `verify:factory` 22/22 · `verify:controlled-v3:sandbox` **39/39** (incl. SEC-1 refused on the compiled
 wasm, owner unchanged after the refused `migrate`). `axe` 0 violations at 7 widths. `test:onchain`

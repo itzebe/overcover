@@ -1,6 +1,6 @@
 {
   "contract": "contract.attestor-overcover.testnet",
-  "at": "2026-11-12T16:41:26.579Z",
+  "at": "2026-11-13T00:07:33.305Z",
   "pool": {
     "capital": "14050000000000000000000000",
     "reserved": "10500000000000000000000000",
@@ -29,9 +29,9 @@
       "detail": "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R"
     },
     {
-      "name": "hardened v3 deployed module is exactly this repository's source",
+      "name": "hardened v3 deployed module is a recognised Overcover build",
       "ok": true,
-      "detail": "500023 bytes, a97034e65fb0c53f…"
+      "detail": "500023 bytes, a97034e65fb0c53f… (pinned deployed)"
     },
     {
       "name": "pool is solvent (reserved <= capital)",

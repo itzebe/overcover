@@ -27,6 +27,9 @@ export const READING_MAX_VALIDITY_SEC = 7 * 24 * 3600;
 export const CHALLENGE_WINDOW_MAX_SEC = 7 * 24 * 3600;
 /// Cap on the off-chain evidence reference (mirrors the contract).
 export const MAX_EVIDENCE_BYTES = 128;
+/// Longest delay between a reading's date and its report (mirrors the
+/// contract's REPORT_MAX_DELAY_SEC). Past this, a missing reading is terminal.
+export const REPORT_MAX_DELAY_SEC = BigInt(24 * 3600);
 
 export class ContractError extends Error {}
 
@@ -548,13 +551,28 @@ export class Decentralized {
     this._log("dispute_resolved", { uphold });
   }
 
+  // Classify the observation at settlement time. `Blocked` is transient (the
+  // reservation must be held); `Invalid` is terminal (the reservation must be
+  // released so a dead policy cannot lock capital forever).
   observationValid(metricId, city, obsDate, window, at) {
     const o = this.observations.get(this.obsKey(metricId, city, obsDate));
-    if (!o) return { ok: false, reason: "no observation" };
-    if (o.nullified) return { ok: false, reason: "observation nullified" };
-    if (o.disputed) return { ok: false, reason: "observation disputed (unresolved)" };
-    if (BigInt(at) < o.reportedAt + window) return { ok: false, reason: "challenge window not elapsed" };
-    if (o.expiry > 0n && BigInt(at) > o.expiry) return { ok: false, reason: "observation expired" };
+    if (!o) {
+      // A reading for date D may be submitted at wall-clock `at` while
+      // D <= reportedAt <= at and reportedAt - D <= REPORT_MAX_DELAY_SEC, and it
+      // must be unexpired at submission. Because reportedAt may be BACKDATED, the
+      // last instant a reading can still be accepted is
+      // D + REPORT_MAX_DELAY_SEC + READING_MAX_VALIDITY_SEC. Past that the key is
+      // terminally empty (release); before it, hold — releasing earlier would deny
+      // a payout a still-admissible late reading would have won.
+      const lastPossible = BigInt(obsDate) + REPORT_MAX_DELAY_SEC + BigInt(READING_MAX_VALIDITY_SEC);
+      return BigInt(at) > lastPossible
+        ? { ok: false, kind: "invalid", reason: "no reading was ever reported" }
+        : { ok: false, kind: "blocked", reason: "no observation" };
+    }
+    if (o.disputed) return { ok: false, kind: "blocked", reason: "observation disputed (unresolved)" };
+    if (o.nullified) return { ok: false, kind: "invalid", reason: "observation nullified" };
+    if (BigInt(at) < o.reportedAt + window) return { ok: false, kind: "blocked", reason: "challenge window not elapsed" };
+    if (o.expiry > 0n && BigInt(at) > o.expiry) return { ok: false, kind: "invalid", reason: "observation expired" };
     return { ok: true, value: o.value };
   }
 
@@ -567,9 +585,10 @@ export class Decentralized {
     const t = atTime === null ? this.now : BigInt(atTime);
     if (t < pol.obsDate + this.settleDelaySec) throw new ContractError("too early to settle");
     const obs = this.observationValid(pol.metricId, pol.city, pol.obsDate, pol.challengeWindowSec, t);
-    if (!obs.ok) throw new ContractError(`cannot settle: ${obs.reason}`);
+    if (!obs.ok && obs.kind === "blocked") throw new ContractError(`cannot settle: ${obs.reason}`);
 
-    const triggered = pol.direction === "below" ? obs.value <= pol.threshold : obs.value >= pol.threshold;
+    // A terminal-invalid reading settles no-pay; a valid one follows the trigger.
+    const triggered = obs.ok && (pol.direction === "below" ? obs.value <= pol.threshold : obs.value >= pol.threshold);
     this.reserved -= pol.payout;
     const prod = this.products.get(pol.productId);
     if (prod) prod.reserved -= pol.payout;
@@ -584,9 +603,9 @@ export class Decentralized {
       pol.paidAmount = 0n;
     }
     pol.settledAt = t;
-    pol.observedValue = obs.value;
+    pol.observedValue = obs.ok ? obs.value : 0n;
     this.checkInvariant();
-    this._log("policy_settled", { id: policyId, triggered, paid: pol.paidAmount.toString(), value: obs.value.toString() });
+    this._log("policy_settled", { id: policyId, triggered, paid: pol.paidAmount.toString(), value: pol.observedValue.toString() });
     return { triggered, paid: pol.paidAmount };
   }
 

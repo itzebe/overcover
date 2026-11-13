@@ -1,11 +1,11 @@
 {
   "note": "Public, independently re-derivable evidence for the controlled v3 testnet deployments. No private keys. Regenerate with `node proof/controlled-v3-evidence.mjs`.",
   "mode": "TESTNET",
-  "generatedAt": "2026-11-12T16:04:21.767Z",
+  "generatedAt": "2026-11-13T00:07:17.211Z",
   "wasm": {
     "path": "contract/target/wasm32-unknown-unknown/release/overcover.wasm",
-    "bytes": 500023,
-    "sha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1"
+    "bytes": 500154,
+    "sha256": "40aa677e9c646f38cbaf841c53b36b56b377668751aee64289839926e8bb5da8"
   },
   "contracts": [
     {
@@ -19,9 +19,9 @@
         "sha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1",
         "hasSec1Guard": true
       },
-      "wasmSha256MatchesDeployedCode": true,
-      "balanceYocto": "6616167773817617800000000",
-      "storageUsage": 509029,
+      "wasmSha256MatchesDeployedCode": false,
+      "balanceYocto": "6621167773817617800000000",
+      "storageUsage": 509426,
       "accessKeys": [
         {
           "curve": "ed25519",
@@ -296,7 +296,7 @@
           "max_payout": 3e+23,
           "min_lead_sec": 0,
           "max_total_coverage": 4e+23,
-          "reserved": 0,
+          "reserved": 1e+23,
           "active": true,
           "proposed_by": "owner.ovc-v3-ctl-2f6c4c.testnet",
           "evidence_hash": ""
@@ -319,16 +319,16 @@
         }
       ],
       "pool": {
-        "capital": "1420000000000000000000000",
-        "reserved": "100000000000000000000000",
-        "available": "1320000000000000000000000",
+        "capital": "1425000000000000000000000",
+        "reserved": "200000000000000000000000",
+        "available": "1225000000000000000000000",
         "held_bonds": "0",
-        "premiums_collected": "20000000000000000000000",
+        "premiums_collected": "25000000000000000000000",
         "total_paid": "300000000000000000000000",
         "total_deposited": "1600000000000000000000000",
         "total_withdrawn": "0",
         "bonds_forfeited": "100000000000000000000000",
-        "policy_count": 2,
+        "policy_count": 3,
         "solvent": true,
         "paused": false
       },
@@ -370,9 +370,38 @@
           "paid_amount": 0,
           "observed_value": 0,
           "settled_at": 0
+        },
+        {
+          "id": 3,
+          "buyer": "oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet",
+          "beneficiary": "oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet",
+          "product_id": "heat-lagos",
+          "city": "lagos",
+          "metric_id": "heat",
+          "direction": "Above",
+          "threshold_tenths": 400,
+          "payout": 1e+23,
+          "premium": 5e+21,
+          "obs_date": 1794507078,
+          "challenge_window_sec": 3600,
+          "issued_at": 1794499881,
+          "status": "active",
+          "paid_amount": 0,
+          "observed_value": 0,
+          "settled_at": 0
         }
       ],
       "txns": [
+        {
+          "tx": "45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn",
+          "block": 277385948,
+          "signer": "oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet",
+          "actions": [
+            "FUNCTION_CALL"
+          ],
+          "method": "buy_cover",
+          "success": true
+        },
         {
           "tx": "44yqcchmoazdqN1cGvEojYHAB7k22ZL8y9B3fk1xNd41",
           "block": 277367762,

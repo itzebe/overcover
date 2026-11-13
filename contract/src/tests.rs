@@ -697,11 +697,15 @@ fn g4_resolver_quorum_nullifies_and_refunds_the_bond() {
         ctx(format!("res{}.testnet", i).parse().unwrap(), 0, day3 + 80);
         c.resolver_vote("".to_string(), "berlin".to_string(), day3, false);
     }
-    // The reading is voided: the policy fails closed and does not pay.
+    // The reading is voided: the policy fails closed (no payout) and, because a
+    // nullified reading can never be replaced, the reservation is RELEASED so
+    // the capital is not locked forever.
     let id = 1;
     ctx(owner(), 0, day3 + 7200);
-    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
-    assert!(r.is_err(), "a nullified observation must not settle");
+    assert!(!c.resolve(id), "a nullified observation must never pay");
+    assert_eq!(c.get_policy(id).unwrap().status, "settled_no_pay");
+    assert_eq!(c.get_pool().reserved.0, 0, "the reservation must be released");
+    assert!(c.reconcile());
 }
 
 #[test]
@@ -735,10 +739,14 @@ fn g7_timeout_voids_the_reading_and_refunds_the_challenger() {
     // No resolver quorum. After the dispute window, anyone may time it out.
     ctx("anyone.testnet".parse().unwrap(), 0, day3 + 61 + 3601);
     c.timeout_dispute("".to_string(), "berlin".to_string(), day3);
+    // A timed-out reading is voided: no payout, and the reservation is released
+    // (a voided reading can never be replaced for this key).
     let id = 1;
     ctx(owner(), 0, day3 + 7200);
-    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
-    assert!(r.is_err(), "a timed-out (voided) observation must not settle");
+    assert!(!c.resolve(id), "a timed-out (voided) observation must never pay");
+    assert_eq!(c.get_pool().reserved.0, 0, "the reservation must be released");
+    assert_eq!(c.get_policy(id).unwrap().status, "settled_no_pay");
+    assert!(c.reconcile());
 }
 
 // --------------------------------------------------------------------------
@@ -1108,10 +1116,12 @@ fn k7b_expired_reading_cannot_settle() {
         submit_raw(&mut c, i, "", "berlin", day3, 250, day3 + 60, day3 + 180, b"ev", 0, i);
     }
     assert_eq!(count_observations(&c), 1);
-    // Settle well after the expiry -> refused.
+    // Past the expiry the reading can never settle, so the policy settles no-pay
+    // and the reservation is released rather than locked.
     ctx(owner(), 0, day3 + 7200);
-    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
-    assert!(r.is_err(), "a reading past its expiry must not settle");
+    assert!(!c.resolve(id), "a reading past its expiry must never pay");
+    assert_eq!(c.get_pool().reserved.0, 0, "the reservation must be released");
+    assert_eq!(c.get_policy(id).unwrap().status, "settled_no_pay");
 }
 
 // --- condition 8: conflicting observations are handled safely --------------
@@ -1575,4 +1585,171 @@ fn factory_14_an_owner_created_product_records_no_proposer_evidence() {
     let stored = c.get_product("owner-made".to_string()).unwrap();
     assert_eq!(stored.proposed_by, owner().to_string());
     assert_eq!(stored.evidence_hash, "");
+}
+
+// ==========================================================================
+// SEC-6 — a terminally-invalid observation must not lock reserved capital.
+//
+// A policy reserves its payout at purchase. If the observation for its
+// (metric, city, date) is nullified by a resolver quorum, or expires, no
+// replacement reading can ever be finalised for that key, so the policy can
+// never pay. The reservation must be released (settled no-pay); otherwise it is
+// locked forever and `withdraw` keeps failing, denying providers their capital.
+// ==========================================================================
+
+#[test]
+fn sec6_nullified_observation_releases_the_reservation() {
+    let (mut c, day3) = disputed();
+    assert_eq!(c.get_pool().reserved.0, 100 * ONE, "the payout is reserved while active");
+    // Three resolvers reject the reading -> it is nullified.
+    for i in 1..=3u8 {
+        ctx(format!("res{}.testnet", i).parse().unwrap(), 0, day3 + 80);
+        c.resolver_vote("".to_string(), "berlin".to_string(), day3, false);
+    }
+    // Anyone may finalise the dead policy once the challenge window has elapsed.
+    ctx("anyone.testnet".parse().unwrap(), 0, day3 + 7200);
+    let paid = c.resolve(1);
+    assert!(!paid, "a nullified reading must never pay");
+    assert_eq!(c.get_pool().reserved.0, 0, "the reservation must be released");
+    assert_eq!(c.get_policy(1).unwrap().status, "settled_no_pay");
+    assert!(c.reconcile(), "the pool must reconcile after a no-pay settlement");
+    assert!(c.check_invariant());
+    // Providers can now withdraw their capital.
+    ctx("lp1.testnet".parse().unwrap(), 0, day3 + 7200);
+    let _ = c.withdraw(U128(1000 * ONE));
+}
+
+#[test]
+fn sec6_expired_observation_releases_the_reservation() {
+    let mut c = setup();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
+    let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let day3 = 3 * 24 * 3600;
+    // Every operator signs a reading that expires 2 minutes after reporting.
+    for i in 1..=3u8 {
+        submit_raw(&mut c, i, "", "berlin", day3, 250, day3 + 60, day3 + 180, b"ev", 0, i);
+    }
+    assert_eq!(count_observations(&c), 1);
+    assert_eq!(c.get_pool().reserved.0, 100 * ONE);
+    // Long after the expiry: the reading can never settle, so the reservation is
+    // released rather than locked.
+    ctx("anyone.testnet".parse().unwrap(), 0, day3 + 7200);
+    let paid = c.resolve(id);
+    assert!(!paid, "an expired reading must not pay");
+    assert_eq!(c.get_pool().reserved.0, 0, "the reservation must be released");
+    assert_eq!(c.get_policy(id).unwrap().status, "settled_no_pay");
+    assert!(c.reconcile());
+}
+
+// SEC-7 — a policy whose reading is NEVER reported must not lock capital.
+//
+// A reading for date D can only be submitted while D <= reported_at <= D + 24h.
+// If no observation is finalised by D + 24h (operators never reported, or never
+// reached quorum), the key is terminally empty: no reading can ever arrive, so
+// the policy can never pay. The reservation must be released, exactly as for a
+// nullified/expired reading (SEC-6). A permissionless product for a city no
+// operator covers turns this into a griefing vector: the attacker pays only the
+// premium to strand the whole payout of provider capital forever.
+// ==========================================================================
+
+#[test]
+fn sec7_a_reading_that_never_arrives_releases_the_reservation() {
+    let mut c = setup();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
+    let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let day3 = 3 * 24 * 3600;
+    assert_eq!(c.get_pool().reserved.0, 100 * ONE, "the payout is reserved at purchase");
+
+    // Past the LAST instant a reading could ever be accepted (a backdated report
+    // plus the maximum reading validity).
+    let terminal = day3 + REPORT_MAX_DELAY_SEC + READING_MAX_VALIDITY_SEC;
+    ctx("anyone.testnet".parse().unwrap(), 0, terminal + 60);
+    let paid = c.resolve(id);
+    assert!(!paid, "a reading that never arrived can never pay");
+    assert_eq!(c.get_pool().reserved.0, 0, "the reservation must be released");
+    assert_eq!(c.get_policy(id).unwrap().status, "settled_no_pay");
+    assert!(c.reconcile(), "the pool must reconcile after a no-pay settlement");
+    assert!(c.check_invariant());
+    // Providers can now withdraw their capital.
+    ctx("lp1.testnet".parse().unwrap(), 0, terminal + 60);
+    let _ = c.withdraw(U128(1000 * ONE));
+}
+
+#[test]
+fn sec7_a_reading_still_possible_keeps_the_reservation() {
+    // Before the last instant a reading can arrive, settlement must refuse and
+    // hold the reservation (not release it early) — even well past D + 24h,
+    // because a backdated report is still admissible.
+    let mut c = setup();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
+    let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let day3 = 3 * 24 * 3600;
+    // One second before the terminal instant: still held.
+    let terminal = day3 + REPORT_MAX_DELAY_SEC + READING_MAX_VALIDITY_SEC;
+    ctx("anyone.testnet".parse().unwrap(), 0, terminal);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(id)));
+    assert!(r.is_err(), "a reading may still arrive; settlement must refuse");
+    assert_eq!(c.get_pool().reserved.0, 100 * ONE, "the reservation must be held");
+}
+
+#[test]
+fn sec6_a_transient_block_still_refuses_and_holds_the_reservation() {
+    // A disputed (unresolved) reading must NOT release the reservation: the
+    // dispute can still be upheld and the policy then pays.
+    let (mut c, day3) = disputed();
+    ctx(owner(), 0, day3 + 7200);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.resolve(1)));
+    assert!(r.is_err(), "an unresolved dispute must still refuse settlement");
+    assert_eq!(c.get_pool().reserved.0, 100 * ONE, "the reservation must be held");
+}
+
+// ==========================================================================
+// SEC-7 boundary — a backdated reading can legitimately arrive AFTER D + 24h.
+//
+// `reported_at` is an operator-declared field bounded only by
+// `reported_at <= now` and `reported_at - obs_date <= REPORT_MAX_DELAY_SEC`. So
+// an operator may report at wall-clock `D + 24h + k` with `reported_at` set to
+// `D + 24h`, and a valid reading can be finalised long after `D + 24h`. The
+// terminal bound must therefore be the LAST wall-clock instant a reading could
+// still be accepted: `D + REPORT_MAX_DELAY_SEC + expiry_horizon` — NOT
+// `D + REPORT_MAX_DELAY_SEC`. Settling before that would deny a real payout.
+// ==========================================================================
+
+#[test]
+fn sec7_a_backdated_reading_can_arrive_after_the_report_delay() {
+    let mut c = setup();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
+    let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let day3 = 3 * 24 * 3600;
+    // Operators report the breach at wall-clock day3 + 24h + 6h — six hours AFTER
+    // the naive "D + 24h" bound — backdating `reported_at` to the latest a reading
+    // for this date may claim (day3 + 24h). The reading is still valid because its
+    // expiry is inside the report validity horizon.
+    let reported_at = day3 + REPORT_MAX_DELAY_SEC;
+    let expiry = reported_at + READING_MAX_VALIDITY_SEC;
+    let submit_at = reported_at + 6 * 3600;
+    for i in 1..=3u8 {
+        let operator = op(i);
+        let sig = sign_reading_full(&operator, "", "berlin", day3, 250, reported_at, expiry, b"ev", 0, i);
+        ctx(operator, 0, submit_at);
+        c.submit_reading("".to_string(), "berlin".to_string(), day3, 250, reported_at, expiry, b"ev".to_vec(), 0, sig);
+    }
+    assert_eq!(count_observations(&c), 1, "a reading backdated to D + 24h still finalises after D + 24h");
+    // Settle shortly after (past the 1h challenge window, before expiry): the
+    // breach must pay. A naive D + 24h terminal bound would have released the
+    // reservation before this reading could ever arrive.
+    ctx(owner(), 0, submit_at + 7200);
+    let paid = c.resolve(id);
+    assert!(paid, "a late-but-valid reading must still pay the breach");
+    assert_eq!(c.get_policy(id).unwrap().status, "settled_paid");
+    assert_eq!(c.get_policy(id).unwrap().paid_amount, 100 * ONE);
+    assert!(c.reconcile());
 }

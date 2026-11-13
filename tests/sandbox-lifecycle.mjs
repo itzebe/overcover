@@ -234,6 +234,48 @@ async function main() {
   check("a paused contract refuses purchases", /paused/i.test(pausedBuy || ""), (pausedBuy || "").slice(0, 80));
   await call(owner, "set_paused", { paused: false });
 
+  // --- SEC-6: a terminally-invalid reading must not lock the reservation -----
+  // Buy a second policy on a fresh date, finalise a reading, then have the
+  // resolver quorum NULLIFY it. The policy can then never pay, so `resolve` must
+  // settle it no-pay and RELEASE the reservation instead of leaving it locked
+  // forever (which would strand providers' capital).
+  const obsDate2 = Math.floor(await blockNow()) + 4;
+  const quote2 = await view("quote", { product_id: "heat-lagos", payout });
+  const policy2Id = await callRet(buyer, "buy_cover", { product_id: "heat-lagos", payout, obs_date: obsDate2, beneficiary: null }, String(quote2));
+  while ((await blockNow()) < obsDate2 + 1) await sleep(500);
+  const reportedAt2 = obsDate2;
+  const expiry2 = reportedAt2 + 6 * 3600;
+  const sig2 = (op, nonce) => {
+    const msg = readingMessageV3({ operator: op.id, metricId: "heat", city: "lagos", obsDate: obsDate2, valueTenths: value, reportedAt: reportedAt2, expiry: expiry2, evidenceHash: Array.from(evidence), nonce, contractId: CONTRACT });
+    return Array.from(op.kp.sign(msg).signature);
+  };
+  const baseArgs2 = { metric_id: "heat", city: "lagos", obs_date: obsDate2, value_tenths: value, reported_at: reportedAt2, expiry: expiry2, evidence_hash: Array.from(evidence) };
+  // o1 and o2 each reported once in phase 1, so their monotonic nonce is now 1;
+  // a 2-of-3 quorum is enough to finalise.
+  await call(o1, "submit_reading", { ...baseArgs2, nonce: 1, signature: sig2(o1, 1) });
+  await call(o2, "submit_reading", { ...baseArgs2, nonce: 1, signature: sig2(o2, 1) });
+  await call(stranger, "challenge_observation", { metric_id: "heat", city: "lagos", obs_date: obsDate2, counter_value_tenths: 100 }, NEAR("0.1"));
+  await call(r1, "resolver_vote", { metric_id: "heat", city: "lagos", obs_date: obsDate2, uphold: false });
+  await call(r2, "resolver_vote", { metric_id: "heat", city: "lagos", obs_date: obsDate2, uphold: false });
+  await call(r3, "resolver_vote", { metric_id: "heat", city: "lagos", obs_date: obsDate2, uphold: false });
+  const obs4 = await view("get_observation", { metric_id: "heat", city: "lagos", obs_date: obsDate2 });
+  check("SEC-6 a resolver quorum nullifies the reading", obs4.nullified === true, `nullified=${obs4.nullified}`);
+  const reservedWithNullified = BigInt((await view("get_pool")).reserved);
+  check("SEC-6 the nullified policy's payout is still reserved", reservedWithNullified >= BigInt(payout), `reserved=${reservedWithNullified}`);
+  while ((await blockNow()) < reportedAt2 + 22) await sleep(500);
+  const paid2 = await callRet(owner, "resolve", { policy_id: Number(policy2Id) });
+  check("SEC-6 resolve on a nullified reading returns false (no payout)", paid2 === false || paid2 === "false", `resolve=${JSON.stringify(paid2)}`);
+  let pol3 = await rawView("get_policy", { id: Number(policy2Id) });
+  for (let i = 0; i < 20 && pol3.status === "active"; i++) { await sleep(500); pol3 = await rawView("get_policy", { id: Number(policy2Id) }); }
+  check("SEC-6 the dead policy settles no-pay", pol3.status === "settled_no_pay" && BigInt(pol3.paid_amount) === 0n, `status=${pol3.status} paid=${pol3.paid_amount}`);
+  const poolAfter = await view("get_pool");
+  check("SEC-6 the reservation is RELEASED, not locked", BigInt(poolAfter.reserved) === reservedWithNullified - BigInt(payout), `reserved ${reservedWithNullified} -> ${poolAfter.reserved}`);
+  check("SEC-6 the pool still reconciles and is solvent", (await view("reconcile")) === true && BigInt(poolAfter.reserved) <= BigInt(poolAfter.capital));
+  // The stranded-capital symptom is gone: the depositor can now withdraw, whereas
+  // a permanently-locked reservation would have made `withdraw` fail forever.
+  const withdrawErr = await callErr(owner, "withdraw", { amount: NEAR("1") });
+  check("SEC-6 a locked reservation would have blocked withdraw (now it does not)", !/solvency|reserved/i.test(withdrawErr || ""), (withdrawErr || "no error").slice(0, 80));
+
   const passed = results.filter((r) => r.ok).length;
   console.log(`\n${passed}/${results.length} sandbox checks passed.`);
   fs.writeFileSync(path.join(root, "proof", "sandbox-lifecycle.json"), JSON.stringify({ mode: "SANDBOX", nodeUrl: NODE_URL, contract: CONTRACT, checks: results, passed, total: results.length }, null, 2));

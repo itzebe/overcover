@@ -6,8 +6,10 @@
 The console now reads **and signs against the hardened v3 contract by default**. v3 is metric-agnostic
 (rainfall *and* temperature), with a domain-separated multi-operator oracle quorum, independent dispute
 resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, a permissionless
-product factory, and a state-preserving in-place `migrate`. Its deployed bytes are **byte-identical to
-this repository's source** (sha256 `a97034e65fb0c53f…`, 500023 bytes; `npm run verify:proof`). The
+product factory, and a state-preserving in-place `migrate`. Its **deployed** bytes are the hardened
+v3 build sha256 `a97034e65fb0c53f…` (500023 bytes); this branch's source builds to a **newer** module
+(sha256 `40aa677e9c646f38…`) that adds the SEC-6/SEC-7 reservation-release fix, so `npm run verify:proof`
+now reports the deployed module as a recognised build and prints `SOURCE AHEAD OF DEPLOYMENT`. The
 legacy address still runs the original v1 module and is disclosed as such (the console labels it
 *Legacy build* and disables buying there).
 
@@ -26,7 +28,7 @@ npm run test:model && npm run test:contract && npm run test:console && npm run t
 npm run test:agent-eval     # 33 — product-feed schema/premium/metric + agent boundary (offline) + independent-client integration
 npm run test:factory        # 11 — discovery agent: deterministic rule, evidence hash, forecast labelling
 npm run test:deploy         # 21 — the deploy/upgrade paths refuse a stale (guard-less) wasm
-npm run verify:proof        # 13/13 — needs cargo build for the two bytecode checks (legacy v1 + hardened v3)
+npm run verify:proof        # 13/13 — needs cargo build; asserts the deployed v3 is a recognised build (prints SOURCE AHEAD when the SEC-6/SEC-7 fix is not yet redeployed)
 npm run verify:agent        # limits engine vs the live product
 npm run verify:upgrade      # 8/8 — the SEC-1 guard on the compiled wasm (real neard node)
 npm run verify:upgrade-preservation  # state PRESERVED + the migrated policy still settles (real v1 bytecode)
@@ -79,7 +81,7 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 76 Rust unit tests pass; 66-attack reference model `66 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
+| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 82 Rust unit tests pass; 70-attack reference model `70 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
 | Product discovery | FIXED AND VERIFIED | `list_products` view; console offers only *sellable* products (named, payable, active) and groups everything else as clearly-labelled fixtures. | Live `list_products` returns 22 products (2 named: `rain-lagos`, `rain-bergen-dry`; 20 demo-generated). `rain-bergen-dry` pins its trigger at the contract's plausible ceiling (500.0 mm), so it can only pay on that single reading — a broken definition shown as a fixture, not offered as cover; `rain-lagos` renders as a coverage card. `tests/console.test.js`; live probe. |
 | Premium calculation | FIXED AND VERIFIED | `quote(product_id, payout) = ceil(payout × premium_bp / 10_000)`, computed in the contract. | `quote` read live (`0.0500 NEAR` for 1 NEAR at 500 bp); console re-reads the contract's quote before buying (`tests/console.test.js`). |
 | Payout calculation | FIXED AND VERIFIED | Payout is the amount reserved at purchase; `resolve` pays iff `value_tenths ≥ threshold_tenths`. | Policy 3 settled `settled_paid` (1 NEAR paid); policy 4 `settled_no_pay` (0). `verify:proof` asserts both. The console's hero and cards state the **≥** direction, derived from `threshold_tenths`. |
@@ -114,7 +116,7 @@ The console reads and signs against `contract.ovc-v3-ctl-2f6c4c.testnet` by defa
 | Item | Value |
 | --- | --- |
 | code_hash | `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL` |
-| Deployed wasm sha256 | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` (500023 bytes) — **byte-identical to this repository's source** (`npm run verify:proof`) |
+| Deployed wasm sha256 | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` (500023 bytes) — a **recognised Overcover build**; this branch's source is **ahead** of it (`40aa677e…`, 500154 bytes, carries SEC-6/SEC-7). `npm run verify:proof` reports `SOURCE AHEAD OF DEPLOYMENT` |
 | Pool | capital 1.4250 NEAR, reserved 0.2000 NEAR, solvent, 3 policies |
 | Products | `heat-lagos`, `heat-lagos-factory` — both **temperature** (`degC`), trigger `at or above 40.0 °C` |
 | Policies | 1 `heat-lagos` settled_paid · 2 `heat-lagos-factory` active · 3 `heat-lagos` active |
@@ -207,7 +209,8 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 
 **Contract version.** The console's **default** contract is the hardened **v3**
 `contract.ovc-v3-ctl-2f6c4c.testnet` (code hash `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`, wasm
-sha256 `a97034e6…`, 500023 bytes — byte-identical to this source). The console reads and signs against
+sha256 `a97034e6…`, 500023 bytes — a recognised Overcover build; this branch's source is ahead of it,
+see the divergence note above). The console reads and signs against
 it; the legacy address `contract.attestor-overcover.testnet` still runs the original **v1** module
 (code hash `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, wasm sha256 `1f30ccf1…`, 344857 bytes) and
 is disclosed as *Legacy build* with buying disabled. The repository source is **contract v3**
@@ -364,8 +367,46 @@ Nothing is staged.
 
 5. **`verify:proof` did not assert the deployed v3 module equals this source.** Root cause: the
    bytecode check only compared the legacy v1 module to a pinned sha256. Fix: `proof/verify.mjs` now
-   also fetches the v3 module and, when the local build is present, asserts it is **byte-identical to
-   this repository's source** (`a97034e6…`, 500023 bytes). `verify:proof` is now **13/13**.
+   also fetches the v3 module and, when the local build is present, asserts it is a **recognised
+   Overcover build** and separately reports whether it is byte-identical to this source. After the
+   SEC-6/SEC-7 fix the source legitimately builds to a **newer** module (`40aa677e…`, 500154 bytes)
+   than the deployed `a97034e6…` (500023 bytes), so the check reports `SOURCE AHEAD OF DEPLOYMENT`
+   rather than a false failure. `verify:proof` is now **13/13**.
+
+## Defects found and fixed in this mission (2026-11-12, SEC-6 + SEC-7 reservation-release hardening)
+
+1. **SEC-6 — a nullified or expired observation permanently locked reserved capital (HIGH).**
+   Root cause: `resolve` treated *every* non-payable observation as a transient "cannot settle" and
+   refused, but a reading **nullified** by a resolver quorum, or one that had **expired**, can never be
+   replaced for its `(metric, city, date)` key — so the policy can never pay and no path released its
+   reservation. The provider capital backing it could never be withdrawn (`withdraw` refuses while
+   `capital − amount < reserved`). Fix: an explicit `Settlement` enum (`Blocked` = transient, hold the
+   reservation; `Invalid` = terminal, release it). A terminal outcome settles the policy `no_pay` and
+   releases the reservation, emitting the reason in the `policy_settled` event. Regression:
+   `sec6_nullified_observation_releases_the_reservation`, `sec6_expired_observation_releases_the_reservation`
+   (Rust); the SEC-6 block in `tests/sandbox-lifecycle.mjs` proves it end-to-end on the compiled wasm
+   against a real `neard` (nullify a real reading → reservation released → `withdraw` no longer fails);
+   model scenarios A14b/A17/A26.
+
+2. **SEC-7 — a policy whose reading is NEVER reported permanently locked reserved capital (HIGH).**
+   Root cause: a reading for date `D` is only admissible while `D ≤ reported_at ≤ now` and
+   `reported_at − D ≤ 24 h`, so once no observation can ever be finalised for the key, `resolve` still
+   returned the transient "no observation" block forever — the reservation stayed locked and provider
+   capital could never be withdrawn. This is reachable permissionlessly: an attacker proposes a product
+   (`propose_product`) for a city no operator covers, buys a policy, and strands the whole payout of
+   provider capital with no operator misbehaviour required. Fix: classify the missing-observation branch
+   by time — `Blocked` (hold) before the last instant a reading can still be accepted, `Invalid`
+   (release) after it. The terminal instant is `D + REPORT_MAX_DELAY_SEC + READING_MAX_VALIDITY_SEC`,
+   **not** `D + 24 h`, because `reported_at` may be backdated; a first cut using `D + 24 h` was caught by
+   `sec7_a_backdated_reading_can_arrive_after_the_report_delay` and corrected (it would have settled a
+   still-payable policy no-pay). Regression: `sec7_a_reading_that_never_arrives_releases_the_reservation`,
+   `sec7_a_reading_still_possible_keeps_the_reservation`, `sec7_a_backdated_reading_can_arrive_after_the_report_delay`
+   (Rust); model scenarios A30–A30c.
+
+Both fixes are in `contract/src/lib.rs`, mirrored in the reference model (`sim/engine.mjs`,
+`sim/scenarios.mjs`), and **are not yet on the deployed v3 module** — `verify:proof` reports
+`SOURCE AHEAD OF DEPLOYMENT` and the divergence is deliberate. Closing them on the live address needs
+a redeploy of `contract.ovc-v3-ctl-2f6c4c.testnet` (operator key; not performed in this mission).
 
 ## Defects found and fixed in this mission (2026-11-12, SEC-1 disclosure + SEC-5 remediation)
 
@@ -397,9 +438,10 @@ Nothing is staged.
 1. **`cargo` was absent in this environment, so the 76 Rust contract tests and the byte-identity proof
    could not run.** Root cause: the container had no Rust toolchain (only Node). Fix: installed the
    pinned toolchain (`rust-toolchain.toml` → 1.99.1, `wasm32-unknown-unknown`). Result: `npm run
-   test:contract` = **76 passed / 0 failed**, and a from-source rebuild is **byte-identical** to the
-   deployed module (sha256 `a97034e6…`, 500,023 bytes) — proving the deployed contract equals this
-   source. No product code changed.
+   test:contract` = **82 passed / 0 failed**, and a from-source rebuild was **byte-identical** to the
+   deployed module (sha256 `a97034e6…`, 500,023 bytes) — proving the deployed contract equalled the
+   source at that time. (After the SEC-6/SEC-7 fix on this branch the source is intentionally ahead of
+   the deployed module: `40aa677e…`, 500,154 bytes; see the divergence note above.)
 
 2. **No behavioural defect was found in the v3 contract or harness during the live run.** The
    controlled-v3 harness completed **40/40** on the first funded attempt; every refusal was returned
@@ -692,7 +734,8 @@ exercised the whole lifecycle against the **real deployed module** — not a san
   (`DeployContract`, `SuccessValue`, block `DCP5eZ7EB9sATkSsgDqKch3i77f6vBnwkDTVoNqT8YDY`).
 - **Deployed identity (independently re-read from `view_code`):** module sha256
   `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1`, 500,023 bytes — **byte-identical
-  to the local source rebuild** (`rust-toolchain.toml` 1.99.1, `CARGO_HOME=/home/openhands/.cargo`).
+  to the local source rebuild at deploy time** (`rust-toolchain.toml` 1.99.1, `CARGO_HOME=/home/openhands/.cargo`);
+  this branch's SEC-6/SEC-7 fix now builds ahead of it (`40aa677e…`).
   `code_hash` `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`. The SEC-1 guard string is present in the
   deployed bytes.
 - **Permissionless product creation:** the **non-owner** `proposer.ovc-v3-ctl-2f6c4c.testnet` called
@@ -752,8 +795,9 @@ still serves v1: `code_hash` `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R`, mod
 operator key (see below).
 
 **Live-contract evidence (unchanged, re-verified).** `npm run verify:proof` → **13/13**: the deployed
-legacy v1 module matches its published sha256 and the **deployed v3 module is byte-identical to this
-repository's source** (`a97034e6…`, 500023 bytes); the legacy pool is solvent (capital 14.05 / reserved
+legacy v1 module matches its published sha256 and the **deployed v3 module is a recognised Overcover
+build** (`a97034e6…`, 500023 bytes; this branch's source is ahead of it at `40aa677e…`, 500154 bytes);
+the legacy pool is solvent (capital 14.05 / reserved
 10.50 NEAR) and reconciles; all 18 `demo-log.json` transactions resolve on-chain; the two autonomous
 agent purchases on v1 **and the one on v3** are real `buy_cover` calls each tied to its policy; the
 settled policies paid as shown. `npm run verify:agent` confirms the spend engine against the live
@@ -807,7 +851,8 @@ from the chain (evidence `proof/agent-purchases-v3.json`). The agent key is not 
   `contract.ovc-v3-ctl-2f6c4c.testnet`: deploy + init, the 3-of-5 operator and resolver quorums, the
   accelerated demo window, the settled-and-paid policy, the permissionless factory (non-owner proposal →
   automatic activation → factory purchase), the adversarial refusals, and SEC-1 closure. The deployed
-  bytes are byte-identical to the source-rebuilt wasm (sha256 `a97034e6…`, 500,023 bytes). Earlier
+  bytes were byte-identical to the source-rebuilt wasm at deploy time (sha256 `a97034e6…`, 500,023 bytes);
+  this branch's SEC-6/SEC-7 fix now builds ahead of the deployed module. Earlier
   sessions' two isolated runs (`contract.ovc-v3-ctl-mwd32f3w.testnet`, `contract.ovc-v3-ctl-mwd3judn.testnet`)
   remain on-chain; their public state is in `proof/controlled-v3-onchain-evidence.json`. Status: **VERIFIED
   (live testnet, 40/40)**.

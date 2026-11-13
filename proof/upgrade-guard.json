@@ -2,13 +2,13 @@
   "mode": "SANDBOX",
   "nodeUrl": "http://127.0.0.1:3034",
   "contract": "cover.test.near",
-  "wasmSha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1",
+  "wasmSha256": "40aa677e9c646f38cbaf841c53b36b56b377668751aee64289839926e8bb5da8",
   "guardMessage": "migrate may only be called by the contract account itself",
   "checks": [
     {
       "name": "the compiled v2 wasm is deployed on the sandbox",
       "ok": true,
-      "detail": "500023 bytes, sha256 a97034e65fb0c53f…"
+      "detail": "500154 bytes, sha256 40aa677e9c646f38…"
     },
     {
       "name": "the contract is initialised with the real owner",

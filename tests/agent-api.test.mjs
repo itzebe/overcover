@@ -98,6 +98,21 @@ test("a disabled agent refuses a buy with 403 and reasons, before the network", 
   assert.match(j.reasons.join(" "), /disabled/);
 });
 
+// A policy denial must never reach the signing or broadcasting stage: the
+// decision is refused before any transaction is built. The audit log is the
+// evidence — a denied request appends a "denied" entry, never a "buy" (which is
+// only written once a transaction hash exists).
+test("a policy-denied buy never reaches signing: the audit records no transaction", async () => {
+  await fetch(BASE + "/api/v1/agent/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: false }) });
+  const r = await fetch(BASE + "/api/v1/agent/buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: buyBody(`denied-${Date.now()}`) });
+  assert.equal(r.status, 403);
+  const audit = await (await fetch(BASE + "/api/v1/agent/audit")).json();
+  const last = audit.entries[audit.entries.length - 1];
+  assert.equal(last.kind, "denied", "the last audit entry must be the denial, not a signed buy");
+  assert.ok(!last.hash, "a denied request carries no transaction hash");
+  await fetch(BASE + "/api/v1/agent/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: true }) });
+});
+
 test("re-enabling the agent restores evaluation", async () => {
   const r = await fetch(BASE + "/api/v1/agent/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: true }) });
   assert.equal(r.status, 200);

@@ -36,7 +36,7 @@ npm run verify:upgrade-preservation  # state PRESERVED + the migrated policy sti
 npm run verify:factory      # 22/22 — permissionless factory on the COMPILED wasm (real neard node)
 npm run verify:connectivity # 13/13 — public console needs no local agent
 npm run verify:live         # production URL at 5 widths
-npm run verify:sandbox               # 21/21 — the decentralised lifecycle on a real neard
+npm run verify:sandbox               # 28/28 — the decentralised lifecycle on a real neard
 npm run verify:controlled-v3:plan    # prints the controlled v3 deployment plan; sends nothing
 npm run verify:controlled-v3         # 40/40 — the controlled v3 deploy on NEAR TESTNET (needs a funded root)
 npm run verify:controlled-v3:sandbox # 39/39 — the same proof on a real neard node
@@ -125,7 +125,7 @@ The console reads and signs against `contract.ovc-v3-ctl-2f6c4c.testnet` by defa
 
 | Requirement | Status | Evidence |
 | --- | --- | --- |
-| Deployed v3 == this source | FIXED AND VERIFIED | `npm run verify:proof` — "hardened v3 deployed module is exactly this repository's source" (sha256 `a97034e6…`). |
+| Deployed v3 vs this source | PARTIALLY WORKING | `npm run verify:proof` reports the deployed module as a **recognised** hardened build (`a97034e6…`) and prints `SOURCE AHEAD OF DEPLOYMENT`: this branch's source builds to `811e0427…`, which carries the SEC-6/SEC-7 reservation-release fix and the SEC-9 unbounded-lead fix that the deployed module predates. Redeploying the newer module needs the operator key for `contract.ovc-v3-ctl-2f6c4c.testnet` (see §9). `npm run redeploy:v3 -- --plan` prints the exact operation and sends nothing. |
 | Metric-agnostic product rendering | FIXED AND VERIFIED | The live product is **temperature**; the console derives the covered event, unit and direction from the contract's metric, and `products.json` carries `temperature`/`degC` (not a hardcoded "rainfall mm"). `tests/products-feed.test.mjs`; `tests/console.test.js`. |
 | A real agent purchase on v3 | FIXED AND VERIFIED | tx `45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn` → policy 3 (`heat-lagos`, 0.1 NEAR payout, 0.005 NEAR premium), signer `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet`; re-derived from the chain by `npm run verify:proof` (evidence `proof/agent-purchases-v3.json`). |
 | Over-limit refusal on the live v3 path | FIXED AND VERIFIED | The shipped engine (`agent/limits.mjs`) refuses a 1 NEAR payout against the live v3 `heat-lagos` product with explicit reasons ("payout … exceeds maxPayoutPerPolicy …"), before any network. `npm run verify:connectivity` check 9. |
@@ -147,6 +147,7 @@ The console reads and signs against `contract.ovc-v3-ctl-2f6c4c.testnet` by defa
 | Wallet signing | IMPLEMENTED BUT NOT VERIFIED (live) | `signAndSend` passes exactly the caller's action; the wallet signs. | Unit-tested shapes; `verify:connectivity` loads the bundle. A live HERE/Meteor extension approval is **BLOCKED BY HUMAN ACTION**. |
 | Transaction confirmation | FIXED AND VERIFIED | `evaluateWalletOutcome` claims success only from the wallet's own confirmed hash. | `tests/console.test.js`: rejected/failed/hashless results are never success. |
 | Failure and rejection handling | FIXED AND VERIFIED | Rejection → "Purchase not completed", nothing charged; no silent success. Connect errors are mapped to actionable sentences (cancelled / pop-up blocked / wrong network / unreachable / no account). | `tests/console.test.js` (the fake-success guard; the wallet-error mapping). |
+| Wallet timeout / retry safety | FIXED AND VERIFIED | A wallet that does not answer within the deadline (`OVERCOVER_SIGN_TIMEOUT_MS`, 120 s default) leaves the outcome **unknown**: the console keeps buying **blocked** (with an explanatory hint) until the wallet actually answers, so a retry cannot issue a **second** signed `buy_cover` for the same intent. A late answer is reconciled honestly — a confirmed hash is shown with its explorer link, anything else as no cover. | `tests/wallet-journey.test.mjs`: the retry across the timeout boundary signs nothing extra; a late confirmed answer is recovered; a late no-hash answer and a late rejection are both reported as no cover. |
 | Policy ownership verification | FIXED AND VERIFIED | Policy `buyer` is the signer; read back from the contract. | Policy 15 `buyer = human-demo-…`; policies 11,12 `buyer = oc-agent-…`. |
 
 **Human purchase (end to end).** The `buy_cover` **shape the console builds** is proven on-chain:
@@ -304,7 +305,7 @@ suite re-ran green. So the harness is a real guard, not decoration.
 ### Release gate re-run (this session)
 
 All green, locally: model 74/74 (0 exploitable) · contract **88** (was 83; +5 fuzz seeds) · console
-116 · agent 53 · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
+**127** · agent **54** · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
 · `verify:upgrade-preservation` PRESERVED · `verify:connectivity` 13/13 · `verify:sandbox` 28/28 ·
 `verify:factory` 22/22 · `verify:controlled-v3:sandbox` **39/39** (incl. SEC-1 refused on the compiled
 wasm, owner unchanged after the refused `migrate`). `axe` 0 violations at 7 widths. `test:onchain`
@@ -370,8 +371,9 @@ session **independently reproduced it** against the live OutLayer testnet worker
 `robots.txt`, `sitemap.xml`, `llms.txt`, `llms-full.txt`, `products.json`, `products.schema.json`,
 `og.png` all return 200 and match `main`. `robots.txt` explicitly allows GPTBot, OAI-SearchBot,
 ChatGPT-User, ClaudeBot, Claude-Web, PerplexityBot, Googlebot, Bingbot, Google-Extended and
-Applebot-Extended. The JSON-LD `@graph` (Organization, WebSite, SoftwareApplication, WebPage) parses and
-makes no invented-rating/pricing claims; FAQPage is correctly **absent** (no FAQ section on the page).
+Applebot-Extended. The JSON-LD `@graph` (Organization, WebSite, SoftwareApplication, WebPage, FAQPage)
+parses and makes no invented-rating/pricing claims. The **FAQPage** entries mirror the eight genuine
+on-page FAQ questions (`#faq`, "Frequently asked questions") exactly — no synthetic Q&A is emitted.
 Canonical, `robots: index, follow`, OG and Twitter tags are present in the initial HTML. **Limitation:**
 no access to Google Search Console or Bing Webmaster Tools, so crawler *access* is verified but indexing
 is **not** — no indexing claim is made.
@@ -956,7 +958,7 @@ from the chain (evidence `proof/agent-purchases-v3.json`). The agent key is not 
   See §"Blockchain evidence". The v3 build (domain-separated length-prefixed observation message,
   multi-operator oracle quorum, per-policy challenge window, frozen per-dispute resolver threshold,
   owner-excluded resolvers, generic metric model, hardened `migrate`) is proven end-to-end on a **local
-  sandbox** (`npm run verify:sandbox` = 21/21; `npm run verify:controlled-v3:sandbox` = 39/39) and the
+  sandbox** (`npm run verify:sandbox` = 28/28; `npm run verify:controlled-v3:sandbox` = 39/39) and the
   in-place `migrate` is proven **state-preserving** against the exact live v1 bytecode
   (`npm run verify:upgrade-preservation`). It is **not** on the legacy address
   `contract.attestor-overcover.testnet`, because closing SEC-1 there needs the contract's full-access

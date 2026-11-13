@@ -94,6 +94,13 @@ auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 - **The demo pins the reading.** The recorded demo reports the same genuine Open-Meteo reading the
   threshold was derived from, so the outcome is deterministic. The value is real and signed; it is
   pinned, not fabricated.
+- **The double-purchase guard is per page, not per buyer.** While a wallet prompt is outstanding the
+  console keeps buying blocked so a retry cannot send a second signed `buy_cover` for the same
+  intent (`tests/wallet-journey.test.mjs`). That guard lives in the page: opening a **second tab**,
+  or buying from a **second device**, can still issue a second genuine purchase. The contract is
+  designed to accept it — `buy_cover` mints a new, independently collateralised policy per call and
+  never deduplicates a buyer — so a second purchase is a second real policy, not a double charge for
+  one. Idempotency across tabs/devices is a product decision the contract does not make.
 - **No reentrancy surface.** Payouts use `Promise` transfers after all state is written; there is no
   callback into contract logic.
 
@@ -106,9 +113,9 @@ auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 - 17 adversarial tests against the **live** contract (`npm run test:onchain`): each attack is refused
   with the expected reason. These need the gitignored operator key files and do not run in CI; see
   `docs/SECURITY_PRE_AUDIT.md` §4.
-- The console: 116 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
+- The console: 127 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
   violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog.
-- The agent service: 53 tests including idempotency and limit enforcement **under concurrency**
+- The agent service: 54 tests including idempotency and limit enforcement **under concurrency**
   (`npm run test:agent`), and the OpenAPI spec is checked against the running routes.
 - A security pre-audit with a reproduced critical finding and its fix: `docs/SECURITY_PRE_AUDIT.md`.
 

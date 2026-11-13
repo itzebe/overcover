@@ -138,6 +138,22 @@ key and nothing signed. Only a local service the operator runs can send a purcha
 - Parametric, not indemnity: a payout follows the reading meeting the trigger, and a
   loss that does not meet the trigger is not covered.
 
+## Deployment status
+
+The product vision is fixed; its deployment is not yet complete. This section
+separates code that exists from code that is deployed, and names every external
+authority the remaining work depends on.
+
+| Capability | Status | Evidence |
+| --- | --- | --- |
+| Capital pool, purchase, reserved payout, oracle quorum, bonded dispute, deterministic settlement | Live on NEAR testnet | The full lifecycle runs on-chain against the contract the console reads; every figure on the console is a direct contract read. |
+| SEC-1 legacy `migrate()` guard (a third party cannot seize the contract) | Deployed | The live v3 account runs code hash `CQR8x1kW…` (wasm sha256 `a97034e6…`), which carries the guard; proven 40/40 by the controlled-v3 deploy proof. Closing it on the legacy v1 address still needs that account's owner key. |
+| SEC-6/7/9 settlement fixes (release reserved capital on a terminal, no-pay settlement) | Built, not deployed | This source builds reproducibly to sha256 `811e0427…`; the live v3 module predates it. The code-only, state-preserving redeploy is prepared and reversible but needs the operator signing key. |
+| Legacy v1 containment (`set_paused`) | Blocked on external authority | The legacy address is read-only in the console and buying is refused, but contract-level pausing needs the legacy owner key, which the deployment automation does not hold. |
+| Human purchase of cover on the hardened module | Available, but a recorded v3 purchase is outstanding | The console signs one `buy_cover` against the live v3 account with the visitor's own wallet. The recorded human purchase in the project history was made against the legacy module and is not evidence of a purchase on v3. |
+| Hardware-attested external observations (TDX adapter) | Prototype, not deployed | The adapter builds reproducibly and its attestation path is tested, but it is not published. Optional provenance; never replaces operator signatures, quorum or disputes. |
+| Independent third-party security audit | Not performed | No external audit has occurred. The repository's adversarial suites and proofs are the project's own and are not a substitute for an audit. |
+
 ## Architecture
 
 - Contract (`contract/`): Rust, near-sdk, LookupMap/UnorderedSet collections.

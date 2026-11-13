@@ -98,6 +98,33 @@
   .btn:hover { border-color: var(--ink2); }
   .btn:active { transform: translateY(1px); }
   .btn[disabled] { opacity: .55; cursor: default; }
+  /* On phones the brand bar is the only sticky element, so every pixel of its
+     height is viewport the reader loses while scrolling. Compact it to a single
+     row of controls and drop the decorative tagline where it would wrap. Placed
+     after the base rules so the overrides win. */
+  @media (max-width: 640px) {
+    .mast-in { gap: 8px 10px; padding-top: 9px; padding-bottom: 9px; }
+    /* `display: contents` lets the three controls be laid out by the mast's own
+       flex row, so at 320px the bar is two rows (brand, then the controls) rather
+       than three. */
+    .mast-right { display: contents; }
+    .mast-right .btn { padding: 7px 11px; font-size: 13px; min-height: 44px; }
+    .net { padding: 4px 9px; font-size: 11px; gap: 6px; }
+    /* Drop the decorative tagline and the redundant "NEAR testnet ·" prefix (the
+       page is a testnet console throughout) so the read-state pill, Connect
+       wallet and Refresh fit on one row instead of wrapping to two. */
+    .brand .tagline { display: none; }
+    .net .net-net { display: none; }
+  }
+
+  /* ---------------- primary navigation ---------------- */
+  .nav { background: var(--card); border-bottom: 1px solid var(--line); }
+  .nav-in { display: flex; gap: 4px; align-items: stretch; overflow-x: auto; scrollbar-width: none; }
+  .nav-in::-webkit-scrollbar { display: none; }
+  .nav-in a { flex: none; display: inline-flex; align-items: center; min-height: 46px; padding: 0 13px; font-size: 13.5px; font-weight: 600; color: var(--ink2); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .nav-in a:first-child { padding-left: 0; }
+  .nav-in a:hover { color: var(--ink); border-bottom-color: var(--line2); text-decoration: none; }
+  .nav-in a:focus-visible { outline-offset: -2px; }
 
   /* ---------------- hero ---------------- */
   .hero { background: linear-gradient(168deg, var(--field) 0%, #0d1f18 62%, #12291f 100%); color: var(--on-field); position: relative; overflow: hidden; }
@@ -133,6 +160,16 @@
   /* ---------------- generic card ---------------- */
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); }
   .pad { padding: var(--s4); }
+
+  /* Two-column explanatory split (what / who). One component, no inline styles. */
+  .split { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .split { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .split .card h3 { font-size: 16px; font-weight: 680; margin: 0 0 10px; letter-spacing: -.01em; }
+  .split .card p { color: var(--ink2); font-size: 14.5px; margin: 0; }
+  .split .card p + p { margin-top: 12px; color: var(--muted); font-size: 13.5px; }
+
+  /* Anchors from the nav must not land under the sticky brand bar. */
+  main [id] { scroll-margin-top: 70px; }
 
   /* ---------------- solvency ---------------- */
   .solv-top { display: grid; gap: 18px; grid-template-columns: 1fr; }
@@ -369,6 +406,8 @@
   .buy-result p { font-size: 13.5px; color: var(--ink2); margin: 0 0 8px; }
   .buy-result .mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
   .buy-hint { margin: 10px 0 0; font-size: 13px; color: var(--muted); min-height: 1.2em; }
+  .buy-pending { margin: 10px 0 0; border: 1px solid var(--bad); background: var(--bad-w); border-radius: var(--r); padding: 12px 14px; font-size: 13.5px; color: var(--ink); }
+  .buy-pending b { color: var(--bad); }
 
   /* Wallet picker: a real modal, so a click on "Connect wallet" is answered where
      the user is looking, at every viewport. */
@@ -449,6 +488,19 @@
   .disclose li { font-size: 13.5px; color: #4a3a12; padding-left: 22px; position: relative; }
   .disclose li::before { content: "!"; position: absolute; left: 0; top: 2px; width: 14px; height: 14px; border-radius: 4px; background: #e6c879; color: #4a3a12; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
   .disclose li b { color: #3a2c0a; }
+
+  /* ---------------- deployment status ledger ---------------- */
+  .status-table { border: 1px solid var(--line); border-radius: var(--r2); overflow-x: auto; background: var(--card); }
+  .status-table table { width: 100%; border-collapse: collapse; }
+  .status-table th, .status-table td { text-align: left; padding: 11px 14px; font-size: 13.5px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .status-table th { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 650; background: var(--card-2); }
+  .status-table tr:last-child td { border-bottom: 0; }
+  .status-table td a { text-decoration: underline; text-underline-offset: 2px; }
+  .status-table .st { font-family: var(--sans); font-size: 11px; font-weight: 650; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); white-space: nowrap; display: inline-block; }
+  .status-table .st.live { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
+  .status-table .st.prototype { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
+  .status-table .st.blocked { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
+  .status-table .st.planned { color: var(--muted); }
 
   /* ---------------- proof ---------------- */
   .proof { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
@@ -631,6 +683,22 @@
   </div>
 </header>
 
+<!-- Primary navigation. A quiet ledger index: the page is long and evidence-dense,
+     so a reader must be able to orient and jump without hunting. Kept out of the
+     sticky brand bar so it does not eat mobile viewport height. -->
+<nav class="nav" aria-label="Sections">
+  <div class="wrap nav-in">
+    <a href="#what-h">What it covers</a>
+    <a href="#how">How it works</a>
+    <a href="#cover">Cover</a>
+    <a href="#factory">Factory</a>
+    <a href="#quote-h">Price</a>
+    <a href="#trust-h">Trust</a>
+    <a href="#status">Status</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
+
 <main id="main">
   <div class="wrap"><div id="error-slot"></div></div>
 
@@ -652,9 +720,9 @@
         <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
         <p class="sub">Overcover covers one clearly-defined event at a time: a public index reading — rainfall or temperature — meeting a set trigger, in a named city, on a named date. Each product states its own trigger and direction, so the payout follows from contract rules, no adjuster, no queue.</p>
         <div class="actions">
-          <button class="btn-gold" type="button" data-wallet="connect">Connect a wallet</button>
-          <a class="btn-ghost" href="#cover">See the cover available</a>
+          <a class="btn-gold" href="#cover">See the cover available</a>
           <a class="btn-ghost" href="#how">How a claim settles</a>
+          <button class="btn-ghost" type="button" data-wallet="connect">Connect a wallet</button>
         </div>
         <p class="proof-line">
           <span id="hero-dot" class="dot load" aria-hidden="true"></span>
@@ -742,16 +810,16 @@
       <h2 id="what-h">What Overcover covers, and who it is for</h2>
       <p class="sect-note">One risk at a time, defined in advance. No underwriting interview, no claim form.</p>
     </div>
-    <div class="prod-grid">
+    <div class="split">
       <div class="card pad">
-        <h3 style="font-size:17px">The risk it covers</h3>
-        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">A named city's public index — rainfall or temperature — meets a trigger defined in the product on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
-        <p style="margin-top:12px;color:var(--muted);font-size:13.5px">Because the trigger is a public reading rather than an assessed loss, there is nothing to argue about and no adjuster to wait for.</p>
+        <h3>The risk it covers</h3>
+        <p>A named city's public index — rainfall or temperature — meets a trigger defined in the product on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
+        <p>Because the trigger is a public reading rather than an assessed loss, there is nothing to argue about and no adjuster to wait for.</p>
       </div>
       <div class="card pad">
-        <h3 style="font-size:17px">Who it is for</h3>
-        <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle: growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes, and the software agents that run them.</p>
-        <p style="margin-top:12px;color:var(--muted);font-size:13.5px">It is a poor fit for a loss that needs assessing after the fact — that is what a traditional policy is for.</p>
+        <h3>Who it is for</h3>
+        <p>Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle: growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes, and the software agents that run them.</p>
+        <p>It is a poor fit for a loss that needs assessing after the fact — that is what a traditional policy is for.</p>
       </div>
     </div>
   </section>
@@ -944,6 +1012,7 @@
         <button id="b-buy" class="btn-gold" type="button" disabled>Buy cover</button>
         <span class="buy-status" id="b-status" role="status" aria-live="polite"></span>
       </div>
+      <p class="buy-pending" id="b-pending" hidden></p>
       <p class="buy-hint" id="b-hint"></p>
 
       <div class="buy-note" id="b-note">
@@ -1181,6 +1250,61 @@
         <p class="lbl">Sample settlements from the recorded demo</p>
         <div class="links" id="demo-links"><span class="sub" style="font-size:12.5px">Loading…</span></div>
       </div>
+    </div>
+  </section>
+
+  <section class="wrap band" id="status" aria-labelledby="status-h">
+    <div class="sect-head">
+      <div>
+        <p class="eyebrow">Honest deployment status</p>
+        <h2 id="status-h">What is live, what is not, and what is blocked</h2>
+      </div>
+      <p class="sect-note">The product vision is fixed; its deployment is not yet complete. This ledger separates code that exists from code that is deployed, and names every external authority it depends on. It is updated by hand and does not change without evidence.</p>
+    </div>
+    <div class="status-table scroll">
+      <table>
+        <caption class="sub" style="text-align:left;padding:10px 14px 0;font-size:12.5px">Deployment status of each capability. “Live” means verified against the deployed contract on NEAR testnet; it does not mean audited.</caption>
+        <thead>
+          <tr><th scope="col">Capability</th><th scope="col">Status</th><th scope="col">Evidence</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Capital pool, policy purchase, reserved payout, oracle quorum, bonded dispute, deterministic settlement</td>
+            <td><span class="st live">Live · testnet</span></td>
+            <td>The full lifecycle runs on-chain against the contract this page reads. Every figure on this page is a direct contract read.</td>
+          </tr>
+          <tr>
+            <td>SEC-1 legacy <code>migrate()</code> guard (a third party cannot seize the contract)</td>
+            <td><span class="st live">Live · testnet</span></td>
+            <td>Deployed to <code>contract.ovc-v3-ctl-2f6c4c.testnet</code> (code hash <code>CQR8x1kW…</code>, wasm sha256 <code>a97034e6…</code>), proven 40/40 by <code>npm run verify:controlled-v3</code>. Closing it on the <em>legacy</em> v1 address still needs that account's owner key (see below).</td>
+          </tr>
+          <tr>
+            <td>SEC-6/7/9 settlement fixes (release reserved capital on a terminal, no-pay settlement)</td>
+            <td><span class="st prototype">Built, not deployed</span></td>
+            <td>This source builds reproducibly to wasm sha256 <code>811e0427…</code>; the live v3 module (<code>a97034e6…</code>) predates it. The code-only, state-preserving redeploy is prepared and reversible but needs the operator signing key. <code>npm run verify:proof</code> reports <code>SOURCE AHEAD OF DEPLOYMENT</code>.</td>
+          </tr>
+          <tr>
+            <td>Legacy v1 containment (<code>set_paused</code>)</td>
+            <td><span class="st blocked">Blocked</span></td>
+            <td>The legacy address <code>contract.attestor-overcover.testnet</code> is read-only here and buying is refused. Contract-level pausing needs the legacy owner key, which the deployment automation does not hold. See <a href="https://github.com/itzebe/overcover/blob/main/docs/AUTHORITY_RECOVERY.md" rel="noopener">authority recovery</a>.</td>
+          </tr>
+          <tr>
+            <td>Human purchase of cover on the hardened module</td>
+            <td><span class="st live">Available · testnet</span></td>
+            <td>The console signs one <code>buy_cover</code> against the live v3 account with the visitor's own wallet. The human purchase recorded in the project history was made against the <em>legacy</em> module; it is not evidence of a purchase on v3, and a recorded human v3 purchase is still outstanding.</td>
+          </tr>
+          <tr>
+            <td>Hardware-attested external observations (TDX adapter)</td>
+            <td><span class="st prototype">Prototype · not deployed</span></td>
+            <td>The adapter builds reproducibly and its attestation path is tested, but it is not published. It is optional provenance: it never replaces operator signatures, oracle quorum or disputes.</td>
+          </tr>
+          <tr>
+            <td>Independent third-party security audit</td>
+            <td><span class="st planned">Not performed</span></td>
+            <td>No external audit has occurred. The adversarial suites and proofs in the repository are the project's own; they are not a substitute for an audit.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -1874,13 +1998,13 @@
     var dot = el("fresh-dot"), text = el("fresh-text");
     var nd = el("dot"), nl = el("netlabel");
     if (state === "live") {
-      dot.className = "dot live"; nd.className = "dot live"; nl.textContent = "NEAR testnet · live";
+      dot.className = "dot live"; nd.className = "dot live"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>live';
       text.innerHTML = "Live — read from the contract at <b>" + esc(detail) + "</b>. Re-checked every 15 seconds.";
     } else if (state === "stale") {
-      dot.className = "dot stale"; nd.className = "dot stale"; nl.textContent = "NEAR testnet · stale";
+      dot.className = "dot stale"; nd.className = "dot stale"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>stale';
       text.innerHTML = "Stale — the latest read failed, so the figures shown are the last good read at <b>" + esc(detail) + "</b>. Do not treat them as current.";
     } else {
-      dot.className = "dot failed"; nd.className = "dot failed"; nl.textContent = "NEAR testnet · unreachable";
+      dot.className = "dot failed"; nd.className = "dot failed"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>unreachable';
       text.textContent = "No data — every RPC endpoint failed. Nothing on this page is being shown as live.";
     }
   }
@@ -2101,7 +2225,7 @@
 
   // ---------------------------------------------------------------- purchase
 
-  var buyState = { busy: false, result: null };
+  var buyState = { busy: false, result: null, pendingSign: false };
 
   function setBuyStatus(msg, isErr, isOk) {
     var s = el("b-status");
@@ -2116,7 +2240,7 @@
     // build. A legacy, untrusted, or not-yet-verified contract disables the
     // control entirely — the security banner explains why.
     var allowed = trust.state === "hardened" && !walletState.networkMismatch;
-    b.disabled = buyState.busy || !walletState.connected || !quoteState.selected || !allowed;
+    b.disabled = buyState.busy || buyState.pendingSign || !walletState.connected || !quoteState.selected || !allowed;
     b.textContent = buyState.busy ? "Waiting for your wallet…" : "Buy cover";
     // Show the exact address the wallet will sign against, from the same value
     // the transaction uses, so the destination is never implicit.
@@ -2129,9 +2253,12 @@
     }
     // Say why the button cannot be used yet, so a first-time visitor is never
     // left pressing a dead control with no explanation.
+    var pend = el("b-pending");
+    if (pend) pend.hidden = !buyState.pendingSign;
     var h = el("b-hint");
     if (!h) return;
-    if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
+    if (buyState.pendingSign) h.textContent = "Your wallet has not answered yet. Check its window and the explorer before retrying — a second purchase is blocked until it does.";
+    else if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
     else if (walletState.networkMismatch) h.textContent = "This wallet is not on NEAR testnet. Switch it to testnet to buy — Overcover settles on testnet only.";
     else if (!allowed) h.textContent = trust.state === "legacy"
       ? "New purchases are disabled on this legacy address. Read or buy on the hardened build — it is the default."
@@ -2206,8 +2333,74 @@
     return { product_id: product.id, payout: payoutStr, obs_date: obsDateSec, beneficiary: beneficiary || null };
   }
 
+  // A wallet that never answers must not hang the buy control forever. Unlike
+  // the connect path (bounded in wallet.js), signAndSend had no bound: a dead
+  // extension would leave the button disabled and the user with no way forward.
+  // The bound is generous (an approval is a human step) and overridable for tests.
+  var SIGN_TIMEOUT_MS = Number(window.OVERCOVER_SIGN_TIMEOUT_MS) || 120000;
+  // Race the wallet against a deadline. The wallet promise is NOT cancelled
+  // (the user may still approve after the deadline), so on timeout the outcome
+  // is genuinely UNKNOWN — never a success, never a definite failure. The
+  // settled promise is returned too, so a LATE wallet answer can be recovered
+  // honestly instead of being silently discarded.
+  function withSignDeadline(promise) {
+    var tracked = promise.then(
+      function (v) { return { ok: true, value: v }; },
+      function (e) { return { ok: false, error: e }; }
+    );
+    var deadline = new Promise(function (_, reject) {
+      setTimeout(function () { reject({ code: "sign_timeout" }); }, SIGN_TIMEOUT_MS);
+    });
+    var raced = Promise.race([tracked.then(function (r) {
+      if (r.ok) return r.value;
+      throw r.error;
+    }), deadline]);
+    return { raced: raced, settled: tracked };
+  }
+
+  // A wallet that answers AFTER the deadline: the timeout message said the
+  // outcome was unknown, so a late answer must be reconciled honestly — never
+  // left as a permanently ambiguous state, and never shown as a success unless
+  // the wallet's own result carries a transaction hash.
+  function onWalletLateAnswer(r) {
+    if (!buyState.pendingSign) return; // the normal path already handled it
+    buyState.pendingSign = false;
+    if (r.ok) {
+      var out = evaluateWalletOutcome(r.value);
+      if (out.ok) {
+        setBuyStatus("Transaction confirmed (late wallet response).", false, true);
+        showBuyResult(true,
+          "<h4>Cover in force</h4>" +
+          "<p>Your wallet answered after the deadline and the contract confirmed your <code>buy_cover</code> call. The policy appears under “Policies written”.</p>" +
+          '<p class="mono">' + esc(out.hash) + "</p>" +
+          '<p><a href="' + EXPLORER + "/txns/" + encodeURIComponent(out.hash) + '" target="_blank" rel="noopener">View the transaction on NEAR Blocks ↗</a></p>');
+      } else {
+        setBuyStatus("No cover was bought: " + out.reason + ".", true);
+        showBuyResult(false,
+          "<h4>No cover was bought</h4>" +
+          "<p>" + esc(out.reason) + ". Nothing was charged.</p>");
+      }
+    } else {
+      var m = r.error && r.error.message ? r.error.message : String(r.error);
+      setBuyStatus("Purchase not completed: " + m, true);
+      showBuyResult(false,
+        "<h4>No cover was bought</h4>" +
+        "<p>" + esc(m) + "</p>" +
+        "<p>Nothing was charged.</p>");
+    }
+    updateBuyEnabled();
+    tick();
+  }
+
   function doBuy() {
     if (buyState.busy) return;
+    // A previous wallet request timed out and has not answered yet. The outcome
+    // is unknown, so a retry could send a SECOND signed buy_cover for the same
+    // intent. Refuse until the wallet actually responds.
+    if (buyState.pendingSign) {
+      setBuyStatus("Your wallet has not answered the previous request yet. Check your wallet and the explorer before retrying — a second purchase is blocked while the outcome is unknown.", true);
+      return;
+    }
     var p = quoteState.selected;
     if (!p) { setBuyStatus("Choose a product to price first.", true); return; }
     if (!WALLET || !walletState.connected) { setBuyStatus("Connect a wallet first.", true); return; }
@@ -2258,10 +2451,13 @@
         trust = now; trust.contract = CONTRACT;
         setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
         var args = buildBuyArgs(p, payoutStr, obs, ben);
-        return WALLET.signAndSend({
+        var d = withSignDeadline(WALLET.signAndSend({
           receiverId: CONTRACT,
           actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
-        });
+        }));
+        // If the wallet answers only after the deadline, reconcile it honestly.
+        d.settled.then(onWalletLateAnswer);
+        return d.raced;
       });
     }).then(function (res) {
       var out = evaluateWalletOutcome(res);
@@ -2277,6 +2473,28 @@
       updateBuyEnabled();
       tick();
     }).catch(function (e) {
+      // A timed-out wallet is an UNKNOWN outcome, not a failure: the user may
+      // still approve after the deadline, so no transaction may be claimed and
+      // none may be ruled out. Say so, and point at the explorer to check. The
+      // wallet promise is still outstanding, so buying stays BLOCKED until the
+      // wallet actually answers — otherwise a retry could send a second signed
+      // buy_cover while the first is unresolved.
+      if (e && e.code === "sign_timeout") {
+        buyState.pendingSign = true;
+        setBuyStatus("No answer from your wallet.", true);
+        var pend = el("b-pending");
+        if (pend) pend.innerHTML = "<b>Purchase outcome unknown — do not retry yet.</b> Your wallet did not answer within " +
+          Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent, and a second signed " +
+          "purchase is blocked until your wallet answers. Check the contract's transactions before retrying.";
+        showBuyResult(false,
+          "<h4>Transaction outcome unknown</h4>" +
+          "<p>Your wallet did not respond within " + Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent — this page cannot tell, and it will not guess.</p>" +
+          "<p>Check <a href=\"" + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + "\" target=\"_blank\" rel=\"noopener\">the contract's transactions on NEAR Blocks ↗</a> before retrying. Buying is blocked until your wallet answers, so a second purchase cannot be sent while this one is unresolved. If you approve the wallet prompt after this message, the cover is still valid and will appear under “Policies written” on the next refresh.</p>");
+        buyState.busy = false;
+        updateBuyEnabled();
+        tick();
+        return;
+      }
       var m = e && e.message ? e.message : String(e);
       setBuyStatus("Purchase not completed: " + m, true);
       showBuyResult(false,

@@ -992,3 +992,29 @@ from the chain (evidence `proof/agent-purchases-v3.json`). The agent key is not 
 - **Single attestor** on the legacy v1 contract; disputes are resolved by the owner (centralisation
   point, documented). The hardened v3 contract — the console default — replaces this with an
   operator quorum + independent resolvers.
+
+## Security-hardening & discoverability mission (2026-11-13)
+
+The full campaign report is `docs/SECURITY_HARDENING_MISSION.md`. Headline outcomes:
+
+- **SEC-1 (legacy v1 `migrate()` takeover) now has a positive, reproducible proof**:
+  `npm run verify:sec1-takeover` (17/17) deploys the **exact live v1 bytecode** to a local neard node,
+  shows an unprivileged account taking the contract over (owner + attestor replaced, accounting reset,
+  capital stranded, owner-only method accepted, forged observation accepted), then shows the hardened
+  module refusing the same call. Wired into CI (`REQUIRE_SANDBOX=1`). This closes the gap where the
+  prior tests only asserted the v2 guard and never demonstrated the attack.
+- **Legacy containment status (honest):** `contract.attestor-overcover.testnet` is **not paused
+  on-chain** (`get_pool().paused == false`). Buying is blocked there **only in the console** (the buy
+  gate refuses any non-hardened code hash). The owner-level fix (`set_paused(true)`) is **BLOCKED BY
+  HUMAN ACTION** — it needs the legacy owner key.
+- **v3 SEC-6/SEC-7/SEC-9 redeploy is prepared and verified by plan** (`node driver/redeploy-v3.mjs
+  --plan`): live `a97034e6…` → `811e0427…`, code-only, reversible. The deploy itself is **BLOCKED BY
+  HUMAN ACTION** (operator key).
+- **OutLayer independently verified:** the POC's recorded Intel TDX quote verifies offline
+  (`UpToDate`), and a **fresh live** OutLayer execution was run and its attestation verified
+  (`task_hash_matches`, `UpToDate`). POC suites 34/34. The Overcover adapter is not deployed (needs the
+  operator's `outlayer deploy`).
+- **Discoverability:** added a genuine FAQ + `FAQPage` JSON-LD to the console; all crawler endpoints
+  (`robots.txt`, `sitemap.xml`, `llms.txt`, `llms-full.txt`, `products.json`, `products.schema.json`)
+  HTTP-verified at 200 on production. Crawler *access* is verified; **indexing is not claimed**.
+

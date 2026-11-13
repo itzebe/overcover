@@ -37,8 +37,8 @@ npm test                      # model + sim + contract + console + agent + deplo
 
 node driver/keys.js           # create the testnet identity graph
 npm run deploy                # deploy (60s challenge window)
-npm run verify:sandbox        # 21/21 — the decentralised lifecycle on a real local neard
-npm run verify:controlled-v3:sandbox  # 29/29 — controlled v3 deploy + SEC-1 closure on a real neard
+npm run verify:sandbox        # 28/28 — the decentralised lifecycle on a real local neard
+npm run verify:controlled-v3:sandbox  # 39/39 — controlled v3 deploy + SEC-1 closure on a real neard
 npm run demo                  # run the full economic cycle, write demo-log.json
 ```
 

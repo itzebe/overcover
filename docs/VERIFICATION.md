@@ -84,7 +84,7 @@ npm run test:agent-eval # 33 product-feed schema/premium + agent boundary + inde
 npm run test:factory    # 11 discovery-agent tests (deterministic rule, evidence hash, forecast labelling)
 npm run test:onchain    # 17 adversarial tests against the LIVE contract
 # v3 lifecycle on a local neard node:
-#   npm run verify:sandbox                # 21/21 (compiled v3 wasm, real neard)
+#   npm run verify:sandbox                # 28/28 (compiled v3 wasm, real neard)
 #   npm run verify:upgrade-preservation   # in-place upgrade of the live v1 bytecode preserves state
 #   npm run verify:controlled-v3:plan     # the controlled v3 testnet deployment plan (sends nothing)
 #   npm run verify:controlled-v3          # 40/40 — the controlled v3 deploy on NEAR TESTNET (needs a funded root)

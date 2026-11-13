@@ -109,7 +109,7 @@ for.
 | --- | --- | --- |
 | v1 | Single-attestor parametric cover, human + agent purchase, honest console | **Live on testnet** |
 | Feed | Machine-readable catalogue + agent evaluation tests | **This release** |
-| v2 | Operator quorum, per-operator nonces, independent resolvers, generic metrics | Built, locally proven (21/21), **not deployed** |
+| v2 | Operator quorum, per-operator nonces, independent resolvers, generic metrics | Built, locally proven (28/28), **not deployed** |
 | v3 | External settlement oracle (e.g. UMA-style dispute), capacity market, fee switch | Design only |
 
 ## Risks (honest)

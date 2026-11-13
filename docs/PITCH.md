@@ -101,7 +101,7 @@ capital — which is exactly what a mutual structure exists to aggregate.
    test, not asserted.
 4. **The hard part is being taken seriously.** Oracle centralisation (one bonded
    attestor in v1) is the honest weakness. The v2 contract adds an operator quorum
-   and independent resolvers; it is built and proven locally (21/21) but **not
+   and independent resolvers; it is built and proven locally (28/28) but **not
    deployed**.
 
 ## Twelve-month roadmap (realistic)

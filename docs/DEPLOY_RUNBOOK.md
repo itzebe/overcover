@@ -34,11 +34,11 @@ change is needed for the deploy itself; the UI is already version-aware.
 ```bash
 cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
 npm test                 # model + sim + contract + console + agent
-npm run verify:sandbox   # runs the compiled wasm on a real local neard node — expect 21/21
+npm run verify:sandbox   # runs the compiled wasm on a real local neard node — expect 28/28
 npm run verify:upgrade   # proves the SEC-1 guard on the compiled wasm — expect 8/8
 ```
 
-Stop here if `verify:sandbox` is not 21/21 or `verify:upgrade` is not 8/8.
+Stop here if `verify:sandbox` is not 28/28 or `verify:upgrade` is not 8/8.
 
 **Rebuild before you deploy.** A previously-built `overcover.wasm` may predate the SEC-1 fix. Both
 `driver/deploy.js` and `driver/upgrade.js` refuse to run if the wasm lacks the guard string

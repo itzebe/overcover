@@ -166,7 +166,7 @@ SEC-9 — see `docs/SECURITY_PRE_AUDIT.md`), but the **live v3 module still runs
 
 | | Live v3 `contract.ovc-v3-ctl-2f6c4c.testnet` | Branch source |
 | --- | --- | --- |
-| sha256 | `a97034e6…` (500023 bytes) | `0fd707e7…` (500342 bytes) |
+| sha256 | `a97034e6…` (500023 bytes) | `811e0427…` (500342 bytes) |
 | `code_hash` | `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL` | — (not yet deployed) |
 
 Until the module is replaced, the live contract keeps the capital-lock behaviour on the affected

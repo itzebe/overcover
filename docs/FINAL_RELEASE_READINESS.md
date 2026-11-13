@@ -8,7 +8,7 @@ The console now reads **and signs against the hardened v3 contract by default**.
 resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, a permissionless
 product factory, and a state-preserving in-place `migrate`. Its **deployed** bytes are the hardened
 v3 build sha256 `a97034e65fb0c53f…` (500023 bytes); this branch's source builds to a **newer** module
-(sha256 `0fd707e7d8d6bdeb…`, 500342 bytes) that adds the SEC-6/SEC-7 reservation-release fix **and the
+(sha256 `811e0427ec467582…`, 500342 bytes) that adds the SEC-6/SEC-7 reservation-release fix **and the
 SEC-9 unbounded-lead fix**, so `npm run verify:proof`
 now reports the deployed module as a recognised build and prints `SOURCE AHEAD OF DEPLOYMENT`. The
 legacy address still runs the original v1 module and is disclosed as such (the console labels it
@@ -117,7 +117,7 @@ The console reads and signs against `contract.ovc-v3-ctl-2f6c4c.testnet` by defa
 | Item | Value |
 | --- | --- |
 | code_hash | `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL` |
-| Deployed wasm sha256 | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` (500023 bytes) — a **recognised Overcover build**; this branch's source is **ahead** of it (`0fd707e7…`, 500342 bytes, carries SEC-6/SEC-7 **and SEC-9**). `npm run verify:proof` reports `SOURCE AHEAD OF DEPLOYMENT` |
+| Deployed wasm sha256 | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` (500023 bytes) — a **recognised Overcover build**; this branch's source is **ahead** of it (`811e0427…`, 500342 bytes, carries SEC-6/SEC-7 **and SEC-9**). `npm run verify:proof` reports `SOURCE AHEAD OF DEPLOYMENT` |
 | Pool | capital 1.4250 NEAR, reserved 0.2000 NEAR, solvent, 3 policies |
 | Products | `heat-lagos`, `heat-lagos-factory` — both **temperature** (`degC`), trigger `at or above 40.0 °C` |
 | Policies | 1 `heat-lagos` settled_paid · 2 `heat-lagos-factory` active · 3 `heat-lagos` active |
@@ -812,7 +812,7 @@ operator key (see below).
 
 **Live-contract evidence (unchanged, re-verified).** `npm run verify:proof` → **13/13**: the deployed
 legacy v1 module matches its published sha256 and the **deployed v3 module is a recognised Overcover
-build** (`a97034e6…`, 500023 bytes; this branch's source is ahead of it at `0fd707e7…`, 500342 bytes,
+build** (`a97034e6…`, 500023 bytes; this branch's source is ahead of it at `811e0427…`, 500342 bytes,
 carrying SEC-6/SEC-7/SEC-9);
 the legacy pool is solvent (capital 14.05 / reserved
 10.50 NEAR) and reconciles; all 18 `demo-log.json` transactions resolve on-chain; the two autonomous

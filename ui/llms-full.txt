@@ -12,7 +12,7 @@ funds only.
 - Legacy address (original v1 module, readable but not a purchase destination): contract.attestor-overcover.testnet
 - Block explorer: https://testnet.nearblocks.io/address/contract.ovc-v3-ctl-2f6c4c.testnet
 - License: MIT
-- Track: NEAR Hackathon 2026 — Business (primary), Swarms, DeFi
+- Audience: institutions, operators and autonomous agents that need objective, machine-readable cover
 
 ## The problem it addresses
 

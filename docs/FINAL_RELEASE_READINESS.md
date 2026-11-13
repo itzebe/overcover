@@ -274,6 +274,73 @@ Nothing is staged.
 
 ---
 
+## Session 2026-11-13 — security release closure + real OutLayer execution + institutional framing
+
+This session (branch `feat/overcover-security-hardening-discoverability`, PR #42) closed the console
+and infrastructure findings, independently reproduced the live OutLayer execution the POC claimed, and
+repositioned the public framing for institutions. It changed **no** smart contract, product rule or
+accounting behaviour, and deployed nothing.
+
+### Findings closed
+
+1. **SEC-8 — production shipped no Content-Security-Policy (LOW/MED).** `vercel.json` now sets a
+   hash-pinned CSP (`script-src 'self' 'sha256-…'`, no `unsafe-inline` for script) plus
+   `object-src`/`base-uri`/`frame-ancestors`/`form-action` locked. Verified in a real browser under the
+   served header (`npm run ui:qa`). The old note that a strict policy "would need `unsafe-inline`" was
+   wrong: hashing removes the need. **Caveat (honest):** the deployed **production** site still serves
+   the pre-CSP build; the header lands when this branch reaches `main`. Verified by
+   `curl -sI https://overcover.vercel.app/` — no `content-security-policy` present today.
+2. **SEC-10 — a code-only hardening deploy would have disabled buying (LOW).** The console's
+   `TRUSTED` build map is now a list of approved builds, so the pending SEC-6/7/9 module does not
+   silently lock the buy button. Regression test added.
+3. **SEC-11 — an evidence URL from the factory feed was rendered without a scheme check (LOW).**
+   `safeUrl` now passes only `http(s)` URLs into the evidence link; a real-`esc` DOM-XSS + scheme test
+   was added.
+4. **Duplicate submission while a buy is in flight.** The guard existed but was untested; a regression
+   test now asserts a second click signs nothing extra.
+
+### Independently reproduced (real OutLayer execution)
+
+The OutLayer attested-observation POC (PR #41) records a real OutLayer-hosted Intel TDX execution. This
+session **independently reproduced it** against the live OutLayer testnet worker:
+
+- A live `connector-probe` call completed on the worker (`testnet-api.outlayer.ai`), returning a real
+  `attestation_url` and a 5006-byte TDX quote (`tee_type 0x81`).
+- The canonical task hash recomputed from the attestation's own fields equals the quote's
+  `report_data[0..32]` — i.e. **`verifyAttestation().checks.report_data_binds_task === true`** against a
+  freshly fetched hardware quote, not a fixture. The serialization (task_type ‖ task_id(i64 LE) ‖
+  build_target ‖ wasm_hash ‖ input_hash ‖ output_hash ‖ caller_account_id ‖ project_id ‖ timestamp(i64 LE)
+  ‖ attached_usd, absent fields skipped) was brute-force confirmed.
+- Full Intel signature/TCB verification via `dcap-qvl` is unchanged from the POC.
+
+### Still BLOCKED BY HUMAN ACTION (unchanged, not worked around)
+
+- **Redeploy of `contract.ovc-v3-ctl-2f6c4c.testnet` to carry SEC-6/SEC-7/SEC-9.** The live v3 module
+  (`a97034e6…`, 500023 bytes) still runs pre-fix code; the hardened source builds ahead of it
+  (`811e0427…`, 500342 bytes). This needs the **contract account's operator key**, which is not
+  available in this environment (`OVC_V3_SECRET_KEY` unset, no `keys/`). No unauthorized upgrade or key
+  recovery was attempted. `npm run verify:proof` prints `SOURCE AHEAD OF DEPLOYMENT` accordingly.
+- **Live human wallet approval on v3.** A real HERE/Meteor extension approval with a funded testnet
+  account remains the outstanding acceptance test; it needs a human-controlled wallet. PR #39's recorded
+  human purchase occurred on the **legacy v1** contract and must not be read as a v3 human purchase.
+- **Legacy v1 SEC-1 closure.** `contract.attestor-overcover.testnet` still runs the original v1 module;
+  containment (legacy disclosure, buying disabled there) is in place, but the in-place upgrade needs the
+  same operator key.
+
+### Discoverability (verified against production, HTTP)
+
+`robots.txt`, `sitemap.xml`, `llms.txt`, `llms-full.txt`, `products.json`, `products.schema.json`,
+`og.png` all return 200 and match `main`. `robots.txt` explicitly allows GPTBot, OAI-SearchBot,
+ChatGPT-User, ClaudeBot, Claude-Web, PerplexityBot, Googlebot, Bingbot, Google-Extended and
+Applebot-Extended. The JSON-LD `@graph` (Organization, WebSite, SoftwareApplication, WebPage) parses and
+makes no invented-rating/pricing claims; FAQPage is correctly **absent** (no FAQ section on the page).
+Canonical, `robots: index, follow`, OG and Twitter tags are present in the initial HTML. **Limitation:**
+no access to Google Search Console or Bing Webmaster Tools, so crawler *access* is verified but indexing
+is **not** — no indexing claim is made.
+
+---
+
+
 ## Defects found and fixed in this mission (2026-11-13, security-hardening completion session)
 
 1. **SEC-9 — an unbounded observation date permanently locked reserved capital (HIGH).** Root cause:

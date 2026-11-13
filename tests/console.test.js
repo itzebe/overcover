@@ -434,6 +434,30 @@ test("the page describes a parametric mechanism honestly, without over-claiming"
     "must not claim automation beyond the implementation");
 });
 
+test("the institutional positioning is present and stays truthful", () => {
+  const start = HTML.indexOf('<section class="wrap band inst"');
+  const end = HTML.indexOf('<section class="wrap band" id="how"');
+  assert.ok(start !== -1 && end > start, "the institutional positioning band must exist");
+  const band = HTML.slice(start, end);
+  assert.match(band, /Built for institutions, operators and autonomous agents/);
+  // Each pillar must be traceable to a real contract rule, not a slogan.
+  assert.match(band, /reserved from the pool/, "the capital pillar must state the reservation rule");
+  assert.match(band, /reserved ≤ capital|reserved <= capital/, "the solvency invariant must be named");
+  assert.match(band, /cannot change/, "the immutability of a product must be stated");
+  assert.match(band, /quorum/, "the oracle/resolver quorum must be named");
+  assert.match(band, /products\.json/, "the machine-readable catalogue must be linked for agents");
+  // The institutional framing must not invent ratings, customers, adoption or coverage.
+  assert.doesNotMatch(band, /\b(clients?|customers?|partners?|insured (amount|sum)|rated|A\+)\b/i,
+    "no invented customers, partnerships, coverage or ratings");
+  assert.doesNotMatch(band, /\b(\d[\d,.]*\s*(million|billion|bn|m)\b|\$\d)/i, "no invented figures");
+  // The mandatory disclosure survives: the band must point to the honest limits.
+  assert.match(band, /#trust-h/, "the band must link to the honest-limits section");
+  // A link inside a sentence must clear WCAG 1.4.1.
+  assert.match(HTML, /\.inst-pillars \.p p a \{ text-decoration: underline/,
+    "in-sentence links in the band must be underlined");
+});
+
+
 test("the insurance journey names the real actor for each step", () => {
   const j = HTML.slice(HTML.indexOf('class="journey"'), HTML.indexOf('id="cover"'));
   const steps = [...j.matchAll(/class="t">([^<]+)</g)].map((m) => m[1]);

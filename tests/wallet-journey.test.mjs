@@ -451,3 +451,34 @@ test("networkMismatch() fires on a .near (mainnet) account, not only on the sele
   assert.equal(make("alice.testnet", "testnet"), false, "a testnet account on the testnet selector is not a mismatch");
   assert.equal(make("alice.testnet", "mainnet"), true, "a selector configured for mainnet is a mismatch");
 });
+
+// ---- adversarial: duplicate submission -----------------------------------
+// A double-click (or a programmatic second call) while a buy is in flight must
+// not produce a second transaction. The guard is buyState.busy, re-checked at
+// the top of doBuy before any premium read or wallet request.
+test("a second buy while one is in flight signs nothing extra", async () => {
+  let resolveSign;
+  const wallet = mockWallet({ result: okResult("HASH-DUP") });
+  wallet.signAndSend = (payload) => {
+    wallet.calls.push(payload);
+    return new Promise((r) => { resolveSign = () => r(okResult("HASH-DUP")); });
+  };
+  const page = bootPage({ wallet });
+  await settle(page);
+  await wallet.connect();
+
+  page.el("b-buy").dispatch("click");
+  await wait(30); // first buy is now blocked awaiting the wallet
+  assert.equal(wallet.calls.length, 1, "the first click requests one transaction");
+  assert.equal(page.el("b-buy").disabled, true, "the buy button is disabled while a buy is in flight");
+  assert.match(page.el("b-buy").textContent, /Waiting for your wallet/, "the button says it is waiting");
+
+  page.el("b-buy").dispatch("click");
+  page.el("b-buy").dispatch("click");
+  await wait(20);
+  assert.equal(wallet.calls.length, 1, "a second click while in flight must not sign another transaction");
+
+  resolveSign();
+  await wait(30);
+  assert.equal(wallet.calls.length, 1, "no extra transaction appears after the first completes");
+});

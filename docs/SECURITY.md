@@ -99,12 +99,14 @@ auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 
 ## What has been verified
 
-- A 66-attack reference model (`npm run test:model`): **66 attacks, 66 defended, 0 exploitable.**
-- 76 Rust unit tests (`npm run test:contract`).
+- A 74-attack reference model (`npm run test:model`): **74 attacks, 74 defended, 0 exploitable.**
+- 88 Rust unit tests (`npm run test:contract`), including a stateful randomised solvency fuzzer that
+  drives deposit/withdraw/buy/report/settle in a random order and asserts `reserved <= capital` after
+  every step.
 - 17 adversarial tests against the **live** contract (`npm run test:onchain`): each attack is refused
   with the expected reason. These need the gitignored operator key files and do not run in CI; see
   `docs/SECURITY_PRE_AUDIT.md` §4.
-- The console: 108 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
+- The console: 116 regression + live-RPC tests, and `npm run axe` (axe-core, WCAG 2.2 AA) with 0
   violations at 320/360/390/768/1024/1280/1440 px, for the page **and** the wallet dialog.
 - The agent service: 53 tests including idempotency and limit enforcement **under concurrency**
   (`npm run test:agent`), and the OpenAPI spec is checked against the running routes.

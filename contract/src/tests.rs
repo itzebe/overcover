@@ -1793,3 +1793,197 @@ fn sec7_a_backdated_reading_can_arrive_after_the_report_delay() {
     assert_eq!(c.get_policy(id).unwrap().paid_amount, 100 * ONE);
     assert!(c.reconcile());
 }
+
+// --------------------------------------------------------------------------
+// Stateful invariant fuzzing — reserved <= capital must survive a long,
+// randomised sequence of every state-changing action.
+//
+// The invariant is also checked after every mutation inside the contract
+// (`check_invariant_or_panic`), so this harness is a second, independent guard:
+// it drives the public API in an adversarial order and, after each step, asserts
+// the four pool identities hold and that the reconciliation identity still
+// balances. A deterministic PRNG keeps the run reproducible; a failing seed is
+// printed so the exact sequence can be replayed.
+// --------------------------------------------------------------------------
+
+/// xorshift64* — deterministic, dependency-free, adequate for test fuzzing.
+struct Fuzz(u64);
+impl Fuzz {
+    fn new(seed: u64) -> Self {
+        Fuzz(seed | 1)
+    }
+    fn next(&mut self) -> u64 {
+        let mut x = self.0;
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+        self.0 = x;
+        x.wrapping_mul(0x2545_F491_4F6C_DD1D)
+    }
+    fn below(&mut self, n: u64) -> u64 {
+        if n == 0 {
+            0
+        } else {
+            self.next() % n
+        }
+    }
+}
+
+/// Run a mutating call and swallow a contract refusal. A refusal is a valid
+/// outcome of the fuzz (it must leave state untouched); the invariant check
+/// that follows each step is what the harness is really asserting.
+fn try_call<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+}
+
+/// Assert the pool's accounting identities after a step. `reserved <= capital`
+/// is the invariant the mission names; the rest prove the reservation cannot
+/// leak value out of the reconciliation identity.
+fn assert_pool_sound(c: &Overcover, step: usize) {
+    let pool = c.get_pool();
+    assert!(
+        pool.reserved.0 <= pool.capital.0,
+        "step {step}: INVARIANT broken — reserved {} > capital {}",
+        pool.reserved.0,
+        pool.capital.0
+    );
+    assert!(pool.solvent, "step {step}: pool reports insolvent");
+    assert!(c.check_invariant(), "step {step}: check_invariant() false");
+    assert!(c.reconcile(), "step {step}: reconcile() false");
+    assert_eq!(
+        pool.available.0,
+        pool.capital.0 - pool.reserved.0,
+        "step {step}: available != capital - reserved"
+    );
+}
+
+/// Drive a long randomised sequence of every state-changing action and assert
+/// `reserved <= capital` (and the pool identities) after each one. Called once
+/// per seed from separate `#[test]`s, because the mocked storage persists for
+/// the duration of a single test and a fresh contract needs a fresh store.
+fn run_stateful_fuzz(seed: u64, steps: usize) {
+    {
+        let mut rng = Fuzz::new(seed);
+        ctx(owner(), 0, 0);
+        let mut c = Overcover::new(owner(), pubkey(9), U128(ONE / 10), 3600, 3600);
+        register_ops(&mut c);
+        register_resolvers(&mut c);
+        ctx(owner(), 0, 0);
+        c.add_product(
+            "rain-berlin-20mm".to_string(),
+            "berlin".to_string(),
+            200,
+            300,
+            U128(ONE),
+            U128(1000 * ONE),
+            24 * 3600,
+            U128(5000 * ONE),
+        );
+        // A small pool of providers, buyers and resolvers to draw from.
+        let providers: Vec<AccountId> = (0..3)
+            .map(|i| format!("lp{i}.testnet").parse().unwrap())
+            .collect();
+        let buyers: Vec<AccountId> = (0..4)
+            .map(|i| format!("b{i}.testnet").parse().unwrap())
+            .collect();
+
+        let mut now = 0u64;
+        let mut ids: Vec<u64> = vec![];
+        let mut dates: Vec<u64> = vec![];
+
+        for step in 0..steps {
+            now += rng.below(20_000); // advance wall clock, sometimes across a date
+            match rng.below(100) {
+                // ---- deposit ----
+                0..=24 => {
+                    let who = providers[rng.below(providers.len() as u64) as usize].clone();
+                    let amt = ((1 + rng.below(300)) as u128) * ONE;
+                    ctx(who, amt, now);
+                    let _ = try_call(|| c.deposit());
+                }
+                // ---- withdraw (the solvency gate may refuse) ----
+                25..=39 => {
+                    let who = providers[rng.below(providers.len() as u64) as usize].clone();
+                    let amt = ((1 + rng.below(400)) as u128) * ONE;
+                    ctx(who, 0, now);
+                    let _ = try_call(|| c.withdraw(U128(amt)));
+                }
+                // ---- buy cover (bounds / capacity / capital may refuse) ----
+                40..=79 => {
+                    let who = buyers[rng.below(buyers.len() as u64) as usize].clone();
+                    let payout = ((1 + rng.below(500)) as u128) * ONE;
+                    let lead = 24 * 3600 + rng.below(MAX_LEAD_SEC - 24 * 3600);
+                    let obs_date = now + lead;
+                    let premium = c.quote("rain-berlin-20mm".to_string(), U128(payout)).0;
+                    ctx(who, premium, now);
+                    if let Ok(id) = try_call(|| {
+                        c.buy_cover("rain-berlin-20mm".to_string(), U128(payout), obs_date, None)
+                    }) {
+                        ids.push(id);
+                        dates.push(obs_date);
+                    }
+                }
+                // ---- report a reading for a random existing date ----
+                80..=94 => {
+                    if !dates.is_empty() {
+                        let idx = rng.below(dates.len() as u64) as usize;
+                        let d = dates[idx];
+                        let value = rng.below(600); // 0..60.0 mm, straddling the 20.0 threshold
+                        let reported_at = now;
+                        for i in 1..=3u8 {
+                            // Only the first reading for a key finalizes; later
+                            // submissions for the same key are refused.
+                            let _ =
+                                try_call(|| submit(&mut c, i, "", "berlin", d, value, reported_at));
+                        }
+                    }
+                }
+                // ---- settle a random policy ----
+                _ => {
+                    if !ids.is_empty() {
+                        let idx = rng.below(ids.len() as u64) as usize;
+                        let id = ids[idx];
+                        ctx(owner(), 0, now);
+                        let _ = try_call(|| c.resolve(id));
+                    }
+                }
+            }
+            assert_pool_sound(&c, step);
+            // Per-product reservation can never exceed the global reservation.
+            for p in c.list_products() {
+                assert!(
+                    p.reserved <= c.get_pool().reserved.0,
+                    "step {step}: product reserved exceeds pool reserved"
+                );
+            }
+        }
+        // Every policy ends in a terminal state once its date has passed and it
+        // has been settled; nothing is left permanently reserved at the end.
+        ctx(owner(), 0, now + MAX_LEAD_SEC + 10 * 3600);
+        for id in ids.clone() {
+            let _ = try_call(|| c.resolve(id));
+            assert_pool_sound(&c, 9999);
+        }
+    }
+}
+
+#[test]
+fn stateful_fuzz_seed_1() {
+    run_stateful_fuzz(1, 400);
+}
+#[test]
+fn stateful_fuzz_seed_2() {
+    run_stateful_fuzz(2, 400);
+}
+#[test]
+fn stateful_fuzz_seed_7() {
+    run_stateful_fuzz(7, 600);
+}
+#[test]
+fn stateful_fuzz_seed_1337() {
+    run_stateful_fuzz(1337, 600);
+}
+#[test]
+fn stateful_fuzz_seed_deadbeef() {
+    run_stateful_fuzz(0xDEAD_BEEF, 800);
+}

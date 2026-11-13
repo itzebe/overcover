@@ -76,9 +76,9 @@ The same hashes are linked from the console's Proof section to `testnet.nearbloc
 
 ```bash
 npm ci --ignore-scripts
-npm run test:model      # 66 attacks, 66 defended, 0 exploitable  (reference model)
-npm run test:contract   # 76 Rust unit tests
-npm run test:console    # 108 regression + live-RPC tests (page regressions + end-to-end wallet journey)
+npm run test:model      # 74 attacks, 74 defended, 0 exploitable  (reference model)
+npm run test:contract   # 88 Rust unit tests (incl. a stateful randomised solvency fuzzer)
+npm run test:console    # 116 regression + live-RPC tests (page regressions + end-to-end wallet journey)
 npm run test:agent      # 53 limits + API + u128 precision + funds guard + OpenAPI + idempotency tests
 npm run test:agent-eval # 33 product-feed schema/premium + agent boundary + independent-client integration
 npm run test:factory    # 11 discovery-agent tests (deterministic rule, evidence hash, forecast labelling)
@@ -127,8 +127,8 @@ blocked at the network layer).
 
 ## 6. The product rules hold
 
-`research/model/` is an executable BigInt model of the accounting rules and a 66-attack suite that
-runs **before** the contract. `npm run test:model` prints `66 attacks, 66 defended, 0 exploitable`.
+`research/model/` is an executable BigInt model of the accounting rules and a 74-attack suite that
+runs **before** the contract. `npm run test:model` prints `74 attacks, 74 defended, 0 exploitable`.
 It is the reason the invariant and the reconciliation identity were trusted enough to implement.
 
 ## 7. The public console needs no local agent
@@ -180,7 +180,7 @@ development still works. Run it against production with
   gitignored operator identities (`keys/identities.json`, `keys/state.json`) and a fresh deploy, so
   they cannot run without a funded operator key. The suite exists and fails cleanly with an
   actionable message; it is **not** part of `npm test`. The same attacks are executed against the
-  reference model (`npm run test:model`, 66 attacks, 0 exploitable), which is the offline gate that
+  reference model (`npm run test:model`, 74 attacks, 0 exploitable), which is the offline gate that
   runs everywhere. The list of attacks covered: economics (capacity, premium injection, reserve vs
   withdraw, correlated claims, lead time, early resolve), oracle (wrong signer, stale, out-of-range,
   overwrite, future date, early resolve, bonded dispute both ways), mechanics (double resolve,

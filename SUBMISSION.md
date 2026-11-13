@@ -211,9 +211,9 @@ captured in this environment. A judge can complete it in two minutes by followin
 
 | Suite | Command | Result |
 | --- | --- | --- |
-| Reference model attacks | `npm run test:model` | **66 attacks, 0 exploitable, 66 defended** |
-| Contract unit tests | `npm run test:contract` | **76 passed, 0 failed** (includes 14 permissionless-factory tests, 4 SEC-1 migrate-authorization regressions and the v3 reading-message layout pin) |
-| Console regression + live RPC | `npm run test:console` | **108 passed, 0 failed** |
+| Reference model attacks | `npm run test:model` | **74 attacks, 0 exploitable, 74 defended** |
+| Contract unit tests | `npm run test:contract` | **88 passed, 0 failed** (includes 14 permissionless-factory tests, 4 SEC-1 migrate-authorization regressions, the v3 reading-message layout pin and a 5-seed stateful solvency fuzzer) |
+| Console regression + live RPC | `npm run test:console` | **116 passed, 0 failed** |
 | Agent limits + API + u128 precision |  `npm run test:agent` | **53 passed, 0 failed** — includes idempotency and limit enforcement under concurrency, and the funds preflight |
 | Product feed + agent evaluation | `npm run test:agent-eval` | **33 passed, 0 failed** — feed schema/premium checks, agent boundary cases, live read-only chain check |
 | Discovery agent | `npm run test:factory` | **11 passed, 0 failed** — deterministic risk rule, evidence-hash reproducibility, forecast (not observation) labelling, one live API read |

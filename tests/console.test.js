@@ -10,6 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -351,9 +352,10 @@ test("demo evidence in the page matches the recorded demo log", () => {
   const hashes = new Set(log.map((e) => e.hash));
   // Deployed contract code hashes are legitimate on-chain values (readable via
   // `view_account`), not transaction evidence, so they are allowed — but only
-  // these two known modules. Any other embedded hash must be a demo-log tx.
+  // these known modules. Any other embedded hash must be a demo-log tx.
   const codeHashes = new Set([
-    "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL", // hardened v3 module
+    "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL", // hardened v3 module (live)
+    "9h296MCND93dzHQn4vVUeEVai3VuohDbo9VJFntpT45C", // hardened v3 module (SEC-6/7/9 build)
     "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R", // legacy v1 module
   ]);
   const embedded = [...SCRIPT.matchAll(/"([1-9A-HJ-NP-Za-km-z]{40,})"/g)].map((m) => m[1]);
@@ -431,6 +433,30 @@ test("the page describes a parametric mechanism honestly, without over-claiming"
   assert.ok(!/\bno human involvement\b|\bfully automated\b|\bautomatically approved\b/i.test(HTML),
     "must not claim automation beyond the implementation");
 });
+
+test("the institutional positioning is present and stays truthful", () => {
+  const start = HTML.indexOf('<section class="wrap band inst"');
+  const end = HTML.indexOf('<section class="wrap band" id="how"');
+  assert.ok(start !== -1 && end > start, "the institutional positioning band must exist");
+  const band = HTML.slice(start, end);
+  assert.match(band, /Built for institutions, operators and autonomous agents/);
+  // Each pillar must be traceable to a real contract rule, not a slogan.
+  assert.match(band, /reserved from the pool/, "the capital pillar must state the reservation rule");
+  assert.match(band, /reserved ≤ capital|reserved <= capital/, "the solvency invariant must be named");
+  assert.match(band, /cannot change/, "the immutability of a product must be stated");
+  assert.match(band, /quorum/, "the oracle/resolver quorum must be named");
+  assert.match(band, /products\.json/, "the machine-readable catalogue must be linked for agents");
+  // The institutional framing must not invent ratings, customers, adoption or coverage.
+  assert.doesNotMatch(band, /\b(clients?|customers?|partners?|insured (amount|sum)|rated|A\+)\b/i,
+    "no invented customers, partnerships, coverage or ratings");
+  assert.doesNotMatch(band, /\b(\d[\d,.]*\s*(million|billion|bn|m)\b|\$\d)/i, "no invented figures");
+  // The mandatory disclosure survives: the band must point to the honest limits.
+  assert.match(band, /#trust-h/, "the band must link to the honest-limits section");
+  // A link inside a sentence must clear WCAG 1.4.1.
+  assert.match(HTML, /\.inst-pillars \.p p a \{ text-decoration: underline/,
+    "in-sentence links in the band must be underlined");
+});
+
 
 test("the insurance journey names the real actor for each step", () => {
   const j = HTML.slice(HTML.indexOf('class="journey"'), HTML.indexOf('id="cover"'));
@@ -871,13 +897,13 @@ const factorySrc = extractFunction(SCRIPT, "renderFactory");
 const matchSrc = extractFunction(SCRIPT, "matchActivated");
 const statusSrc = extractFunction(SCRIPT, "factoryStatus");
 const renderFactory = new Function(
-  "esc, cap, metricLabel, fmtVal, utc, term, shortAcct",
-  `var esc = esc;
+  "esc, safeUrl, cap, metricLabel, fmtVal, utc, term, shortAcct",
+  `var esc = esc; var safeUrl = safeUrl;
    ${matchSrc};
    ${statusSrc};
    ${factorySrc};
    return renderFactory;`
-)((s) => String(s), (s) => String(s), (m) => "m:" + m, (v) => "v:" + v, (s) => "T" + s,
+)((s) => String(s), (s) => String(s), (s) => String(s), (m) => "m:" + m, (v) => "v:" + v, (s) => "T" + s,
   (k, v) => `[${k}=${v}]`, (a) => "acct:" + a);
 
 const feedOne = {
@@ -937,4 +963,103 @@ test("a contract-read failure never shows a proposal as active", () => {
   const html = renderFactory(feedOne, [], null);
   assert.doesNotMatch(html, /Activated on-chain/);
   assert.doesNotMatch(html, /undefined/);
+});
+
+// --- Content Security Policy -------------------------------------------------
+// The page ships one inline <script> (the app). A strict CSP that allows only
+// 'self' would break it, so the policy pins that script by its sha256. This test
+// ties the header in vercel.json to the exact bytes the browser will hash: if the
+// inline script changes and the header is not updated, the header stops matching
+// and the deployed page would refuse to run its own app. The failure is loud here
+// rather than silent in production.
+test("the CSP pins the shipped inline script by its exact sha256", () => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
+  const rule = (cfg.headers || []).find((h) => (h.headers || []).some((x) => x.key === "Content-Security-Policy"));
+  assert.ok(rule, "vercel.json must define a Content-Security-Policy header");
+  const csp = rule.headers.find((x) => x.key === "Content-Security-Policy").value;
+
+  const hash = "sha256-" + crypto.createHash("sha256").update(SCRIPT, "utf8").digest("base64");
+  assert.ok(csp.includes(`'${hash}'`), `the CSP must allow the inline script by hash ${hash}`);
+
+  // The policy must actually lock the dangerous surfaces down, not merely exist.
+  assert.match(csp, /script-src 'self' 'sha256-/, "scripts are limited to self plus the pinned inline hash");
+  assert.match(csp, /object-src 'none'/, "plugins are disabled");
+  assert.match(csp, /base-uri 'none'/, "no <base> hijack");
+  assert.match(csp, /frame-ancestors 'none'/, "the page cannot be framed");
+  assert.match(csp, /form-action 'none'/, "forms cannot exfiltrate");
+  assert.match(csp, /connect-src 'self' https:/, "the console may only reach the RPC hosts over https");
+});
+
+test("the approved-build map accepts the live module and the SEC-6/7/9 hardening", () => {
+  // A code-only hardening deploy changes the code hash but not the account. If
+  // the console only accepted one hash, that deploy would silently lock buying.
+  const m = SCRIPT.match(/TRUSTED\[HARDENED_CONTRACT\]\s*=\s*\[([\s\S]*?)\]/);
+  assert.ok(m, "the hardened contract must map to a list of approved builds");
+  assert.ok(m[1].includes("CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL"), "the live module stays approved");
+  assert.ok(m[1].includes("9h296MCND93dzHQn4vVUeEVai3VuohDbo9VJFntpT45C"), "the SEC-6/7/9 build is approved");
+  assert.match(SCRIPT, /expected\.indexOf\(codeHash\)\s*!==\s*-1/, "trust is decided against the whole approved list");
+});
+
+test("the console makes no claim about an OutLayer/TDX adapter or an un-deployed hardening", () => {
+  // The adapter is a POC, not a live oracle path; the console must not imply it is.
+  assert.doesNotMatch(HTML, /OutLayer|Intel TDX|TEE attestation/i, "no OutLayer/TDX claim in the live console");
+  // The console describes the live module as hardened (SEC-1) and the legacy one
+  // as original — that is contract-state-driven, not a claim about SEC-6/7/9.
+  assert.match(SCRIPT, /Hardened build|hardened module/, "the hardened label is state-driven");
+});
+
+// --- DOM XSS ---------------------------------------------------------------
+// The permissionless factory lets anyone publish a product, and the console
+// renders product ids, city names and evidence text that originate from those
+// untrusted strings. Every renderer must escape them. The factory tests above
+// use a passthrough esc, so escaping itself is asserted here with the REAL esc
+// lifted from the page.
+const escSrc = SCRIPT.slice(SCRIPT.indexOf("var esc ="), SCRIPT.indexOf("var cap ="));
+const realEsc = new Function(`${escSrc}; return esc;`)();
+const safeUrlSrc = SCRIPT.slice(SCRIPT.indexOf("var safeUrl ="), SCRIPT.indexOf("var cap ="));
+const realSafeUrl = new Function("esc", `${safeUrlSrc}; return safeUrl;`)(realEsc);
+const renderFactoryEscaped = new Function(
+  "esc, safeUrl, cap, metricLabel, fmtVal, utc, term, shortAcct",
+  `var esc = esc; var safeUrl = safeUrl;
+   ${matchSrc};
+   ${statusSrc};
+   ${factorySrc};
+   return renderFactory;`
+)(realEsc, realSafeUrl, (s) => String(s), (m) => "m:" + m, (v) => "v:" + v, (s) => "T" + s,
+  (k, v) => `[${k}=${v}]`, (a) => "acct:" + a);
+
+test("the real esc neutralises the five HTML metacharacters", () => {
+  assert.equal(realEsc(`<>&"'`), "&lt;&gt;&amp;&quot;&#39;");
+});
+
+test("factory-supplied strings are escaped before they reach the DOM", () => {
+  const payload = `"><img src=x onerror=alert(1)>`;
+  const feed = {
+    proposals: [{
+      id: payload, status: "PROPOSED", metric: "rain", city: payload, direction: "Above",
+      thresholdTenths: 300, premiumBp: 500, coverageStartSec: 1794472201,
+      evidence: { kind: payload, source: payload, sourceUrl: "https://example.com", observedAt: payload, valueTenths: 1, unit: payload, raw: payload, hash: payload },
+      risk: { emerging: true, direction: "Above", rationale: payload },
+    }],
+  };
+  const html = renderFactoryEscaped(feed, [], null);
+  assert.ok(!html.includes("<img src=x"), "no live img element may be produced from a proposal string");
+  assert.ok(!html.includes(payload), "the raw payload must never appear unescaped");
+  assert.ok(html.includes("&lt;img src=x onerror=alert(1)&gt;"), "the payload is shown as inert text");
+});
+
+test("a javascript: or data: evidence URL is refused, never rendered as a live link", () => {
+  assert.equal(realSafeUrl("javascript:alert(1)"), "", "javascript: must not survive");
+  assert.equal(realSafeUrl("data:text/html,<script>alert(1)</script>"), "", "data: must not survive");
+  assert.equal(realSafeUrl("https://api.open-meteo.com/v1/forecast"), "https://api.open-meteo.com/v1/forecast");
+  const feed = {
+    proposals: [{
+      id: "factory-rain-miami-2026-11-17", status: "PROPOSED", metric: "rain", city: "miami",
+      direction: "Above", thresholdTenths: 300, premiumBp: 500, coverageStartSec: 1794472201,
+      evidence: { kind: "forecast", source: "x", sourceUrl: "javascript:alert(1)", observedAt: "2026-11-17", valueTenths: 615, unit: "mm/10", raw: 61.5, hash: "sha256:abc" },
+      risk: { emerging: true, direction: "Above", rationale: "r" },
+    }],
+  };
+  const html = renderFactoryEscaped(feed, [], null);
+  assert.ok(!html.includes("javascript:alert(1)"), "the dangerous scheme must not appear in the markup");
 });

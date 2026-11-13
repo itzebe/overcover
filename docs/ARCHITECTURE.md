@@ -65,7 +65,7 @@ on the operator's machine.
 ### 4. Reference model — `research/model/`
 
 An executable BigInt model of the accounting rules (`sim/engine.mjs`) driven by a
-**66-attack suite** (`research/model/attacks.mjs`) that runs before the contract. It is a design
+**74-attack suite** (`research/model/attacks.mjs`) that runs before the contract. It is a design
 instrument: it proved the accounting identities and the solvency invariant before any Rust was
 written. Run it with `npm run test:model`; the full lifecycle simulation is `npm run simulate:full`.
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light" />
-<meta name="description" content="Overcover — parametric insurance for businesses that cannot afford to wait for a claims process. Cover is defined up front, the payout is reserved from a capital pool, and settlement follows a signed public reading. Live on NEAR testnet; every figure is read from the contract." />
+<meta name="description" content="Overcover — fully-collateralised parametric insurance for institutions, operators and autonomous agents. Cover is defined up front as an immutable product, the payout is reserved from a capital pool, and settlement follows a signed public index reading. Live on NEAR testnet; every figure is read from the contract." />
 <title>Overcover — parametric insurance, settled on contract rules</title>
 <link rel="canonical" href="https://overcover.vercel.app/" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
@@ -197,7 +197,20 @@
     .journey > li:not(:last-child) .node::after { left: 19.5px; }
   }
 
-  /* ---------------- products ---------------- */
+  /* ------------- institutional positioning ------------- */
+  .inst { margin: 0; }
+  .inst-pillars { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .inst-pillars { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  .inst-pillars .p { background: var(--card); padding: 22px 24px; }
+  .inst-pillars .p .k { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  .inst-pillars .p h3 { font-size: 15.5px; margin: 0 0 8px; }
+  .inst-pillars .p p { margin: 0; color: var(--ink2); font-size: 14px; line-height: 1.55; }
+  .inst-pillars .p p + p { margin-top: 10px; color: var(--muted); font-size: 13.5px; }
+  /* A link inside a sentence must be distinguishable without relying on colour
+     (WCAG 1.4.1 / axe link-in-text-block), so it is always underlined. */
+  .inst-pillars .p p a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------------- products ---------------- */
   .prod-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
   @media (min-width: 720px) { .prod-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
   .prod { display: flex; flex-direction: column; overflow: hidden; }
@@ -487,7 +500,7 @@
       "isAccessibleForFree": true,
       "license": "https://github.com/itzebe/overcover/blob/main/LICENSE",
       "codeRepository": "https://github.com/itzebe/overcover",
-      "description": "A browser console that reads a NEAR testnet smart contract and lets a visitor buy parametric index insurance cover (rainfall or temperature). Cover terms are fixed in the contract; the payout is reserved from a capital pool; settlement follows a signed, challengeable public reading.",
+      "description": "A browser console that reads a NEAR testnet smart contract and lets a visitor buy fully-collateralised parametric index insurance cover (rainfall or temperature). Cover terms are fixed in an immutable on-chain product; the payout is reserved from a capital pool; settlement follows a signed, challengeable public index reading. The same catalogue is published machine-readably for autonomous agents.",
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -551,7 +564,7 @@
   <section class="hero" aria-labelledby="hero-h">
     <div class="wrap hero-in">
       <div>
-        <p class="eyebrow">Parametric insurance · live on NEAR testnet</p>
+        <p class="eyebrow">Programmable parametric risk · live on NEAR testnet</p>
         <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
         <p class="sub">Overcover covers one clearly-defined event at a time: a public index reading — rainfall or temperature — meeting a set trigger, in a named city, on a named date. Each product states its own trigger and direction, so the payout follows from contract rules, no adjuster, no queue.</p>
         <div class="actions">
@@ -655,6 +668,34 @@
         <h3 style="font-size:17px">Who it is for</h3>
         <p style="margin-top:10px;color:var(--ink2);font-size:14.5px">Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle: growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes, and the software agents that run them.</p>
         <p style="margin-top:12px;color:var(--muted);font-size:13.5px">It is a poor fit for a loss that needs assessing after the fact — that is what a traditional policy is for.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSTITUTIONAL POSITIONING ================= -->
+  <section class="wrap band inst" aria-labelledby="inst-h">
+    <div class="sect-head">
+      <h2 id="inst-h">Built for institutions, operators and autonomous agents</h2>
+      <p class="sect-note">Capital, terms and settlement are all on the record. Read them before you commit, and verify them without trusting this page.</p>
+    </div>
+    <div class="inst-pillars">
+      <div class="p">
+        <p class="k">Capital-backed, not promised</p>
+        <h3>Every payout is reserved at purchase</h3>
+        <p>The moment a policy is bought, its maximum payout is reserved from the pool and can no longer be withdrawn while the policy is live. The contract re-checks <code>reserved ≤ capital</code> after every state change and refuses any transaction that would leave the pool promising more than it holds.</p>
+        <p>The pool's identity — <code>capital = deposits − withdrawals + premiums + forfeited bonds − payouts</code> — is computed on-chain and shown live below.</p>
+      </div>
+      <div class="p">
+        <p class="k">Programmable and immutable</p>
+        <h3>Cover is a product, defined before purchase</h3>
+        <p>A product fixes the city, index, trigger, premium rate, payout bounds and capacity cap. Once published it cannot change, so a buyer is never re-priced and there is no discretion at settlement. Any account may underwrite a product with a stake, and any account may provide pool capital — the contract judges the terms, not a committee.</p>
+        <p>The same catalogue is published machine-readably in <a href="/products.json">products.json</a>, so software can price and buy cover without a human in the loop.</p>
+      </div>
+      <div class="p">
+        <p class="k">Verifiable, not trusted</p>
+        <h3>Settlement is a rule, and the result is on the record</h3>
+        <p>An index reading is finalised only by a quorum of independent operators who each sign with their own key. Anyone may challenge a reading by posting a bond, and an independent resolver quorum — separate from the operators, and unable to vote twice — decides. The owner cannot set the index or resolve a dispute alone.</p>
+        <p>Every figure on this page is a direct contract read, reproducible from public JSON-RPC. The security model and its limits are stated in full under <a href="#trust-h">What you should know before trusting this</a>.</p>
       </div>
     </div>
   </section>
@@ -1084,7 +1125,7 @@
     </div>
   </div>
   <div class="wrap f-bot">
-    <span>Overcover · NEAR Hackathon 2026 · MIT</span>
+    <span>Overcover · programmable parametric risk · MIT</span>
     <span>Testnet only — no real funds. Figures are contract state; if a read fails, the page says so instead of showing a stale number as live.</span>
   </div>
 </footer>
@@ -1126,8 +1167,16 @@
   var HARDENED_CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
   var LEGACY_CONTRACT = "contract.attestor-overcover.testnet";
   var TRUSTED = {};
-  TRUSTED[HARDENED_CONTRACT] = "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL";
-  TRUSTED[LEGACY_CONTRACT] = "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R";
+  // Approved modules per deployment. More than one build is accepted so a
+  // code-only hardening deploy (which changes the code hash but not the account)
+  // does not lock buying while the console catches up. The live module and the
+  // SEC-6/7/9 hardening are both accepted for the hardened address; drop the
+  // superseded hash once the new module is live and verified.
+  TRUSTED[HARDENED_CONTRACT] = [
+    "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL", // live module (SEC-1 hardened)
+    "9h296MCND93dzHQn4vVUeEVai3VuohDbo9VJFntpT45C", // SEC-6/7/9 hardening, wasm sha256 811e0427…
+  ];
+  TRUSTED[LEGACY_CONTRACT] = ["36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R"];
   var DEFAULT_CONTRACT = HARDENED_CONTRACT;
 
   // ?contract= selects which deployment to READ. A syntactically valid NEAR
@@ -1149,7 +1198,7 @@
     var expected = TRUSTED[contractId];
     if (!expected) return { state: "untrusted", codeHash: codeHash || null, reason: "not an approved Overcover address" };
     if (!codeHash) return { state: "unknown", codeHash: null, reason: "its deployed module has not been read yet" };
-    if (codeHash === expected) {
+    if (expected.indexOf(codeHash) !== -1) {
       return { state: contractId === LEGACY_CONTRACT ? "legacy" : "hardened", codeHash: codeHash, reason: "" };
     }
     return { state: "untrusted", codeHash: codeHash, reason: "its deployed module does not match the approved build" };
@@ -1166,6 +1215,10 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   };
+  // A URL from the discovery feed is rendered as a link. esc() stops attribute
+  // break-out but not a javascript:/data: scheme, so only http(s) survives; any
+  // other value renders the label as plain text instead of a live link.
+  var safeUrl = function (u) { return /^https?:\/\//i.test(String(u)) ? esc(u) : ""; };
   var cap = function (s) { s = String(s); return s.charAt(0).toUpperCase() + s.slice(1); };
   var big = function (y) { try { return BigInt(y); } catch (e) { return null; } };
   var near = function (y) { var b = big(y); return b === null ? NaN : Number(b) / 1e24; };
@@ -1517,7 +1570,7 @@
         "</div>";
       var evidence = '<div class="feat-ev">' +
         '<p class="k">Evidence · ' + esc(ev.kind) + " (not an observation of an event that occurred)</p>" +
-        '<p class="v"><a href="' + esc(ev.sourceUrl) + '" target="_blank" rel="noopener">' + esc(ev.source) + "</a> — " + esc(String(ev.raw)) + " " + esc(String(ev.unit).replace(/\/\s*10$/, "")) + " forecast for " + esc(ev.observedAt) + "</p>" +
+        '<p class="v"><a href="' + safeUrl(ev.sourceUrl) + '" target="_blank" rel="noopener">' + esc(ev.source) + "</a> — " + esc(String(ev.raw)) + " " + esc(String(ev.unit).replace(/\/\s*10$/, "")) + " forecast for " + esc(ev.observedAt) + "</p>" +
         '<p class="k">Evidence hash (recorded on-chain when activated)</p>' +
         '<p class="v mono">' + esc(ev.hash) + "</p>" +
         "</div>";

@@ -82,7 +82,7 @@ rule (WCAG 1.4.1) and the shipped artifacts.
 
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
-| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 82 Rust unit tests pass; 70-attack reference model `70 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
+| Core insurance functionality | FIXED AND VERIFIED | `contract/src/lib.rs`: products, policies, pool, reservations, signed oracle, bonded disputes, deterministic settlement. | 88 Rust unit tests pass (including a stateful randomised solvency fuzzer); 74-attack reference model `74 defended, 0 exploitable`; the live demo ran the full cycle (18 txs, `demo-log.json`). |
 | Product discovery | FIXED AND VERIFIED | `list_products` view; console offers only *sellable* products (named, payable, active) and groups everything else as clearly-labelled fixtures. | Live `list_products` returns 22 products (2 named: `rain-lagos`, `rain-bergen-dry`; 20 demo-generated). `rain-bergen-dry` pins its trigger at the contract's plausible ceiling (500.0 mm), so it can only pay on that single reading — a broken definition shown as a fixture, not offered as cover; `rain-lagos` renders as a coverage card. `tests/console.test.js`; live probe. |
 | Premium calculation | FIXED AND VERIFIED | `quote(product_id, payout) = ceil(payout × premium_bp / 10_000)`, computed in the contract. | `quote` read live (`0.0500 NEAR` for 1 NEAR at 500 bp); console re-reads the contract's quote before buying (`tests/console.test.js`). |
 | Payout calculation | FIXED AND VERIFIED | Payout is the amount reserved at purchase; `resolve` pays iff `value_tenths ≥ threshold_tenths`. | Policy 3 settled `settled_paid` (1 NEAR paid); policy 4 `settled_no_pay` (0). `verify:proof` asserts both. The console's hero and cards state the **≥** direction, derived from `threshold_tenths`. |
@@ -273,6 +273,111 @@ Nothing is staged.
   to run it and the honesty rules.
 
 ---
+
+## Session 2026-11-13 — stateful invariant fuzzing (contract) + release-gate re-run
+
+This session added the stateful property/invariant testing the mission calls for, and re-ran the
+whole release gate. It changed **no** contract logic, product rule or accounting behaviour: the
+addition is test-only (`contract/src/tests.rs`).
+
+### Added — stateful randomised solvency fuzzer
+
+The named invariant `reserved <= capital` was already asserted after every mutation inside the
+contract (`check_invariant_or_panic`) and by `invariant_and_reconciliation_hold_across_a_sequence`.
+This session adds an independent, adversarial **stateful** harness (`run_stateful_fuzz`) that drives
+the public API in a randomised order — deposit, withdraw, buy, report, settle — and after **every**
+step asserts:
+
+- `reserved <= capital` (the mission's named invariant), `get_pool().solvent`,
+- `check_invariant()`, and `reconcile()` (the full accounting identity), and
+- `available == capital - reserved`, and per-product `reserved <= pool reserved`.
+
+It runs five fixed seeds (`stateful_fuzz_seed_1/2/7/1337/deadbeef`) at 400–800 steps each; the PRNG
+is deterministic so a failing sequence is reproducible.
+
+**Falsification (the point of the harness).** The fuzzer was proven to *detect* a broken invariant,
+not merely to pass: with the `available`-capital guard in `buy_cover` removed and its
+`check_invariant_or_panic` disabled, **all five seeds fail** with e.g.
+`step 1: INVARIANT broken — reserved 134…000 > capital 4…000`. The mutation was then reverted and the
+suite re-ran green. So the harness is a real guard, not decoration.
+
+### Release gate re-run (this session)
+
+All green, locally: model 74/74 (0 exploitable) · contract **88** (was 83; +5 fuzz seeds) · console
+116 · agent 53 · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
+· `verify:upgrade-preservation` PRESERVED · `verify:connectivity` 13/13 · `verify:sandbox` 28/28 ·
+`verify:factory` 22/22 · `verify:controlled-v3:sandbox` **39/39** (incl. SEC-1 refused on the compiled
+wasm, owner unchanged after the refused `migrate`). `axe` 0 violations at 7 widths. `test:onchain`
+(live adversarial) still needs the gitignored operator key + a fresh deploy — not run here.
+
+---
+
+## Session 2026-11-13 — security release closure + real OutLayer execution + institutional framing
+
+This session (branch `feat/overcover-security-hardening-discoverability`, PR #42) closed the console
+and infrastructure findings, independently reproduced the live OutLayer execution the POC claimed, and
+repositioned the public framing for institutions. It changed **no** smart contract, product rule or
+accounting behaviour, and deployed nothing.
+
+### Findings closed
+
+1. **SEC-8 — production shipped no Content-Security-Policy (LOW/MED).** `vercel.json` now sets a
+   hash-pinned CSP (`script-src 'self' 'sha256-…'`, no `unsafe-inline` for script) plus
+   `object-src`/`base-uri`/`frame-ancestors`/`form-action` locked. Verified in a real browser under the
+   served header (`npm run ui:qa`). The old note that a strict policy "would need `unsafe-inline`" was
+   wrong: hashing removes the need. **Caveat (honest):** the deployed **production** site still serves
+   the pre-CSP build; the header lands when this branch reaches `main`. Verified by
+   `curl -sI https://overcover.vercel.app/` — no `content-security-policy` present today.
+2. **SEC-10 — a code-only hardening deploy would have disabled buying (LOW).** The console's
+   `TRUSTED` build map is now a list of approved builds, so the pending SEC-6/7/9 module does not
+   silently lock the buy button. Regression test added.
+3. **SEC-11 — an evidence URL from the factory feed was rendered without a scheme check (LOW).**
+   `safeUrl` now passes only `http(s)` URLs into the evidence link; a real-`esc` DOM-XSS + scheme test
+   was added.
+4. **Duplicate submission while a buy is in flight.** The guard existed but was untested; a regression
+   test now asserts a second click signs nothing extra.
+
+### Independently reproduced (real OutLayer execution)
+
+The OutLayer attested-observation POC (PR #41) records a real OutLayer-hosted Intel TDX execution. This
+session **independently reproduced it** against the live OutLayer testnet worker:
+
+- A live `connector-probe` call completed on the worker (`testnet-api.outlayer.ai`), returning a real
+  `attestation_url` and a 5006-byte TDX quote (`tee_type 0x81`).
+- The canonical task hash recomputed from the attestation's own fields equals the quote's
+  `report_data[0..32]` — i.e. **`verifyAttestation().checks.report_data_binds_task === true`** against a
+  freshly fetched hardware quote, not a fixture. The serialization (task_type ‖ task_id(i64 LE) ‖
+  build_target ‖ wasm_hash ‖ input_hash ‖ output_hash ‖ caller_account_id ‖ project_id ‖ timestamp(i64 LE)
+  ‖ attached_usd, absent fields skipped) was brute-force confirmed.
+- Full Intel signature/TCB verification via `dcap-qvl` is unchanged from the POC.
+
+### Still BLOCKED BY HUMAN ACTION (unchanged, not worked around)
+
+- **Redeploy of `contract.ovc-v3-ctl-2f6c4c.testnet` to carry SEC-6/SEC-7/SEC-9.** The live v3 module
+  (`a97034e6…`, 500023 bytes) still runs pre-fix code; the hardened source builds ahead of it
+  (`811e0427…`, 500342 bytes). This needs the **contract account's operator key**, which is not
+  available in this environment (`OVC_V3_SECRET_KEY` unset, no `keys/`). No unauthorized upgrade or key
+  recovery was attempted. `npm run verify:proof` prints `SOURCE AHEAD OF DEPLOYMENT` accordingly.
+- **Live human wallet approval on v3.** A real HERE/Meteor extension approval with a funded testnet
+  account remains the outstanding acceptance test; it needs a human-controlled wallet. PR #39's recorded
+  human purchase occurred on the **legacy v1** contract and must not be read as a v3 human purchase.
+- **Legacy v1 SEC-1 closure.** `contract.attestor-overcover.testnet` still runs the original v1 module;
+  containment (legacy disclosure, buying disabled there) is in place, but the in-place upgrade needs the
+  same operator key.
+
+### Discoverability (verified against production, HTTP)
+
+`robots.txt`, `sitemap.xml`, `llms.txt`, `llms-full.txt`, `products.json`, `products.schema.json`,
+`og.png` all return 200 and match `main`. `robots.txt` explicitly allows GPTBot, OAI-SearchBot,
+ChatGPT-User, ClaudeBot, Claude-Web, PerplexityBot, Googlebot, Bingbot, Google-Extended and
+Applebot-Extended. The JSON-LD `@graph` (Organization, WebSite, SoftwareApplication, WebPage) parses and
+makes no invented-rating/pricing claims; FAQPage is correctly **absent** (no FAQ section on the page).
+Canonical, `robots: index, follow`, OG and Twitter tags are present in the initial HTML. **Limitation:**
+no access to Google Search Console or Bing Webmaster Tools, so crawler *access* is verified but indexing
+is **not** — no indexing claim is made.
+
+---
+
 
 ## Defects found and fixed in this mission (2026-11-13, security-hardening completion session)
 

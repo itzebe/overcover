@@ -63,6 +63,17 @@ License: MIT
   capital.
 - The live demonstration uses a 60-second challenge window; production would use a
   longer one.
+- **Deployment status.** The hardened v3 module (the SEC-1 `migrate()` guard and the
+  SEC-6/7/9 settlement fixes) is **built and reproducibly verifiable but not yet
+  deployed**; the account in the line above still runs the earlier module. The
+  code-only deploy is prepared and reversible but needs the operator signing key.
+- **Legacy containment is pending.** The legacy v1 address is read-only in the
+  console and buying there is refused, but contract-level pausing needs the legacy
+  owner key, which the deployment automation does not hold. This is a documented
+  external-authority blocker, not a code gap.
+- **The hardware-attested observation adapter is a tested prototype, not deployed.**
+  It is optional provenance and never replaces operator signatures, quorum or
+  disputes.
 
 ## Machine-readable catalogue (for agents)
 

@@ -450,6 +450,19 @@
   .disclose li::before { content: "!"; position: absolute; left: 0; top: 2px; width: 14px; height: 14px; border-radius: 4px; background: #e6c879; color: #4a3a12; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
   .disclose li b { color: #3a2c0a; }
 
+  /* ---------------- deployment status ledger ---------------- */
+  .status-table { border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; background: var(--card); }
+  .status-table table { width: 100%; border-collapse: collapse; }
+  .status-table th, .status-table td { text-align: left; padding: 11px 14px; font-size: 13.5px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .status-table th { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 650; background: var(--card-2); }
+  .status-table tr:last-child td { border-bottom: 0; }
+  .status-table td a { text-decoration: underline; text-underline-offset: 2px; }
+  .status-table .st { font-family: var(--sans); font-size: 11px; font-weight: 650; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); white-space: nowrap; display: inline-block; }
+  .status-table .st.live { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
+  .status-table .st.prototype { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
+  .status-table .st.blocked { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
+  .status-table .st.planned { color: var(--muted); }
+
   /* ---------------- proof ---------------- */
   .proof { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
   .proof > div { background: var(--card); padding: 17px 19px; min-width: 0; }
@@ -1181,6 +1194,56 @@
         <p class="lbl">Sample settlements from the recorded demo</p>
         <div class="links" id="demo-links"><span class="sub" style="font-size:12.5px">Loading…</span></div>
       </div>
+    </div>
+  </section>
+
+  <section class="wrap band" id="status" aria-labelledby="status-h">
+    <div class="sect-head">
+      <div>
+        <p class="eyebrow">Honest deployment status</p>
+        <h2 id="status-h">What is live, what is not, and what is blocked</h2>
+      </div>
+      <p class="sect-note">The product vision is fixed; its deployment is not yet complete. This ledger separates code that exists from code that is deployed, and names every external authority it depends on. It is updated by hand and does not change without evidence.</p>
+    </div>
+    <div class="status-table scroll">
+      <table>
+        <caption class="sub" style="text-align:left;padding:10px 14px 0;font-size:12.5px">Deployment status of each capability. “Live” means verified against the deployed contract on NEAR testnet; it does not mean audited.</caption>
+        <thead>
+          <tr><th scope="col">Capability</th><th scope="col">Status</th><th scope="col">Evidence</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Capital pool, policy purchase, reserved payout, oracle quorum, bonded dispute, deterministic settlement</td>
+            <td><span class="st live">Live · testnet</span></td>
+            <td>The full lifecycle runs on-chain against the contract this page reads. Every figure on this page is a direct contract read.</td>
+          </tr>
+          <tr>
+            <td>Hardened v3 module (SEC-1 <code>migrate()</code> guard, SEC-6/7/9 settlement fixes)</td>
+            <td><span class="st prototype">Built, not deployed</span></td>
+            <td>The module builds reproducibly to sha256 <code>811e0427…</code>. The account this page reads still runs the earlier module; the code-only deploy is prepared and reversible but needs the operator signing key.</td>
+          </tr>
+          <tr>
+            <td>Legacy v1 containment (<code>set_paused</code>)</td>
+            <td><span class="st blocked">Blocked</span></td>
+            <td>The legacy address is read-only here and buying is refused. Contract-level pausing needs the legacy owner key, which is not available to the deployment automation. See <a href="https://github.com/itzebe/overcover/blob/main/docs/OPERATOR_ACTIONS_REQUIRED.md" rel="noopener">operator actions</a>.</td>
+          </tr>
+          <tr>
+            <td>Human purchase of cover on the hardened module</td>
+            <td><span class="st blocked">Blocked</span></td>
+            <td>Depends on the hardened module being deployed. The recorded human purchase in the project history was made against the legacy module and is not evidence of a purchase on the hardened one.</td>
+          </tr>
+          <tr>
+            <td>Hardware-attested external observations (TDX adapter)</td>
+            <td><span class="st prototype">Prototype · not deployed</span></td>
+            <td>The adapter builds reproducibly and its attestation path is tested, but it is not published. It is optional provenance: it never replaces operator signatures, oracle quorum or disputes.</td>
+          </tr>
+          <tr>
+            <td>Independent third-party security audit</td>
+            <td><span class="st planned">Not performed</span></td>
+            <td>No external audit has occurred. The adversarial suites and proofs in the repository are the project's own; they are not a substitute for an audit.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 

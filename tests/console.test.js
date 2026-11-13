@@ -1008,6 +1008,17 @@ test("the console makes no claim about an OutLayer/TDX adapter or an un-deployed
   assert.match(SCRIPT, /Hardened build|hardened module/, "the hardened label is state-driven");
 });
 
+test("the console ships an honest deployment-status ledger", () => {
+  // The console must state plainly what is deployed and what is not, so a reader
+  // (or an answer engine) cannot mistake the un-deployed hardening for live.
+  assert.match(HTML, /id="status"/, "the deployment-status section is present");
+  assert.match(HTML, /Built, not deployed/, "the un-deployed hardening is labelled as such");
+  assert.match(HTML, /Blocked/, "credential-gated work is labelled blocked");
+  assert.match(HTML, /Not performed/, "the absent external audit is stated");
+  // And it must not upgrade the prototype into a claim it cannot support.
+  assert.doesNotMatch(HTML, /audited by|audit complete|SOC 2|ISO 27001/i, "no fabricated audit claim");
+});
+
 // --- DOM XSS ---------------------------------------------------------------
 // The permissionless factory lets anyone publish a product, and the console
 // renders product ids, city names and evidence text that originate from those

@@ -26,6 +26,42 @@ if (!fs.existsSync(EXEC)) {
 const WIDTHS = [320, 360, 390, 430, 768, 1280, 1440];
 const MAX_HEADER = 130; // px of sticky chrome tolerated before it crowds the page
 
+// The page reads the contract from public NEAR RPC endpoints. Those endpoints
+// rate-limit a burst of page loads (this audit opens seven back-to-back, ~11
+// reads each) and answer 429 WITHOUT a CORS header, which the browser reports as
+// a console error even though the page fails over correctly and still renders an
+// honest live/stale state. Proxying the RPC through Node keeps the page's real
+// data path but removes that transport-level noise, so the gate measures the
+// page (overflow, layout, real script errors) instead of the public endpoint's
+// rate limiter.
+const RPC_HOSTS = ["test.rpc.fastnear.com", "rpc.testnet.fastnear.com", "near-testnet.drpc.org"];
+const isRpc = (u) => RPC_HOSTS.some((h) => u.includes(h));
+async function proxyRpc(route) {
+  const req = route.request();
+  const cors = { "content-type": "application/json", "access-control-allow-origin": "*" };
+  const jsonRpcError = (message) =>
+    JSON.stringify({ jsonrpc: "2.0", id: "proxy", error: { code: -32000, message } });
+  try {
+    const res = await fetch(req.url(), {
+      method: req.method(),
+      headers: { "content-type": req.headers()["content-type"] || "application/json" },
+      body: req.method() === "GET" ? undefined : req.postData(),
+    });
+    // A rate-limited (429) or otherwise non-200 endpoint is presented to the page
+    // as a JSON-RPC error at HTTP 200 — the shape the console already handles by
+    // failing over to the next endpoint. This keeps the page's real failover path
+    // exercised without emitting a transport-level console error that has nothing
+    // to do with the page under test.
+    if (res.status !== 200) {
+      await route.fulfill({ status: 200, headers: cors, body: jsonRpcError("upstream " + res.status) });
+      return;
+    }
+    await route.fulfill({ status: 200, headers: cors, body: await res.text() });
+  } catch {
+    await route.fulfill({ status: 200, headers: cors, body: jsonRpcError("rpc unreachable") });
+  }
+}
+
 // Serve ui/ over HTTP so the page's own fetches (factory.json, products.json)
 // succeed and their transport noise cannot be mistaken for a product error.
 const MIME = { ".html": "text/html", ".json": "application/json", ".js": "text/javascript", ".txt": "text/plain", ".xml": "application/xml", ".png": "image/png" };
@@ -50,6 +86,9 @@ for (const width of WIDTHS) {
   const errors = [];
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
   page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+  // Keep the page's real RPC data path, but take the public endpoints' rate
+  // limiting out of the measurement (see proxyRpc above).
+  await page.route((u) => isRpc(u.toString()), proxyRpc);
   await page.goto(base, { waitUntil: "load" });
   await page.waitForTimeout(500);
 
@@ -74,12 +113,14 @@ for (const width of WIDTHS) {
       }
     }
     const header = document.querySelector("header.mast");
+    const net = document.querySelector("#netlabel");
     return {
       overflow: doc.scrollWidth - vw,
       offenders: offenders.slice(0, 6),
       headerH: header ? Math.round(header.getBoundingClientRect().height) : 0,
       sections: document.querySelectorAll("main > section").length,
       h1: document.querySelectorAll("h1").length,
+      readState: net ? net.textContent.trim() : "",
     };
   });
 
@@ -89,8 +130,11 @@ for (const width of WIDTHS) {
   if (report.headerH > MAX_HEADER) failures.push(`${width}px: sticky header is ${report.headerH}px (> ${MAX_HEADER}px)`);
   if (report.sections < 5) failures.push(`${width}px: only ${report.sections} main sections rendered`);
   if (report.h1 !== 1) failures.push(`${width}px: expected exactly one h1, found ${report.h1}`);
+  // The console must reach the live read state against the contract; if the
+  // data path broke, this audit must fail rather than pass on layout alone.
+  if (!/live$/.test(report.readState)) failures.push(`${width}px: console did not reach the live read state (got "${report.readState}")`);
 
-  console.log(`[${width}px] overflow=${report.overflow} header=${report.headerH}px sections=${report.sections} h1=${report.h1} consoleErrors=${errors.length}`);
+  console.log(`[${width}px] overflow=${report.overflow} header=${report.headerH}px sections=${report.sections} h1=${report.h1} read=${report.readState || "?"} consoleErrors=${errors.length}`);
   await page.close();
 }
 

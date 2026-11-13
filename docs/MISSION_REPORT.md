@@ -122,10 +122,38 @@ founder's authority and are marked `[human]`. **Nothing was submitted.**
 | `axe` | 0 violations at 320/360/390/768/1024/1280/1440 px |
 | `poc:outlayer:test` | 17 passed |
 
-Gated suites not run here (need a funded root or a local `neard`):
-`verify:sandbox`, `verify:controlled-v3:sandbox`, `verify:controlled-v3:evidence`,
-`verify:upgrade`, `verify:upgrade-preservation`, `verify:live`,
-`verify:agent`. They are not claimed as passing.
+Gated suites need a funded root or a local `neard`, so they were not run in
+this environment. **They ran in CI** (which provisions `neard`) and passed on the
+final commit:
+
+| CI step | Result |
+| --- | --- |
+| Contract unit tests | success |
+| Reference model attacks | success |
+| Console regression tests | success |
+| Agent limits, API and u128-precision | success |
+| Product feed + agent-evaluation | success |
+| Discovery agent | success |
+| Deploy fail-closed regression | success |
+| Build the contract to wasm | success |
+| Independent proof (deployed bytecode == source, pool solvent, on-chain evidence) | success |
+| SEC-1 migrate() authorization proof | success |
+| Contract end-to-end on a local NEAR node | success |
+| SEC-1 migrate() guard on the compiled wasm | success |
+| In-place upgrade preserves state | success |
+| Controlled v3 deploy + SEC-1 closure on the deployed module | success |
+| Permissionless factory end-to-end on a local NEAR node | success |
+| Agent spend-authorization vs the live contract | success |
+| Fail if a secret is tracked | success |
+
+CI run: `https://github.com/itzebe/overcover/actions/runs/43390713217`
+(head `cd8d4720`) — conclusion **success**.
+
+Note: the first CI run on this branch (`a07a6c2`) **failed** at the "Fail if a
+secret is tracked" step, because the POC report embedded operator public keys in
+the `ed25519:<base58>` form that the scanner greps for. Fixed by storing public
+keys as raw hex (commit `cd8d472`); the scanner cannot tell a public key from a
+secret one, and a public key must not look like committed key material.
 
 ## 7. Remaining risks and limitations
 

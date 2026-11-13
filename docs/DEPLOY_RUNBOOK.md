@@ -102,6 +102,44 @@ but the pool, policies and providers are wiped — use this only when a clean st
 longer overwrite all state (see `docs/SECURITY_PRE_AUDIT.md`, finding SEC-1). A call from any account
 other than the contract itself is refused; `proof/upgrade-guard.mjs` proves this on the compiled wasm.
 
+### 3c. Code-only upgrade of the deployed v3 module (SEC-6 / SEC-7 / SEC-9)
+
+The v3 account `contract.ovc-v3-ctl-2f6c4c.testnet` currently runs sha256 `a97034e6…` (500023 bytes).
+The SEC-6/SEC-7/SEC-9 fixes change **only** contract logic — `observation_settlement`/`resolve` and the
+`buy_cover` lead check — plus a new `const MAX_LEAD_SEC`. **No stored struct changes**, so the state
+layout is identical and a plain `DeployContract` preserves the pool, products, policies, providers and
+observations. Do **not** call `migrate` here: it is a v1→v2 migrator and will fail closed on the
+already-v3 state (that is the safe behaviour, not a bug).
+
+**Prerequisite:** the account's full-access key (operator-held; never committed). This environment has
+no key material, so this step is **not** performed here.
+
+```bash
+# 1. Build the fixed wasm with the pinned toolchain (rust-toolchain.toml, 1.99.1).
+cargo build --manifest-path contract/Cargo.toml --target wasm32-unknown-unknown --release
+sha256sum contract/target/wasm32-unknown-unknown/release/overcover.wasm   # expect 0fd707e7…
+
+# 2. Record the pre-upgrade code hash (for the rollback below).
+curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_code","finality":"final","account_id":"contract.ovc-v3-ctl-2f6c4c.testnet"}}' \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["result"]["hash"])'   # expect CQR8x1kW…
+
+# 3. Deploy the new code to the SAME account (state-preserving; no migrate).
+#    There is no repo script for a code-only v3 upgrade — `driver/upgrade.js` bundles a
+#    v1->v2 migrate and targets the legacy address. Sign a single DeployContract action
+#    with the account's full-access key using any NEAR client (near-cli-rs, near-api-js,
+#    or near-cli). A DeployContract carries no `new()`/`migrate()`: it replaces code only,
+#    so the existing state is retained. (Exact CLI flags depend on the client version;
+#    the operation is `DeployContract(account=contract.ovc-v3-ctl-2f6c4c.testnet, code=<wasm>)`.)
+
+# 4. Re-verify: the new code hash, the unchanged pool, and the SEC-9 refusal.
+node proof/controlled-v3-evidence.mjs   # wasmSha256MatchesDeployedCode must become true
+```
+
+Until this runs, `npm run verify:proof` correctly reports `SOURCE AHEAD OF DEPLOYMENT`, and the live
+contract keeps the capital-lock behaviour. **Rollback:** redeploy the previous module (step 3 with the
+recorded `a97034e6…` wasm) — again code-only, state-preserving.
+
 ## 4. Verify the deploy
 
 ```bash

@@ -73,7 +73,7 @@ function makeElement(id) {
  *  with the elements and the mock wallet for assertions. `search` lets a test
  *  exercise the ?contract= selection; `codeHash` overrides the deployed module
  *  the stubbed RPC reports (so trust states can be driven). */
-function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash, search = "" }) {
+function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash, search = "", signTimeoutMs = undefined }) {
   const elements = new Map();
   let viewAccountCalls = 0;
   const getEl = (id) => {
@@ -100,6 +100,7 @@ function bootPage({ wallet, codeHash = FIXTURE.view_account.code_hash, search = 
     navigator: {},
     OvercoverWallet: wallet,
     OvercoverPolicy: null,
+    OVERCOVER_SIGN_TIMEOUT_MS: signTimeoutMs,
     setInterval: () => 0,
     setTimeout,
     clearTimeout,
@@ -481,4 +482,71 @@ test("a second buy while one is in flight signs nothing extra", async () => {
   resolveSign();
   await wait(30);
   assert.equal(wallet.calls.length, 1, "no extra transaction appears after the first completes");
+});
+
+// ---- adversarial: wallet disconnection during execution ---------------------
+// A wallet that disconnects while the buy is in flight, or that rejects after a
+// delay, must still leave the control usable and must never claim a purchase.
+test("a wallet that rejects mid-flight leaves the control usable and buys nothing", async () => {
+  let rejectSign;
+  const wallet = mockWallet({ result: okResult("HASH-NEVER") });
+  wallet.signAndSend = (payload) => {
+    wallet.calls.push(payload);
+    return new Promise((_, rej) => { rejectSign = () => rej(new Error("User rejected the request")); });
+  };
+  const page = bootPage({ wallet });
+  await settle(page);
+  await wallet.connect();
+
+  page.el("b-buy").dispatch("click");
+  await wait(30);
+  assert.equal(page.el("b-buy").disabled, true, "the control is disabled while a buy is in flight");
+  assert.equal(wallet.calls.length, 1, "one transaction was requested");
+
+  rejectSign(); // the user declines, or the extension closes
+  await wait(40);
+
+  assert.match(page.el("b-status").textContent, /Purchase not completed/, "a rejection is not a purchase");
+  assert.match(page.el("b-result").innerHTML, /No cover was bought/);
+  assert.equal(page.el("b-buy").disabled, false, "the control is usable again after a rejection");
+});
+
+// ---- adversarial: the wallet never answers (RPC timeout / dead extension) ----
+// signAndSend must be bounded: a wallet that never calls back cannot leave the
+// button disabled forever, and the outcome must be reported as UNKNOWN — never
+// as success, never as a definite failure.
+test("a wallet that never answers times out with an honest 'outcome unknown', not a hang or a fake success", async () => {
+  const wallet = mockWallet({ result: okResult("HASH-SHOULD-NOT-CLAIM") });
+  wallet.signAndSend = (payload) => {
+    wallet.calls.push(payload);
+    return new Promise(() => {}); // never resolves or rejects
+  };
+  const page = bootPage({ wallet, signTimeoutMs: 40 });
+  await settle(page);
+  await wallet.connect();
+
+  page.el("b-buy").dispatch("click");
+  await wait(120);
+
+  assert.equal(wallet.calls.length, 1, "exactly one transaction was requested");
+  assert.match(page.el("b-status").textContent, /No answer from your wallet/, "the status says the wallet did not answer");
+  assert.match(page.el("b-result").innerHTML, /outcome unknown/i, "the outcome is reported as unknown");
+  assert.doesNotMatch(page.el("b-status").textContent, /confirmed/i, "a timeout is never a confirmed purchase");
+  assert.doesNotMatch(page.el("b-result").innerHTML, /Cover in force/, "a timeout never claims cover is in force");
+  assert.equal(page.el("b-buy").disabled, false, "the control is released so the user can retry");
+});
+
+// ---- adversarial: reload during a pending settlement ------------------------
+// The console holds no pending state of its own. On load it must render the
+// contract's own view: an active policy past its observation date is shown as
+// awaiting settlement, never as settled and never as paid.
+test("a reload during a pending settlement shows the contract's status, not a local guess", async () => {
+  const wallet = mockWallet({ result: okResult("HASH-RELOAD") });
+  const page = bootPage({ wallet });
+  await settle(page); // simulates a fresh page load with a settlement still pending
+  const pol = page.el("policies").innerHTML;
+  // The fixture holds one settled policy (#1) and one still awaiting resolve (#2).
+  const pendingRow = pol.slice(pol.indexOf("#2"), pol.indexOf("#1"));
+  assert.match(pendingRow, /settlement due|awaiting resolve/i, "the pending policy is shown from the contract state");
+  assert.doesNotMatch(pendingRow, /settled paid/, "a reload must never render the unsettled policy as paid");
 });

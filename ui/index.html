@@ -2269,6 +2269,29 @@
     return { product_id: product.id, payout: payoutStr, obs_date: obsDateSec, beneficiary: beneficiary || null };
   }
 
+  // A wallet that never answers must not hang the buy control forever. Unlike
+  // the connect path (bounded in wallet.js), signAndSend had no bound: a dead
+  // extension would leave the button disabled and the user with no way forward.
+  // The bound is generous (an approval is a human step) and overridable for tests.
+  var SIGN_TIMEOUT_MS = Number(window.OVERCOVER_SIGN_TIMEOUT_MS) || 120000;
+  // Race the wallet against a deadline. The wallet promise is NOT cancelled
+  // (the user may still approve after the deadline), so on timeout the outcome
+  // is genuinely UNKNOWN — never a success, never a definite failure.
+  function withSignDeadline(promise) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var t = setTimeout(function () {
+        if (settled) return; settled = true;
+        reject({ code: "sign_timeout" });
+      }, SIGN_TIMEOUT_MS);
+      promise.then(function (v) {
+        if (settled) return; settled = true; clearTimeout(t); resolve(v);
+      }, function (e) {
+        if (settled) return; settled = true; clearTimeout(t); reject(e);
+      });
+    });
+  }
+
   function doBuy() {
     if (buyState.busy) return;
     var p = quoteState.selected;
@@ -2321,10 +2344,10 @@
         trust = now; trust.contract = CONTRACT;
         setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
         var args = buildBuyArgs(p, payoutStr, obs, ben);
-        return WALLET.signAndSend({
+        return withSignDeadline(WALLET.signAndSend({
           receiverId: CONTRACT,
           actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
-        });
+        }));
       });
     }).then(function (res) {
       var out = evaluateWalletOutcome(res);
@@ -2340,6 +2363,20 @@
       updateBuyEnabled();
       tick();
     }).catch(function (e) {
+      // A timed-out wallet is an UNKNOWN outcome, not a failure: the user may
+      // still approve after the deadline, so no transaction may be claimed and
+      // none may be ruled out. Say so, and point at the explorer to check.
+      if (e && e.code === "sign_timeout") {
+        setBuyStatus("No answer from your wallet.", true);
+        showBuyResult(false,
+          "<h4>Transaction outcome unknown</h4>" +
+          "<p>Your wallet did not respond within " + Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent — this page cannot tell, and it will not guess.</p>" +
+          "<p>Check <a href=\"" + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + "\" target=\"_blank\" rel=\"noopener\">the contract's transactions on NEAR Blocks ↗</a> before retrying. If you approve the wallet prompt after this message, the cover is still valid and will appear under “Policies written” on the next refresh.</p>");
+        buyState.busy = false;
+        updateBuyEnabled();
+        tick();
+        return;
+      }
       var m = e && e.message ? e.message : String(e);
       setBuyStatus("Purchase not completed: " + m, true);
       showBuyResult(false,

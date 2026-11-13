@@ -388,6 +388,8 @@
   .buy-result p { font-size: 13.5px; color: var(--ink2); margin: 0 0 8px; }
   .buy-result .mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
   .buy-hint { margin: 10px 0 0; font-size: 13px; color: var(--muted); min-height: 1.2em; }
+  .buy-pending { margin: 10px 0 0; border: 1px solid var(--bad); background: var(--bad-w); border-radius: var(--r); padding: 12px 14px; font-size: 13.5px; color: var(--ink); }
+  .buy-pending b { color: var(--bad); }
 
   /* Wallet picker: a real modal, so a click on "Connect wallet" is answered where
      the user is looking, at every viewport. */
@@ -992,6 +994,7 @@
         <button id="b-buy" class="btn-gold" type="button" disabled>Buy cover</button>
         <span class="buy-status" id="b-status" role="status" aria-live="polite"></span>
       </div>
+      <p class="buy-pending" id="b-pending" hidden></p>
       <p class="buy-hint" id="b-hint"></p>
 
       <div class="buy-note" id="b-note">
@@ -2232,6 +2235,8 @@
     }
     // Say why the button cannot be used yet, so a first-time visitor is never
     // left pressing a dead control with no explanation.
+    var pend = el("b-pending");
+    if (pend) pend.hidden = !buyState.pendingSign;
     var h = el("b-hint");
     if (!h) return;
     if (buyState.pendingSign) h.textContent = "Your wallet has not answered yet. Check its window and the explorer before retrying — a second purchase is blocked until it does.";
@@ -2459,6 +2464,10 @@
       if (e && e.code === "sign_timeout") {
         buyState.pendingSign = true;
         setBuyStatus("No answer from your wallet.", true);
+        var pend = el("b-pending");
+        if (pend) pend.innerHTML = "<b>Purchase outcome unknown — do not retry yet.</b> Your wallet did not answer within " +
+          Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent, and a second signed " +
+          "purchase is blocked until your wallet answers. Check the contract's transactions before retrying.";
         showBuyResult(false,
           "<h4>Transaction outcome unknown</h4>" +
           "<p>Your wallet did not respond within " + Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent — this page cannot tell, and it will not guess.</p>" +

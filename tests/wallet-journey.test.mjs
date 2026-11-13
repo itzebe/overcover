@@ -614,6 +614,54 @@ test("a late wallet rejection is reported as no cover, and unblocks buying", asy
   assert.equal(page.el("b-buy").disabled, false);
 });
 
+// ---- adversarial: the persistent "do not retry" notice ----------------------
+// The block must be visible even after the changing hint line is rewritten, so a
+// user cannot be left pressing a disabled control with no explanation. The
+// dedicated notice appears on the timeout and clears once the wallet answers.
+test("a timeout shows a persistent 'outcome unknown — do not retry' notice that clears when the wallet answers", async () => {
+  const wallet = mockWallet({ defer: true });
+  const page = bootPage({ wallet, signTimeoutMs: 40 });
+  await settle(page);
+  await wallet.connect();
+
+  assert.equal(page.el("b-pending").hidden, true, "no notice before a purchase");
+  page.el("b-buy").dispatch("click");
+  await wait(120); // deadline fires, wallet still pending
+  assert.equal(page.el("b-pending").hidden, false, "the notice is shown on timeout");
+  assert.match(page.el("b-pending").innerHTML, /outcome unknown/i);
+  assert.match(page.el("b-pending").innerHTML, /do not retry/i);
+
+  wallet.resolveSign(okResult("HASH-NOTICE"));
+  await wait(60);
+  assert.equal(page.el("b-pending").hidden, true, "the notice clears once the wallet has answered");
+  assert.equal(wallet.calls.length, 1, "still exactly one signing request");
+});
+
+// ---- adversarial: a late answer must not overwrite a newer purchase ---------
+// A late answer from an old request may only clear the block; it must never
+// mutate state that belongs to a newer purchase. After reconciliation the user
+// can buy again, and that second purchase is a single, separate request.
+test("a reconciled late answer does not corrupt a subsequent purchase", async () => {
+  const wallet = mockWallet({ defer: true });
+  const page = bootPage({ wallet, signTimeoutMs: 40 });
+  await settle(page);
+  await wallet.connect();
+
+  page.el("b-buy").dispatch("click");
+  await wait(120);
+  wallet.resolveSign(okResult("HASH-FIRST"));
+  await wait(60);
+  assert.equal(page.el("b-buy").disabled, false);
+
+  // A fresh purchase after reconciliation signs exactly once more. (The mock
+  // wallet defers again, so this second request is itself held open — the point
+  // is only that it is a single, new signing request, not a duplicate.)
+  page.el("b-buy").dispatch("click");
+  await wait(15);
+  assert.equal(wallet.calls.length, 2, "the second purchase is a single new signing request");
+  assert.equal(page.el("b-pending").hidden, true, "the old notice is not resurrected by a new purchase");
+});
+
 // ---- adversarial: reload during a pending settlement ------------------------
 // The console holds no pending state of its own. On load it must render the
 // contract's own view: an active policy past its observation date is shown as

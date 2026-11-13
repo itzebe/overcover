@@ -1126,8 +1126,16 @@
   var HARDENED_CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
   var LEGACY_CONTRACT = "contract.attestor-overcover.testnet";
   var TRUSTED = {};
-  TRUSTED[HARDENED_CONTRACT] = "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL";
-  TRUSTED[LEGACY_CONTRACT] = "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R";
+  // Approved modules per deployment. More than one build is accepted so a
+  // code-only hardening deploy (which changes the code hash but not the account)
+  // does not lock buying while the console catches up. The live module and the
+  // SEC-6/7/9 hardening are both accepted for the hardened address; drop the
+  // superseded hash once the new module is live and verified.
+  TRUSTED[HARDENED_CONTRACT] = [
+    "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL", // live module (SEC-1 hardened)
+    "9h296MCND93dzHQn4vVUeEVai3VuohDbo9VJFntpT45C", // SEC-6/7/9 hardening, wasm sha256 811e0427…
+  ];
+  TRUSTED[LEGACY_CONTRACT] = ["36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R"];
   var DEFAULT_CONTRACT = HARDENED_CONTRACT;
 
   // ?contract= selects which deployment to READ. A syntactically valid NEAR
@@ -1149,7 +1157,7 @@
     var expected = TRUSTED[contractId];
     if (!expected) return { state: "untrusted", codeHash: codeHash || null, reason: "not an approved Overcover address" };
     if (!codeHash) return { state: "unknown", codeHash: null, reason: "its deployed module has not been read yet" };
-    if (codeHash === expected) {
+    if (expected.indexOf(codeHash) !== -1) {
       return { state: contractId === LEGACY_CONTRACT ? "legacy" : "hardened", codeHash: codeHash, reason: "" };
     }
     return { state: "untrusted", codeHash: codeHash, reason: "its deployed module does not match the approved build" };

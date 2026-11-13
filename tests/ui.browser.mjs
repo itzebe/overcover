@@ -28,6 +28,20 @@ const AGENT_PORT = 8800 + Math.floor(Math.random() * 90);
 const VIEWPORTS = [320, 360, 390, 412, 768, 1280, 1440];
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json" };
 
+// Serve the same Content-Security-Policy the site ships, so this QA run proves
+// the app actually loads and runs under the deployed policy (a strict policy
+// with only 'self' would refuse the page's own inline script).
+const CSP = (() => {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
+    for (const rule of cfg.headers || []) {
+      const h = (rule.headers || []).find((x) => x.key === "Content-Security-Policy");
+      if (h) return h.value;
+    }
+  } catch {}
+  return null;
+})();
+
 function serveStatic() {
   return new Promise((resolve) => {
     const s = http.createServer((req, res) => {
@@ -36,7 +50,9 @@ function serveStatic() {
       if (!file.startsWith(UI)) { res.writeHead(403); res.end(); return; }
       fs.readFile(file, (err, data) => {
         if (err) { res.writeHead(404); res.end("not found"); return; }
-        res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" });
+        const headers = { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" };
+        if (CSP) headers["Content-Security-Policy"] = CSP;
+        res.writeHead(200, headers);
         res.end(data);
       });
     });

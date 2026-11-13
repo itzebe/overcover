@@ -1,12 +1,11 @@
 # Overcover
 
-> Overcover is an open-source, parametric insurance mutual that runs on NEAR
-> testnet. A visitor connects a NEAR wallet and buys a small policy that pays out
-> if a signed public index reading — rainfall or temperature — meets a trigger
-> defined in the contract before purchase. Cover terms are fixed in the contract,
-> the payout is reserved from a capital pool, and settlement follows the signed
-> reading — no adjuster, no claims queue. It is a hackathon prototype on testnet
-> with test funds only.
+> Overcover is an open-source, fully-collateralised parametric insurance mutual
+> that runs on NEAR testnet. Institutions, operators and autonomous agents buy a
+> policy that pays out if a signed public index reading — rainfall or temperature —
+> meets a trigger fixed in an immutable on-chain product before purchase. The payout
+> is reserved from a capital pool, and settlement follows the signed reading — no
+> adjuster, no claims queue. It is a testnet prototype with test funds only.
 
 Canonical site: https://overcover.vercel.app/
 Source: https://github.com/itzebe/overcover

@@ -1,9 +1,10 @@
 # Overcover — full product description for language models
 
-Overcover is an open-source, parametric risk mutual that runs on the NEAR testnet.
-It writes capital-backed insurance cover that is defined by a product rather than
-negotiated by an underwriter, and settled by contract rules rather than a claims
-queue. It is a hackathon prototype on NEAR testnet with test funds only.
+Overcover is an open-source, fully-collateralised parametric insurance mutual that
+runs on the NEAR testnet. It writes capital-backed insurance cover that is defined
+by an immutable product rather than negotiated by an underwriter, and settled by
+contract rules rather than a claims queue. It is a testnet prototype with test
+funds only.
 
 - Canonical site: https://overcover.vercel.app/
 - Source repository: https://github.com/itzebe/overcover

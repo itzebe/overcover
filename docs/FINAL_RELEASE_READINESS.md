@@ -8,7 +8,8 @@ The console now reads **and signs against the hardened v3 contract by default**.
 resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, a permissionless
 product factory, and a state-preserving in-place `migrate`. Its **deployed** bytes are the hardened
 v3 build sha256 `a97034e65fb0c53f…` (500023 bytes); this branch's source builds to a **newer** module
-(sha256 `40aa677e9c646f38…`) that adds the SEC-6/SEC-7 reservation-release fix, so `npm run verify:proof`
+(sha256 `0fd707e7d8d6bdeb…`, 500342 bytes) that adds the SEC-6/SEC-7 reservation-release fix **and the
+SEC-9 unbounded-lead fix**, so `npm run verify:proof`
 now reports the deployed module as a recognised build and prints `SOURCE AHEAD OF DEPLOYMENT`. The
 legacy address still runs the original v1 module and is disclosed as such (the console labels it
 *Legacy build* and disables buying there).
@@ -116,7 +117,7 @@ The console reads and signs against `contract.ovc-v3-ctl-2f6c4c.testnet` by defa
 | Item | Value |
 | --- | --- |
 | code_hash | `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL` |
-| Deployed wasm sha256 | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` (500023 bytes) — a **recognised Overcover build**; this branch's source is **ahead** of it (`40aa677e…`, 500154 bytes, carries SEC-6/SEC-7). `npm run verify:proof` reports `SOURCE AHEAD OF DEPLOYMENT` |
+| Deployed wasm sha256 | `a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1` (500023 bytes) — a **recognised Overcover build**; this branch's source is **ahead** of it (`0fd707e7…`, 500342 bytes, carries SEC-6/SEC-7 **and SEC-9**). `npm run verify:proof` reports `SOURCE AHEAD OF DEPLOYMENT` |
 | Pool | capital 1.4250 NEAR, reserved 0.2000 NEAR, solvent, 3 policies |
 | Products | `heat-lagos`, `heat-lagos-factory` — both **temperature** (`degC`), trigger `at or above 40.0 °C` |
 | Policies | 1 `heat-lagos` settled_paid · 2 `heat-lagos-factory` active · 3 `heat-lagos` active |
@@ -270,6 +271,21 @@ Nothing is staged.
   177.2 s; audio peaks at −2.7 dB (limiter applied). Raw captures and intermediates are git-ignored.
 - Docs updated: `README.md` and `docs/JUDGE_DEMO.md` link the video; `video/README.md` documents how
   to run it and the honesty rules.
+
+---
+
+## Defects found and fixed in this mission (2026-11-13, security-hardening completion session)
+
+1. **SEC-9 — an unbounded observation date permanently locked reserved capital (HIGH).** Root cause:
+   `buy_cover` bounded `obs_date` only from below (`obs_date >= now + min_lead_sec`); there was no
+   upper bound. The reservation is released only in `resolve`, which needs `now >= obs_date +
+   settle_delay_sec` (saturating), so `obs_date = u64::MAX` makes release unreachable forever and
+   strands provider capital (providers then cannot `withdraw`). The attacker pays only the premium —
+   as low as 1 bp on a permissionless product — to lock the whole payout. Fix: a protocol maximum lead
+   `MAX_LEAD_SEC = 365 d` enforced in `buy_cover` (and validated for `min_lead_sec` at product
+   creation), mirrored in `sim/engine.mjs`. Evidence: Rust `sec9_…` (2 refused + 1 control), model
+   A31/A31b/A31c (73/73), and a 5-case mutation harness that confirms the tests fail against the
+   pre-fix code and against plausible wrong fixes. Detail: `docs/SECURITY_PRE_AUDIT.md` §SEC-9.
 
 ---
 
@@ -796,7 +812,8 @@ operator key (see below).
 
 **Live-contract evidence (unchanged, re-verified).** `npm run verify:proof` → **13/13**: the deployed
 legacy v1 module matches its published sha256 and the **deployed v3 module is a recognised Overcover
-build** (`a97034e6…`, 500023 bytes; this branch's source is ahead of it at `40aa677e…`, 500154 bytes);
+build** (`a97034e6…`, 500023 bytes; this branch's source is ahead of it at `0fd707e7…`, 500342 bytes,
+carrying SEC-6/SEC-7/SEC-9);
 the legacy pool is solvent (capital 14.05 / reserved
 10.50 NEAR) and reconciles; all 18 `demo-log.json` transactions resolve on-chain; the two autonomous
 agent purchases on v1 **and the one on v3** are real `buy_cover` calls each tied to its policy; the

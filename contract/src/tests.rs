@@ -1698,6 +1698,46 @@ fn sec7_a_reading_still_possible_keeps_the_reservation() {
     assert_eq!(c.get_pool().reserved.0, 100 * ONE, "the reservation must be held");
 }
 
+// ==========================================================================
+// SEC-9 — an unbounded observation date can lock the payout forever.
+//
+// `buy_cover` bounds `obs_date` only from BELOW (`obs_date >= now +
+// min_lead_sec`); there is no maximum lead. The reservation is released only in
+// `resolve`, which requires `now >= obs_date + settle_delay_sec`. So a buyer can
+// reserve the payout against an arbitrarily distant `obs_date` — and with
+// `obs_date = u64::MAX` (or any date past `now + settle_delay`, given
+// `saturating_add`) `resolve` is unreachable forever, so the reserved capital is
+// locked permanently and providers can never withdraw it. The attacker pays only
+// the premium (as low as 1 bp) to strand the whole payout of provider capital.
+// ==========================================================================
+
+#[test]
+fn sec9_cover_cannot_be_bought_with_an_unbounded_observation_date() {
+    let mut c = setup();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
+
+    // A century out: must be refused — an unbounded lead lets a buyer strand the
+    // payout for the whole interval, and `u64::MAX` strands it forever.
+    let far = 100 * 365 * 24 * 3600;
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), far, None)
+    }));
+    assert!(r.is_err(), "an unbounded observation date must be refused");
+
+    // `u64::MAX` makes `now >= obs_date + settle_delay` unreachable forever.
+    let r2 = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), u64::MAX, None)
+    }));
+    assert!(r2.is_err(), "a u64::MAX observation date must be refused");
+
+    // A normal lead is unaffected: cover within the bound still works.
+    let ok = 3 * 24 * 3600;
+    let _ = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), ok, None);
+    assert_eq!(c.get_pool().reserved.0, 100 * ONE, "an in-bound purchase still reserves");
+}
+
 #[test]
 fn sec6_a_transient_block_still_refuses_and_holds_the_reservation() {
     // A disputed (unresolved) reading must NOT release the reservation: the

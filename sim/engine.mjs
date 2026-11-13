@@ -25,6 +25,9 @@ export const READING_DOMAIN = "overcover:v3:observation";
 export const READING_MAX_VALIDITY_SEC = 7 * 24 * 3600;
 /// Cap on the challenge window (mirrors the contract's CHALLENGE_WINDOW_MAX_SEC).
 export const CHALLENGE_WINDOW_MAX_SEC = 7 * 24 * 3600;
+/// Longest lead time a policy may be written with (mirrors the contract's
+/// MAX_LEAD_SEC). Without it an unbounded obs date locks the reservation.
+export const MAX_LEAD_SEC = BigInt(365 * 24 * 3600);
 /// Cap on the off-chain evidence reference (mirrors the contract).
 export const MAX_EVIDENCE_BYTES = 128;
 /// Longest delay between a reading's date and its report (mirrors the
@@ -329,6 +332,7 @@ export class Decentralized {
     if (payout < p.minPayout || payout > p.maxPayout) throw new ContractError("payout outside product bounds");
     obsDate = BigInt(obsDate);
     if (obsDate < this.now + p.minLeadSec) throw new ContractError("observation date too soon (min lead not met)");
+    if (obsDate - this.now > MAX_LEAD_SEC) throw new ContractError("observation date too far in the future (max lead exceeded)");
     if (p.reserved + payout > p.maxCapacity) throw new ContractError("product capacity exceeded");
     const premium = this.quotePremium(productId, payout);
     if (this.available() < payout) throw new ContractError("insufficient available capital to underwrite");

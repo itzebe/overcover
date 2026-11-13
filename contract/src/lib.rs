@@ -31,6 +31,14 @@ const MAX_RAINFALL_TENTHS: u64 = 5_000; // 500.0 mm
 const MAX_PREMIUM_BP: u32 = 5_000;
 /// An observation must be reported within this window after its date.
 const REPORT_MAX_DELAY_SEC: u64 = 24 * 3600;
+/// Longest lead time a policy may be written with: the observation date may not
+/// be further than this beyond the purchase instant. Without an upper bound the
+/// reservation (released only in `resolve`, which requires
+/// `now >= obs_date + settle_delay_sec`) could be locked for an arbitrarily long
+/// time — and `obs_date = u64::MAX` locks it forever (SEC-9). One year covers
+/// every legitimate parametric product while keeping `obs_date + settle_delay_sec`
+/// far from `u64` overflow.
+const MAX_LEAD_SEC: u64 = 365 * 24 * 3600;
 /// Longest challenge window the owner may configure. The production default is
 /// 24 h; the demo uses 60 s. A window is fixed per policy at purchase, so the
 /// owner can never shorten a challenge that a policy was sold with.
@@ -866,6 +874,7 @@ impl Overcover {
     ) {
         ensure!(self.products.get(&id).is_none(), "product already exists");
         ensure!(premium_bp <= MAX_PREMIUM_BP, "premium_bp too high");
+        ensure!(min_lead_sec <= MAX_LEAD_SEC, "min lead above maximum");
         ensure!(min_payout.0 > 0, "min payout must be > 0");
         ensure!(max_payout.0 >= min_payout.0, "max payout below min");
         ensure!(
@@ -1254,6 +1263,16 @@ impl Overcover {
         ensure!(
             obs_date >= now.saturating_add(p.min_lead_sec),
             "observation date too soon (min lead not met)"
+        );
+        // Upper bound on the lead: the reservation is released only at
+        // settlement (`now >= obs_date + settle_delay_sec`), so an unbounded
+        // `obs_date` would lock provider capital for that whole interval — and a
+        // date past `now + settle_delay` (e.g. `u64::MAX`) would lock it forever
+        // (SEC-9). The subtraction cannot underflow: the check above already
+        // guarantees `obs_date >= now`.
+        ensure!(
+            obs_date - now <= MAX_LEAD_SEC,
+            "observation date too far in the future (max lead exceeded)"
         );
         ensure!(
             p.reserved.checked_add(payout).map_or(false, |r| r <= p.max_total_coverage),

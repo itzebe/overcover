@@ -1,22 +1,22 @@
 {
   "mode": "SANDBOX",
   "network": "local",
-  "wasmSha256": "40aa677e9c646f38cbaf841c53b36b56b377668751aee64289839926e8bb5da8",
-  "wasmBytes": 500154,
+  "wasmSha256": "0fd707e7d8d6bdebbc169761caeb8ecaae396c93a63a4f03ccc65b87cbd49142",
+  "wasmBytes": 500342,
   "txs": {
-    "create:owner": "BCy9EYnRPzwjLbL8W9C99nwirtG3SjYoUyMLeBhxGv6M",
-    "create:proposer": "72QyUgZRteeANmanEcgRz4rW9SCL6cGJuAtUT6RmUJk7",
-    "create:buyer": "Cg8JXLpTXcDZpJq8eY7p8kJ8DnxWdYSH3ExmUkaGkyKZ",
-    "create:attacker": "86ZxoZrSmtqgczkiVv8oeKrs7sT4JjTgmmpnHGUYXmUG",
-    "create:contract": "3ttBXztSMh8861A9JHcqZWHk4FB7xj2USxiqLe1YZu4J",
-    "deposit": "HLRNJRNh1bSp7VTiwUjjMmNLAN5zDvAedLu6khKRrqoF",
-    "propose_product": "5NfjNtbuVJfZdd5W8bTdGH7KZDWAfz2HdvZ1cvvToN9x"
+    "create:owner": "X2xZS8G9JBYoMJ5iYQXQNxUSTMYyayYNzgTqotLvMVk",
+    "create:proposer": "49bSnqVoHL5tDc4jbczHw8jtK1K4tcczRgSx9ivYYZJu",
+    "create:buyer": "EgaWQgyornaRVNCEvTxHJ34DdpcbSKnv1sbK1Sg9XRrB",
+    "create:attacker": "G5fQZ7UDubVWNAXo4Y962ULDA4NpUSwvMxGQesZm42X",
+    "create:contract": "2gvrenmyXPNuLT9EY8M1oexZZio43bmekHqdwrKntcvr",
+    "deposit": "5RfwQ6S1GJfJLDLwXbyLkH1FFmq4A7FX4w7We6A4Z3Zu",
+    "propose_product": "Exh3cngJKDhmBXqCj2wh25ZnncKDmQyadWhF7yPHnPgz"
   },
   "checks": [
     {
       "name": "deployed the factory wasm to a fresh sandbox contract",
       "ok": true,
-      "detail": "500154 bytes, sha256 40aa677e9c646f38…"
+      "detail": "500342 bytes, sha256 0fd707e7d8d6bdeb…"
     },
     {
       "name": "initialised with the controlled owner",

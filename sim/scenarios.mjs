@@ -618,5 +618,27 @@ console.log("\n== Adversarial matrix ==");
     dead.triggered === false && m.getPolicy(pol).status === "settled_no_pay" && m.reserved === 0n);
 }
 
+// A31: an unbounded observation date must not lock the payout (SEC-9).
+// `buy_cover` bounds `obs_date` only from below. Because the reservation is
+// released only in `resolve` (which needs `now >= obs_date + settle_delay_sec`),
+// a buyer could reserve against an arbitrarily distant date — and `u64::MAX`
+// would lock provider capital forever. The contract now caps the lead.
+{
+  const { m } = newBoard();
+  m.deposit("lp.testnet", N(1000));
+  m.addMetricProduct("rain", { city: "lagos", metricId: "rain", thresholdTenths: 300, premiumBp: 500, minPayout: N(1), maxPayout: N(100), minLeadSec: DAY, maxTotalCoverage: N(5000) });
+  const day3 = 3 * DAY;
+  // A century out is refused; it would strand the payout for that whole interval.
+  expectThrow("A31", "adversarial", "cover with a far-future observation date is refused", () =>
+    m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: 100 * 365 * DAY }));
+  // `u64::MAX` is refused; it would lock the reservation forever.
+  expectThrow("A31b", "adversarial", "cover with a u64::MAX observation date is refused", () =>
+    m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: (1n << 64n) - 1n }));
+  // An in-bound lead is unaffected.
+  const okPol = m.buyCover({ buyer: "a.testnet", productId: "rain", payout: N(10), obsDate: day3 });
+  check("A31c", "adversarial", "cover within the max lead still reserves normally", N(10).toString(),
+    m.reserved.toString(), m.reserved === N(10) && m.getPolicy(okPol).status === "active");
+}
+
 
 }

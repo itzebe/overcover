@@ -331,6 +331,43 @@ with the reason above; no permissive CSP was added merely to appear hardened.
 
 ---
 
+### SEC-9 — HIGH — an unbounded observation date permanently locked reserved capital
+
+**Where:** `contract/src/lib.rs` — `buy_cover` (the lead-time check).
+
+**What.** `buy_cover` bounded `obs_date` only from **below** (`obs_date >= now + min_lead_sec`). There
+was **no upper bound**. The reservation taken at purchase is released only in `resolve`, and `resolve`
+requires `now >= obs_date + settle_delay_sec` (with `saturating_add`). So a buyer could reserve the
+payout against an arbitrarily distant `obs_date` — and `obs_date = u64::MAX` makes `now >= obs_date +
+settle_delay` **unreachable forever**. The reserved capital is then locked permanently and providers can
+never withdraw it (`withdraw` fails closed while `capital - amount < reserved`). The attacker pays only
+the premium — as low as **1 bp** on a permissionless product (`PROPOSAL_MIN_PREMIUM_BP`) — to strand the
+whole payout of provider capital.
+
+**Reproduction (Rust unit test, `contract/src/tests.rs`).**
+`sec9_cover_cannot_be_bought_with_an_unbounded_observation_date` buys cover with a century-out date and
+with `u64::MAX`. Before the fix the purchase **succeeded** (a policy was issued and 100 NEAR reserved) —
+the test failed with "an unbounded observation date must be refused". Model parity: `sim/scenarios.mjs`
+A31/A31b/A31c.
+
+**Root cause.** A missing upper bound on a caller-supplied time field that gates a funds-release path.
+The `min_lead_sec` check protects only the *lower* end of the window; nothing protected the upper end.
+
+**Fix.** A protocol maximum lead `MAX_LEAD_SEC = 365 * 24 * 3600` (one year — longer than any legitimate
+parametric product, short enough to keep `obs_date + settle_delay_sec` far from `u64` overflow).
+`buy_cover` now requires `obs_date - now <= MAX_LEAD_SEC` (the subtraction is safe because the lower
+bound already guarantees `obs_date >= now`). Product creation also validates `min_lead_sec <= MAX_LEAD_SEC`
+so no product can be configured with an unusable lead. Mirrored in `sim/engine.mjs`.
+
+**Regression tests.** `sec9_…` (Rust, 2 refused cases + 1 in-bound control) and model A31/A31b/A31c.
+Mutation-tested: the tests fail against the pre-fix code and against a plausible wrong fix that bounds
+the lead at an absurdly large constant.
+
+**Status: FIXED in source.** The **deployed** v3 module (`code_hash CQR8x1kW…`, sha256 `a97034e6…`)
+still carries the unbounded-lead behaviour; see the deployment-divergence section.
+
+---
+
 ## 3. Controls that held
 
 | Threat | Control | Evidence |
@@ -348,6 +385,7 @@ with the reason above; no permissive CSP was added merely to appear hardened.
 | Secret in tracked files | no ed25519 secret, key file, or private key | `git grep` scan clean; CI check |
 | Terminal observation cannot lock capital | a nullified / expired / never-reported reading settles no-pay and releases the reservation | SEC-6 + SEC-7 Rust tests; model A30; sandbox SEC-6 block |
 | A transient block still holds the reservation | a live challenge or unresolved dispute refuses settlement and keeps the reservation | `sec6_a_transient_block_still_refuses_and_holds_the_reservation`, `sec7_a_reading_still_possible_keeps_the_reservation` |
+| An unbounded observation date cannot lock capital | `buy_cover` caps the lead at `MAX_LEAD_SEC` (1 year) | SEC-9 Rust test; model A31/A31b/A31c |
 
 ---
 
@@ -409,15 +447,16 @@ The 17 cases it covers, and where each is independently defended today:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Reference adversarial model | `npm run test:model` | 66 attacks, 66 defended, 0 exploitable |
-| Contract unit tests | `npm run test:contract` | 76 passed |
+| Reference adversarial model | `npm run test:model` | 73 attacks, 73 defended, 0 exploitable |
+| Contract unit tests | `npm run test:contract` | 83 passed |
 | Console + wallet journey | `npm run test:console` | 108 passed |
 | Agent limits/API/OpenAPI | `npm run test:agent` | 53 passed |
 | Product feed + agent eval | `npm run test:agent-eval` | 33 passed |
 | Deploy fail-closed regression | `npm run test:deploy` | 21 passed |
 | Dependency audit | `npm audit` | 19 low / 0 high / 0 moderate (SEC-5) |
-| v2 lifecycle (local sandbox) | `npm run verify:sandbox` | 21/21 passed |
+| v3 lifecycle (local sandbox) | `npm run verify:sandbox` | 28/28 passed |
 | SEC-1 guard on compiled wasm | `npm run verify:upgrade` | 8/8 passed |
 | SEC-1 reproduction (deployed v1) | local sandbox attack | VULNERABLE (pre-fix) |
 | SEC-1 fix (v2 wasm) | local sandbox attack | SAFE (post-fix) |
+| SEC-9 mutation check | temporary mutation harness | 5/5 mutations detected (original + plausible wrong fixes) |
 | Secret scan | `git grep -nIE 'ed25519:[0-9A-Za-z]{40,}\|BEGIN .*PRIVATE KEY'` | clean |

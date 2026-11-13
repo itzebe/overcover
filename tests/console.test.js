@@ -873,13 +873,13 @@ const factorySrc = extractFunction(SCRIPT, "renderFactory");
 const matchSrc = extractFunction(SCRIPT, "matchActivated");
 const statusSrc = extractFunction(SCRIPT, "factoryStatus");
 const renderFactory = new Function(
-  "esc, cap, metricLabel, fmtVal, utc, term, shortAcct",
-  `var esc = esc;
+  "esc, safeUrl, cap, metricLabel, fmtVal, utc, term, shortAcct",
+  `var esc = esc; var safeUrl = safeUrl;
    ${matchSrc};
    ${statusSrc};
    ${factorySrc};
    return renderFactory;`
-)((s) => String(s), (s) => String(s), (m) => "m:" + m, (v) => "v:" + v, (s) => "T" + s,
+)((s) => String(s), (s) => String(s), (s) => String(s), (m) => "m:" + m, (v) => "v:" + v, (s) => "T" + s,
   (k, v) => `[${k}=${v}]`, (a) => "acct:" + a);
 
 const feedOne = {
@@ -982,4 +982,60 @@ test("the console makes no claim about an OutLayer/TDX adapter or an un-deployed
   // The console describes the live module as hardened (SEC-1) and the legacy one
   // as original — that is contract-state-driven, not a claim about SEC-6/7/9.
   assert.match(SCRIPT, /Hardened build|hardened module/, "the hardened label is state-driven");
+});
+
+// --- DOM XSS ---------------------------------------------------------------
+// The permissionless factory lets anyone publish a product, and the console
+// renders product ids, city names and evidence text that originate from those
+// untrusted strings. Every renderer must escape them. The factory tests above
+// use a passthrough esc, so escaping itself is asserted here with the REAL esc
+// lifted from the page.
+const escSrc = SCRIPT.slice(SCRIPT.indexOf("var esc ="), SCRIPT.indexOf("var cap ="));
+const realEsc = new Function(`${escSrc}; return esc;`)();
+const safeUrlSrc = SCRIPT.slice(SCRIPT.indexOf("var safeUrl ="), SCRIPT.indexOf("var cap ="));
+const realSafeUrl = new Function("esc", `${safeUrlSrc}; return safeUrl;`)(realEsc);
+const renderFactoryEscaped = new Function(
+  "esc, safeUrl, cap, metricLabel, fmtVal, utc, term, shortAcct",
+  `var esc = esc; var safeUrl = safeUrl;
+   ${matchSrc};
+   ${statusSrc};
+   ${factorySrc};
+   return renderFactory;`
+)(realEsc, realSafeUrl, (s) => String(s), (m) => "m:" + m, (v) => "v:" + v, (s) => "T" + s,
+  (k, v) => `[${k}=${v}]`, (a) => "acct:" + a);
+
+test("the real esc neutralises the five HTML metacharacters", () => {
+  assert.equal(realEsc(`<>&"'`), "&lt;&gt;&amp;&quot;&#39;");
+});
+
+test("factory-supplied strings are escaped before they reach the DOM", () => {
+  const payload = `"><img src=x onerror=alert(1)>`;
+  const feed = {
+    proposals: [{
+      id: payload, status: "PROPOSED", metric: "rain", city: payload, direction: "Above",
+      thresholdTenths: 300, premiumBp: 500, coverageStartSec: 1794472201,
+      evidence: { kind: payload, source: payload, sourceUrl: "https://example.com", observedAt: payload, valueTenths: 1, unit: payload, raw: payload, hash: payload },
+      risk: { emerging: true, direction: "Above", rationale: payload },
+    }],
+  };
+  const html = renderFactoryEscaped(feed, [], null);
+  assert.ok(!html.includes("<img src=x"), "no live img element may be produced from a proposal string");
+  assert.ok(!html.includes(payload), "the raw payload must never appear unescaped");
+  assert.ok(html.includes("&lt;img src=x onerror=alert(1)&gt;"), "the payload is shown as inert text");
+});
+
+test("a javascript: or data: evidence URL is refused, never rendered as a live link", () => {
+  assert.equal(realSafeUrl("javascript:alert(1)"), "", "javascript: must not survive");
+  assert.equal(realSafeUrl("data:text/html,<script>alert(1)</script>"), "", "data: must not survive");
+  assert.equal(realSafeUrl("https://api.open-meteo.com/v1/forecast"), "https://api.open-meteo.com/v1/forecast");
+  const feed = {
+    proposals: [{
+      id: "factory-rain-miami-2026-11-17", status: "PROPOSED", metric: "rain", city: "miami",
+      direction: "Above", thresholdTenths: 300, premiumBp: 500, coverageStartSec: 1794472201,
+      evidence: { kind: "forecast", source: "x", sourceUrl: "javascript:alert(1)", observedAt: "2026-11-17", valueTenths: 615, unit: "mm/10", raw: 61.5, hash: "sha256:abc" },
+      risk: { emerging: true, direction: "Above", rationale: "r" },
+    }],
+  };
+  const html = renderFactoryEscaped(feed, [], null);
+  assert.ok(!html.includes("javascript:alert(1)"), "the dangerous scheme must not appear in the markup");
 });

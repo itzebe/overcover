@@ -1174,6 +1174,10 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   };
+  // A URL from the discovery feed is rendered as a link. esc() stops attribute
+  // break-out but not a javascript:/data: scheme, so only http(s) survives; any
+  // other value renders the label as plain text instead of a live link.
+  var safeUrl = function (u) { return /^https?:\/\//i.test(String(u)) ? esc(u) : ""; };
   var cap = function (s) { s = String(s); return s.charAt(0).toUpperCase() + s.slice(1); };
   var big = function (y) { try { return BigInt(y); } catch (e) { return null; } };
   var near = function (y) { var b = big(y); return b === null ? NaN : Number(b) / 1e24; };
@@ -1525,7 +1529,7 @@
         "</div>";
       var evidence = '<div class="feat-ev">' +
         '<p class="k">Evidence · ' + esc(ev.kind) + " (not an observation of an event that occurred)</p>" +
-        '<p class="v"><a href="' + esc(ev.sourceUrl) + '" target="_blank" rel="noopener">' + esc(ev.source) + "</a> — " + esc(String(ev.raw)) + " " + esc(String(ev.unit).replace(/\/\s*10$/, "")) + " forecast for " + esc(ev.observedAt) + "</p>" +
+        '<p class="v"><a href="' + safeUrl(ev.sourceUrl) + '" target="_blank" rel="noopener">' + esc(ev.source) + "</a> — " + esc(String(ev.raw)) + " " + esc(String(ev.unit).replace(/\/\s*10$/, "")) + " forecast for " + esc(ev.observedAt) + "</p>" +
         '<p class="k">Evidence hash (recorded on-chain when activated)</p>' +
         '<p class="v mono">' + esc(ev.hash) + "</p>" +
         "</div>";

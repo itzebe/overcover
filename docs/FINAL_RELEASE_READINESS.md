@@ -624,8 +624,10 @@ a redeploy of `contract.ovc-v3-ctl-2f6c4c.testnet` (operator key; not performed 
     state plainly that the on-chain transaction was signed programmatically with the page's exact
     arguments, that a live extension approval is not captured, and how a judge completes it.
 11. **CI did not run the independent proof.** Added `verify:proof` and `verify:agent` to
-    `.github/workflows/ci.yml`, so the "deployed bytecode == this source" claim is checked on every
-    push.
+    `.github/workflows/ci.yml`, so the bytecode claim is checked on every push: the **legacy v1**
+    module is asserted byte-identical to its published sha256, and the **v3** module is asserted to be
+    a recognised Overcover build (with `SOURCE AHEAD OF DEPLOYMENT` reported honestly when the source
+    is newer — see item 5).
 12. **The wasm build was not byte-reproducible across build environments.** Once CI ran
     `verify:proof`, the bytecode check failed (`4172cd8e…` vs the deployed `1f30ccf1…`) even though
     the toolchain was identical (`rustc 1.99.1 (58cf8f9c3)`), the committed `Cargo.lock` resolved the

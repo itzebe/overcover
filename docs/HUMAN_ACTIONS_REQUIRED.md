@@ -104,12 +104,30 @@ Console or Bing Webmaster Tools, to which this environment has no account.
 
 ---
 
-## F. Publish the work (GitHub write credential) — DONE
+## F. Publish the work (GitHub write credential) — PARTIALLY DONE, currently blocked
 
-**Resolved 2026-11-13.** A GitHub token with `contents:write` + `pull_requests:write` for
-`itzebe/overcover` is available in this environment. The publication branch
+**History (2026-11-13, worked).** Earlier in the release-closure session a GitHub token with
+`contents:write` + `pull_requests:write` for `itzebe/overcover` was valid: the branch
 `feat/security-closure-wallet-timeout-and-status` was pushed, its PR #45 passed CI, and it was
 **squash-merged to `main`** as `c209cbf49f24217e122a0dbcdc2c326debc015a6`. Vercel auto-deployed that
-exact commit to production (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, READY). No further action is required
-for publication; the item is retained here only to record that the earlier 401 limitation no longer
-applies.
+exact commit to production (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, READY).
+
+**Current state (blocked again).** The stored token now returns **HTTP 401** on every call
+(`GET /user`, `git push`). Read-only operations still work anonymously (`git ls-remote`, the public
+REST API, NEAR RPC, the Vercel API), but **nothing that writes** does. As a result the release-truth
+closeout branch `docs/release-truth-closeout` (PR #46, head `81e54ba…`) is already pushed and its CI
+is green, but **further commits to it cannot be pushed from this environment until a valid token is
+restored.**
+
+**What is needed.** A GitHub token with `contents:write` + `pull_requests:write` for
+`itzebe/overcover`, or a human to push the branch and merge PR #46 (and decide PR #44).
+
+**Smallest human action:**
+
+```bash
+# with a valid credential in place, from a checkout of the branch:
+git push origin docs/release-truth-closeout          # PR #46
+# then merge PR #46 (docs-only) and assess/merge PR #44 per its review
+```
+
+The documentation commits are ready on the local branch; the only missing piece is the credential.

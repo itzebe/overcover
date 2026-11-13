@@ -965,6 +965,103 @@ fn migrate_preserves_legacy_state() {
     assert!(c.resolve(1), "a migrated policy must still settle");
 }
 
+// ---------------------------------------------------------------------------
+// SEC-1 remediation — the migrate() boundary the fix must hold on every path.
+// The guard (self-call only) is necessary but not sufficient: a self-call with
+// malformed, replayed or absent state must FAIL CLOSED with a readable reason,
+// and must never silently reset the owner, the config or the pool accounting.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn sec1_migrate_on_a_malformed_state_fails_closed() {
+    // A non-v1 blob on the STATE key must be refused, not decoded as a trap.
+    ctx(contract_id(), 0, 0);
+    env::storage_write(b"STATE", b"not a v1 state blob at all");
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        Overcover::migrate(owner(), pubkey(1), U128(ONE), 0, 60)
+    }));
+    assert!(r.is_err(), "a malformed state blob must fail closed");
+}
+
+#[test]
+fn sec1_migrate_with_no_state_is_a_clean_fresh_init() {
+    // On a never-initialised account there is nothing to migrate: the args are
+    // used as a fresh init (this is the only path where the args are trusted).
+    ctx(contract_id(), 0, 0);
+    let c = Overcover::migrate(owner(), pubkey(3), U128(ONE), 0, 60);
+    assert_eq!(c.get_config().owner, owner());
+    assert_eq!(c.get_config().attestor, bs58_encode(&pubkey(3)));
+    assert_eq!(c.get_pool().capital.0, 0, "a fresh init starts with no capital");
+}
+
+#[test]
+fn sec1_a_second_migrate_does_not_reset_accounting() {
+    // Build a real v1 blob, migrate once, then migrate again. The replay must
+    // not double-count, reset, or otherwise corrupt the migrated accounting.
+    ctx(contract_id(), 0, 0);
+
+    let owner_acct = owner();
+    let mut legacy_providers: LookupMap<AccountId, Provider> = LookupMap::new(StorageKey::Providers);
+    let legacy = LegacyState {
+        owner: owner_acct.clone(), attestor: pubkey(1), paused: false,
+        challenge_bond: ONE / 10, settle_delay_sec: 0, challenge_window_sec: 1,
+        products: LookupMap::new(StorageKey::Products), product_ids: UnorderedSet::new(StorageKey::ProductIds),
+        policies: LookupMap::new(StorageKey::Policies), policy_ids: UnorderedSet::new(StorageKey::PolicyIds),
+        providers: {
+            legacy_providers.insert(&owner_acct, &Provider { deposited: 5 * ONE, withdrawn: 0 });
+            legacy_providers
+        },
+        observations: LookupMap::new(StorageKey::Observations), observation_ids: UnorderedSet::new(StorageKey::ObservationIds),
+        capital: 5 * ONE, reserved: ONE, held_bonds: 0,
+        total_deposited: 5 * ONE, total_withdrawn: 0, premiums_collected: 0,
+        total_paid: 0, bonds_forfeited: 0, next_policy_id: 1,
+    };
+    env::state_write(&legacy);
+
+    let c = Overcover::migrate(owner_acct.clone(), pubkey(1), U128(ONE / 10), 0, 1);
+    assert_eq!(c.get_pool().capital.0, 5 * ONE);
+    assert_eq!(c.get_pool().reserved.0, ONE);
+
+    // Persist the migrated (v2-shaped) state, as the runtime does after an
+    // `#[init]` call. A second self-call now reads v2 bytes where a v1 blob is
+    // expected, so it must fail closed rather than re-run and reset accounting.
+    env::state_write(&c);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        Overcover::migrate(owner_acct.clone(), pubkey(2), U128(ONE), 0, 60)
+    }));
+    assert!(r.is_err(), "a replayed migrate() must fail closed, not re-run");
+}
+
+#[test]
+fn sec1_migrate_preserves_owner_and_config_exactly() {
+    // The upgrade must not silently change who controls the contract or the
+    // protocol parameters: they come from the live state, not the arguments.
+    ctx(contract_id(), 0, 0);
+    let owner_acct = owner();
+    let legacy = LegacyState {
+        owner: owner_acct.clone(), attestor: pubkey(7), paused: true,
+        challenge_bond: 7 * ONE / 100, settle_delay_sec: 5, challenge_window_sec: 99,
+        products: LookupMap::new(StorageKey::Products), product_ids: UnorderedSet::new(StorageKey::ProductIds),
+        policies: LookupMap::new(StorageKey::Policies), policy_ids: UnorderedSet::new(StorageKey::PolicyIds),
+        providers: LookupMap::new(StorageKey::Providers),
+        observations: LookupMap::new(StorageKey::Observations), observation_ids: UnorderedSet::new(StorageKey::ObservationIds),
+        capital: 0, reserved: 0, held_bonds: 0,
+        total_deposited: 0, total_withdrawn: 0, premiums_collected: 0,
+        total_paid: 0, bonds_forfeited: 0, next_policy_id: 1,
+    };
+    env::state_write(&legacy);
+
+    // Deliberately pass different args — the live state must win.
+    let c = Overcover::migrate("attacker.testnet".parse().unwrap(), pubkey(9), U128(ONE * 5), 123, 456);
+    let cfg = c.get_config();
+    assert_eq!(cfg.owner, owner_acct, "owner must come from the live state");
+    assert_eq!(cfg.attestor, bs58_encode(&pubkey(7)), "attestor must come from the live state");
+    assert_eq!(cfg.challenge_bond.0, 7 * ONE / 100, "bond must be preserved");
+    assert_eq!(cfg.settle_delay_sec, 5, "settle delay must be preserved");
+    assert_eq!(cfg.challenge_window_sec, 99, "challenge window must be preserved");
+    assert!(c.get_pool().paused, "the paused flag must be preserved");
+}
+
 // ===========================================================================
 // Threshold-oracle + decentralised-dispute adversarial suite (mission Stage 6).
 // Each test names the condition it proves.

@@ -1,6 +1,6 @@
 {
   "schema": "https://overcover.vercel.app/products.schema.json",
-  "generated_at": "2026-11-12T16:16:17.656Z",
+  "generated_at": "2026-11-13T12:40:39.899Z",
   "source": {
     "network": "testnet",
     "contract": "contract.ovc-v3-ctl-2f6c4c.testnet",

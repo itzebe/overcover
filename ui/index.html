@@ -294,6 +294,19 @@
   .skel i:nth-child(2) { width: 82%; } .skel i:nth-child(3) { width: 64%; }
   @keyframes sh { to { background-position: -200% 0; } }
 
+  /* ---------------- FAQ ---------------- */
+  .faq { border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); overflow: hidden; }
+  .faq details { border-top: 1px solid var(--line); }
+  .faq details:first-child { border-top: 0; }
+  .faq summary { padding: 16px 18px; cursor: pointer; font-size: 15px; font-weight: 640; color: var(--ink); list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::before { content: "\25B8"; color: var(--accent); font-size: 12px; line-height: 1.4; }
+  .faq details[open] > summary::before { content: "\25BE"; }
+  .faq summary:hover { background: var(--card-2); }
+  .faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .faq details > p { margin: 0; padding: 0 18px 18px 40px; font-size: 14.5px; color: var(--ink2); max-width: 74ch; }
+  .faq details > p code { font-family: var(--mono); font-size: 12.5px; background: var(--card-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
   /* ---------------- dashboard figures ---------------- */
   .figs { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
   .figs > div { background: var(--card); padding: 15px 17px; }
@@ -516,6 +529,77 @@
       "isPartOf": { "@id": "https://overcover.vercel.app/#website" },
       "about": { "@id": "https://overcover.vercel.app/#app" },
       "inLanguage": "en"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://overcover.vercel.app/#faq",
+      "isPartOf": { "@id": "https://overcover.vercel.app/#webpage" },
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What exactly does Overcover cover?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A single, publicly measurable event: a named city's rainfall or temperature reading meeting a trigger fixed in the product before you buy, on an agreed date. If the reading meets the trigger the policy pays its reserved payout; if it does not, it pays nothing and the premium is retained by the pool. It is parametric, not indemnity — it does not assess a loss after the fact."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who is Overcover for?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle — growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes — and the software agents that run them. It is a poor fit for a loss that needs assessing after the fact."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is the payout guaranteed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The moment a policy is bought, its maximum payout is reserved from the pool and cannot be withdrawn while the policy is live. The contract re-checks reserved ≤ capital after every state change and refuses any transaction that would leave the pool promising more than it holds. The pool identity capital = deposits − withdrawals + premiums + forfeited bonds − payouts is computed on-chain and shown live."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does an autonomous agent buy cover?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The agent has its own NEAR account and key, and a human sets hard spending limits in advance. It reads the same machine-readable catalogue (products.json) a person reads, calls the contract's own quote view, and signs a single buy_cover call — identical to the one a human wallet signs. The public console can evaluate a purchase with the agent's spending-policy engine read-only, but it holds no key and signs nothing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who decides the reading, and can it be disputed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A reading is finalised only by a quorum of independent operators who each sign with their own key; no single operator and not the owner can set the value alone. For a short window anyone may dispute a reading by posting a bond and a counter-value. A quorum of independent resolvers — separate from the operators, and unable to vote twice — decides; the owner cannot resolve a dispute alone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is settlement verified?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Settlement is a single comparison, reading against trigger, run once when the challenge window has passed. The payout, the released reservation and the pool identity are all contract state, readable from public JSON-RPC without trusting the page. The console reproduces every figure from a public RPC endpoint, and a failed read is shown as stale or 'no data' — never as live."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which NEAR contract is current, and which is legacy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The current, hardened contract — the default for new cover — is contract.ovc-v3-ctl-2f6c4c.testnet. The original v1 module lives at contract.attestor-overcover.testnet; it is readable for the record but is not a purchase destination, and the console labels it 'Legacy build' and disables buying there. The console decides which is which by reading the deployed code hash, not from a label on the page."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is this ready for real money?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Overcover runs on NEAR testnet with test funds only, and the contract has not been professionally audited. It is a working prototype: the full lifecycle — purchase, oracle quorum, bonded dispute, settlement and pool accounting — runs on-chain, but it is not for real funds yet."
+          }
+        }
+      ]
     }
   ]
 }
@@ -1099,6 +1183,50 @@
       </div>
     </div>
   </section>
+
+  <section class="wrap band" id="faq" aria-labelledby="faq-h">
+    <div class="sect-head">
+      <div>
+        <p class="eyebrow">Common questions</p>
+        <h2 id="faq-h">Frequently asked questions</h2>
+      </div>
+      <p class="sect-note">Short, direct answers to what operators, agents and reviewers ask first. Everything here is a property of the deployed contract, not a marketing claim.</p>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>What exactly does Overcover cover?</summary>
+        <p>A single, publicly measurable event: a named city's rainfall or temperature reading meeting a trigger fixed in the product before you buy, on an agreed date. If the reading meets the trigger the policy pays its reserved payout; if it does not, it pays nothing and the premium is retained by the pool. It is parametric, not indemnity &mdash; it does not assess a loss after the fact.</p>
+      </details>
+      <details>
+        <summary>Who is Overcover for?</summary>
+        <p>Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle &mdash; growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes &mdash; and the software agents that run them. It is a poor fit for a loss that needs assessing after the fact.</p>
+      </details>
+      <details>
+        <summary>How is the payout guaranteed?</summary>
+        <p>The moment a policy is bought, its maximum payout is reserved from the pool and cannot be withdrawn while the policy is live. The contract re-checks <code>reserved &le; capital</code> after every state change and refuses any transaction that would leave the pool promising more than it holds. The pool identity <code>capital = deposits &minus; withdrawals + premiums + forfeited bonds &minus; payouts</code> is computed on-chain and shown live.</p>
+      </details>
+      <details>
+        <summary>How does an autonomous agent buy cover?</summary>
+        <p>The agent has its own NEAR account and key, and a human sets hard spending limits in advance. It reads the same machine-readable catalogue (<code>products.json</code>) a person reads, calls the contract's own <code>quote</code> view, and signs a single <code>buy_cover</code> call &mdash; identical to the one a human wallet signs. The public console can evaluate a purchase with the agent's spending-policy engine read-only, but it holds no key and signs nothing.</p>
+      </details>
+      <details>
+        <summary>Who decides the reading, and can it be disputed?</summary>
+        <p>A reading is finalised only by a quorum of independent operators who each sign with their own key; no single operator and not the owner can set the value alone. For a short window anyone may dispute a reading by posting a bond and a counter-value. A quorum of independent resolvers &mdash; separate from the operators, and unable to vote twice &mdash; decides; the owner cannot resolve a dispute alone.</p>
+      </details>
+      <details>
+        <summary>How is settlement verified?</summary>
+        <p>Settlement is a single comparison, reading against trigger, run once when the challenge window has passed. The payout, the released reservation and the pool identity are all contract state, readable from public JSON-RPC without trusting the page. The console reproduces every figure from a public RPC endpoint, and a failed read is shown as stale or &ldquo;no data&rdquo; &mdash; never as live.</p>
+      </details>
+      <details>
+        <summary>Which NEAR contract is current, and which is legacy?</summary>
+        <p>The current, hardened contract &mdash; the default for new cover &mdash; is <code>contract.ovc-v3-ctl-2f6c4c.testnet</code>. The original v1 module lives at <code>contract.attestor-overcover.testnet</code>; it is readable for the record but is not a purchase destination, and the console labels it &ldquo;Legacy build&rdquo; and disables buying there. The console decides which is which by reading the deployed code hash, not from a label on the page.</p>
+      </details>
+      <details>
+        <summary>Is this ready for real money?</summary>
+        <p>No. Overcover runs on NEAR testnet with test funds only, and the contract has not been professionally audited. It is a working prototype: the full lifecycle &mdash; purchase, oracle quorum, bonded dispute, settlement and pool accounting &mdash; runs on-chain, but it is not for real funds yet.</p>
+      </details>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -1115,6 +1243,7 @@
       <a href="#factory">Insurance factory</a>
       <a href="#quote-h">Buy cover</a>
       <a href="#agent">For agents</a>
+      <a href="#faq">FAQ</a>
     </div>
     <div class="f-col">
       <h3>Verify</h3>

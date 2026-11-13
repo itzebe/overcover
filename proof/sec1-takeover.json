@@ -1,0 +1,95 @@
+{
+  "mode": "SANDBOX",
+  "nodeUrl": "http://127.0.0.1:3099",
+  "contract": "cover.test.near",
+  "v1WasmSha256": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e",
+  "checks": [
+    {
+      "name": "the v1 module under test is the live deployed build",
+      "ok": true,
+      "detail": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e"
+    },
+    {
+      "name": "v1 initialised with the legitimate owner",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "a provider deposited real capital into the pool",
+      "ok": true,
+      "detail": "capital=20000000000000000000000000"
+    },
+    {
+      "name": "control: the provider can withdraw their own capital before the attack",
+      "ok": true,
+      "detail": "withdraw ok"
+    },
+    {
+      "name": "SEC-1 VULN: an unprivileged third party's migrate() SUCCEEDS on v1",
+      "ok": true,
+      "detail": "migrate accepted"
+    },
+    {
+      "name": "SEC-1 VULN: the owner is replaced by the attacker",
+      "ok": true,
+      "detail": "owner=attacker.test.near"
+    },
+    {
+      "name": "SEC-1 VULN: the attacker's key becomes the attestor",
+      "ok": true,
+      "detail": "attestor=CfVzpT8ri8oF1W4SH6gXuEdMPY8BhhY5dkxuKxQEqwe4"
+    },
+    {
+      "name": "SEC-1 VULN: the pool accounting is reset (capital 0, reserved 0)",
+      "ok": true,
+      "detail": "capital=0 reserved=0"
+    },
+    {
+      "name": "SEC-1 VULN: the provider can no longer withdraw (capital stranded)",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smar"
+    },
+    {
+      "name": "SEC-1 VULN: the attacker can call the owner-only add_product()",
+      "ok": true,
+      "detail": "accepted"
+    },
+    {
+      "name": "SEC-1 VULN: the attacker can forge a signed observation with their own key",
+      "ok": true,
+      "detail": "accepted"
+    },
+    {
+      "name": "FIX: the same third-party migrate() is REFUSED by the hardened v2 module",
+      "ok": true,
+      "detail": "{\"index\":0,\"kind\":{\"index\":0,\"kind\":{\"FunctionCallError\":{\"ExecutionError\":\"Smart contract"
+    },
+    {
+      "name": "FIX: the attacker does NOT become the owner after the refused migrate()",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "FIX: the attacker does NOT become the attestor after the refused migrate()",
+      "ok": true,
+      "detail": "attestor=4bXhofYMdSewViENTocbeGkpipkbtUXPpsem8pVr979o"
+    },
+    {
+      "name": "FIX: the contract account's own migrate() (the real v1->v2 upgrade path) is allowed",
+      "ok": true,
+      "detail": "accepted"
+    },
+    {
+      "name": "FIX: after the self-call the migrated account reports the intended owner",
+      "ok": true,
+      "detail": "owner=owner.test.near"
+    },
+    {
+      "name": "the hardened v2 module has a different on-chain code hash from v1",
+      "ok": true,
+      "detail": "36koHoSdqrYi… vs C6zb3GhtfEke…"
+    }
+  ],
+  "passed": 17,
+  "total": 17
+}

@@ -992,3 +992,47 @@ from the chain (evidence `proof/agent-purchases-v3.json`). The agent key is not 
 - **Single attestor** on the legacy v1 contract; disputes are resolved by the owner (centralisation
   point, documented). The hardened v3 contract — the console default — replaces this with an
   operator quorum + independent resolvers.
+
+## Security-hardening & discoverability mission (2026-11-13)
+
+The full campaign report is `docs/SECURITY_HARDENING_MISSION.md`. Headline outcomes:
+
+- **SEC-1 (legacy v1 `migrate()` takeover) now has a positive, reproducible proof**:
+  `npm run verify:sec1-takeover` (17/17) deploys the **exact live v1 bytecode** to a local neard node,
+  shows an unprivileged account taking the contract over (owner + attestor replaced, accounting reset,
+  capital stranded, owner-only method accepted, forged observation accepted), then shows the hardened
+  module refusing the same call. Wired into CI (`REQUIRE_SANDBOX=1`). This closes the gap where the
+  prior tests only asserted the v2 guard and never demonstrated the attack.
+- **Legacy containment status (honest):** `contract.attestor-overcover.testnet` is **not paused
+  on-chain** (`get_pool().paused == false`). Buying is blocked there **only in the console** (the buy
+  gate refuses any non-hardened code hash). The owner-level fix (`set_paused(true)`) is **BLOCKED BY
+  HUMAN ACTION** — it needs the legacy owner key.
+- **v3 SEC-6/SEC-7/SEC-9 redeploy is prepared and verified by plan** (`node driver/redeploy-v3.mjs
+  --plan`): live `a97034e6…` → `811e0427…`, code-only, reversible. The deploy itself is **BLOCKED BY
+  HUMAN ACTION** (operator key).
+- **OutLayer independently verified:** the POC's recorded Intel TDX quote verifies offline
+  (`UpToDate`), and a **fresh live** OutLayer execution was run and its attestation verified
+  (`task_hash_matches`, `UpToDate`). POC suites 34/34. The Overcover adapter is not deployed (needs the
+  operator's `outlayer deploy`).
+- **Discoverability:** added a genuine FAQ + `FAQPage` JSON-LD to the console; all crawler endpoints
+  (`robots.txt`, `sitemap.xml`, `llms.txt`, `llms-full.txt`, `products.json`, `products.schema.json`)
+  HTTP-verified at 200 on production. Crawler *access* is verified; **indexing is not claimed**.
+
+
+### Release-operations execution (2026-11-13)
+
+The remaining release operations were attempted. This environment holds **no operator key** (no
+`OVC_V3_SECRET_KEY`, no `keys/`, no NEAR signing key anywhere, no `outlayer` CLI), so the four write
+operations are **BLOCKED** — each with a precise missing prerequisite — and every read-only check was
+executed. Full evidence: `docs/SECURITY_HARDENING_MISSION.md` §10, plus `proof/release-ops.json`
+(`npm run verify:release-ops`).
+
+| Operation | Result | Evidence |
+| --- | --- | --- |
+| Legacy v1 paused | **BLOCKED** | live `paused=false`; needs `owner.attestor-overcover.testnet` key |
+| v3 SEC-6/7/9 redeploy | **BLOCKED** | plan verified (`a97034e6…`→`811e0427…`); driver fails closed without key |
+| Hardened-v3 purchase | **BLOCKED** | needs a funded testnet wallet key |
+| OutLayer adapter deploy | **BLOCKED** | needs `outlayer` CLI + funded FullAccess operator key |
+| On-chain suite (`test:onchain`) | **SKIPPED** | 95 pass / 1 fail; live file needs `keys/identities.json` |
+| Release regression suites | **PASS** | sec1 17/17, upgrade 8/8, upgrade-preservation ok, sandbox 28/28, controlled-v3 39/39, factory 22/22, connectivity 13/13, proof 13/13, live ok, axe 0, ui:qa ok |
+| PR #43 | **DRAFT** | head `f5f60ec9beecdf076a337d9052f9cd601f766412` |

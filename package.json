@@ -33,6 +33,8 @@
     "verify:connectivity": "node proof/connectivity.mjs",
     "verify:live": "node proof/live-check.mjs",
     "verify:migration": "node proof/migration-auth.mjs",
+    "verify:sec1-takeover": "node proof/sec1-takeover.mjs",
+    "verify:release-ops": "node proof/release-ops.mjs",
     "verify:upgrade": "node proof/upgrade-guard.mjs",
     "verify:upgrade-preservation": "node proof/upgrade-state-preservation.mjs",
     "verify:proof": "node proof/verify.mjs",

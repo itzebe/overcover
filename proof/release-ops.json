@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-11-13T13:15:16.689Z",
+  "rpc": "https://test.rpc.fastnear.com",
+  "live": {
+    "legacy": {
+      "sha256": "1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e",
+      "bytes": 344857,
+      "codeHash": "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R"
+    },
+    "v3": {
+      "sha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1",
+      "bytes": 500023,
+      "codeHash": "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL"
+    },
+    "legacyPaused": false,
+    "v3Paused": false
+  },
+  "results": [
+    {
+      "name": "legacy v1 is the known deployed v1 build",
+      "ok": true,
+      "detail": "legacy v1 (deployed)"
+    },
+    {
+      "name": "v3 is a known build (no unexplained deployment state)",
+      "ok": true,
+      "detail": "hardened v3 (currently deployed)"
+    },
+    {
+      "name": "v3 SEC-6/7/9 redeploy still pending",
+      "status": "BLOCKED",
+      "detail": "live a97034e6… ≠ this source 811e0427… (SOURCE AHEAD OF DEPLOYMENT)"
+    },
+    {
+      "name": "legacy v1 is NOT paused on-chain (SEC-1 not contained at the contract)",
+      "status": "BLOCKED",
+      "detail": "paused=false"
+    },
+    {
+      "name": "no operator secret is committed or world-readable in the tree",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "v3 redeploy needs the operator key",
+      "status": "BLOCKED",
+      "detail": "set OVC_V3_SECRET_KEY or create keys/v3-operator.json (gitignored)"
+    },
+    {
+      "name": "canonical wasm present and matches 811e0427…",
+      "ok": true,
+      "detail": "811e0427ec467582913a47400ecf1b7c272ddea20ff5074f04a4513d896c0a7f"
+    },
+    {
+      "name": "test:onchain and a v3 purchase need funded testnet identities",
+      "status": "BLOCKED",
+      "detail": "keys/identities.json absent (gitignored)"
+    },
+    {
+      "name": "OutLayer adapter deploy needs the outlayer CLI and a funded operator",
+      "status": "BLOCKED",
+      "detail": "outlayer CLI not installed; adapter deploy also needs a NEAR FullAccess signature"
+    }
+  ]
+}

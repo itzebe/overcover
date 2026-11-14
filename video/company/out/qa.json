@@ -1,8 +1,8 @@
 {
   "master": {
-    "dur": "153.100",
-    "sizeMB": "51.8",
-    "bitrate": "2706 kbps",
+    "dur": "188.500",
+    "sizeMB": "61.7",
+    "bitrate": "2620 kbps",
     "vcodec": "h264",
     "w": 1920,
     "h": 1080,
@@ -13,9 +13,9 @@
     "sr": "48000"
   },
   "web": {
-    "dur": "153.100",
-    "sizeMB": "22.1",
-    "bitrate": "1155 kbps",
+    "dur": "188.500",
+    "sizeMB": "26.5",
+    "bitrate": "1125 kbps",
     "vcodec": "h264",
     "w": 1920,
     "h": 1080,
@@ -25,15 +25,24 @@
     "layout": "stereo",
     "sr": "48000"
   },
-  "master_sha256": "b5009b5b3c318a743784e27893cfb6dd586625c70bbd63a09ddd6bc854f28000",
-  "web_sha256": "8d391207cfd59213312ecb9d55880ea4f376f167bffc30e707969f50f1e03284",
+  "master_sha256": "5f6e57588a77c4f8b1aef5564b4784d90e4b889590fdbefc9abcc68cd8ca2d0d",
+  "web_sha256": "41607d5c2dae9c747018a891e43389a287cc7850aaee84b8325ee053484c692e",
   "poster_sha256": "87ef3b55e2fb2e8372c42072c04eceae7a515fafc7543d7acf8f014cc62f21b0",
-  "poster": {
-    "w": 1920,
-    "h": 1080
-  },
   "decode_clean": true,
   "decode_output": "",
   "black_frames": 0,
-  "loudness": {}
+  "loudness": {
+    "integrated": "-15.5",
+    "true_peak": "-1.1",
+    "lra": "3.6"
+  },
+  "scene_audio": {
+    "t10": "-21.0",
+    "t30": "-17.5",
+    "t60": "-17.1",
+    "t90": "-20.8",
+    "t120": "-16.9",
+    "t150": "-19.4",
+    "t175": "-18.7"
+  }
 }

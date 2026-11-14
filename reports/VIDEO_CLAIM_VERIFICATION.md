@@ -30,6 +30,11 @@ limitation in the narration. **Not used**: deliberately omitted because it could
 | 18 | "A console, an autonomous agent, and a permissionless factory all read and write the same contract" | Console (`ui/`), agent (`agent/server.mjs`, limits engine), factory (`driver/discovery`), all targeting `contract.ovc-v3-ctl-2f6c4c.testnet`. | Verified (repo) |
 | 19 | "Reproduce every figure yourself at overcover.vercel.app" | `npm run verify:proof` → 13/13 checks; console shows the copy-paste `curl`. | Verified (live) |
 | 20 | On-screen: contract id, code hash, "NEAR testnet" | Live `view_account` code_hash `CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL`; account is on testnet. | Verified (live) |
+| 21 | "The customer journey … captured on the live console" (scene 05) | Captured read-only from `https://overcover.vercel.app/` with `video/company/capture-journey.mjs`; frames in `video/company/frames-journey/`; on-page text in `frames-journey/journey-text.json`. No wallet connected, no purchase made. | Verified (live) |
+| 22 | "the contract quotes the price — five percent of the payout" (scene 05) | Live `list_products` (`heat-lagos`, premium 5.00 %) and the live quote panel (0.30 NEAR payout ⇒ 0.0150 NEAR premium). | Verified (live) |
+| 23 | "policy three on the hardened contract is active on-chain, with reserved capital behind it" (scene 05) | v3 `list_policies` policy #3: `heat-lagos`, payout 0.10 NEAR, premium 0.0050 NEAR, status `active`; live `get_pool` reserved 0.20 NEAR. | Verified (live) |
+| 24 | Card: `buy_cover` → policy #3, transaction `45A1s3hz…` | Tx `45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn`: signer `oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet`, receiver the v3 contract, `SuccessValue` = policy id. | Verified (live) |
+| 25 | Card flag: "Signed by the project's agent … a human-wallet purchase … is the one acceptance step still outstanding" | The signer is the project's agent account, not a browser wallet; the repo's own register lists the live human-wallet purchase as blocked (`reports/OVERCOVER-FINALIZATION-AND-HUMAN-TEST-READINESS.md` §4). | Verified (live + repo) |
 
 ## Deliberately NOT claimed (unverifiable or would be misleading)
 
@@ -41,7 +46,8 @@ limitation in the narration. **Not used**: deliberately omitted because it could
 | That the TEE/attestation layer is live in the product | It is a tested POC, not deployed. |
 | That every deployed contract has all hardened protections | The **deployed** v3 module predates the SEC-6/SEC-7 reservation-release fix (`verify:proof` NOTE); legacy v1 uses a single attestor. |
 | That all historical contracts were upgraded | Legacy v1 (`contract.attestor-overcover.testnet`) is unchanged and remains single-attestor. |
-| Human wallet purchase against hardened v3 | Not yet captured; the recorded human purchase was on **legacy v1** (`docs/JUDGE_DEMO.md`). The film shows the approval surface, not a claimed v3 signature. |
+| Human wallet purchase against hardened v3 | **No such transaction exists on v3 or v1.** Every recorded `buy_cover` signer is a scripted/agent account; the only "human" purchase (legacy v1 `87n1pdeA…`) was signed programmatically on legacy v1. Scene 05 shows the live journey and the real on-chain purchase, and labels the purchase as agent-signed. Evidence: `reports/VIDEO_CUSTOMER_JOURNEY_EVIDENCE.md`. |
+| That one purchase (of any kind) proves adoption, product-market fit, or production readiness | A single testnet purchase is a functional check, not traction. |
 | Specific payout/premium figures as "production" numbers | They are testnet values; the film shows the console's live testnet reads and says so. |
 
 ## Honesty notes carried into the film
@@ -49,6 +55,9 @@ limitation in the narration. **Not used**: deliberately omitted because it could
 - The narration says "on testnet, unaudited, and built to be verified" in the closing scene.
 - The NEAR card states the network is **testnet** and shows the real code hash.
 - The security scene states the TEE distinction explicitly (execution integrity ≠ truth of an observation).
+- Scene 05 shows the live purchase journey and the **real** on-chain purchase, and the card states
+  plainly that the purchase was **signed by the project's agent**, naming the human-wallet signature
+  as the outstanding acceptance step. The film never implies a human bought cover.
 - The film shows the console's **live** reads; where a wallet approval surface appears it is labelled
   as the approval surface, not a completed signature.
 

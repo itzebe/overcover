@@ -57,7 +57,21 @@ export const SCENES = [
     ],
   },
   {
-    id: "05-security",
+    id: "05-journey",
+    title: "The customer journey, exercised",
+    narrate:
+      "This is the customer journey, captured on the live console. A buyer discovers the catalogue, reads the terms, and the contract quotes the price — five percent of the payout, fixed in code, not by the page. One buy_cover is signed, and a policy is issued with its payout reserved from the pool before it is sold. That path is real and verifiable: policy three on the hardened contract is active on-chain, with reserved capital behind it. The signature is the one step a headless browser cannot make — the console is ready for a person to sign this same call in their own wallet, and that human acceptance step is the next milestone.",
+    shots: [
+      { card: "journey", sec: 8.5 },
+      { img: "frames-journey/j2-select.png", sec: 6.0, kb: { z: [1.0, 1.06], x: [0.5, 0.5], y: [0.42, 0.5] } },
+      { img: "frames-journey/j3-price.png", sec: 5.5, kb: { z: [1.06, 1.0], x: [0.5, 0.5], y: [0.5, 0.44] } },
+      { img: "frames-journey/j4-purchase.png", sec: 5.5, kb: { z: [1.0, 1.05], x: [0.46, 0.5], y: [0.5, 0.46] } },
+      { img: "frames-journey/j6-policies.png", sec: 5.5, kb: { z: [1.05, 1.0], x: [0.5, 0.5], y: [0.5, 0.46] } },
+      { card: "evidence", sec: 9.0 },
+    ],
+  },
+  {
+    id: "06-security",
     title: "Security and capital integrity",
     narrate:
       "The hard question is not receiving an observation — it is accepting it as trustworthy. Readings are cryptographically signed. A quorum of distinct operators must agree. Disputes are bonded. Settlement is deterministic. And after every state change, the contract enforces that reserved capital never exceeds the pool. An attestation prototype can prove that code ran inside a secure enclave — but execution integrity is not proof that an observation is true. That distinction is the security model.",
@@ -69,7 +83,7 @@ export const SCENES = [
     ],
   },
   {
-    id: "06-architecture",
+    id: "07-architecture",
     title: "Architecture and differentiation",
     narrate:
       "Overcover is infrastructure, not an interface. External sources feed signed observations into the contract. The contract holds the truth: the products, the policies, the pool, and the observations. Disputes and settlement execute on-chain. And the capital accounting is enforced by invariant, not by policy. A console, an autonomous agent, and a permissionless factory all read and write the same contract — through the same rules.",
@@ -80,7 +94,7 @@ export const SCENES = [
     ],
   },
   {
-    id: "07-close",
+    id: "08-close",
     title: "Overcover",
     narrate:
       "Overcover. Capital-backed parametric insurance infrastructure on NEAR. On testnet, unaudited, and built to be verified — not trusted. Reproduce every figure yourself at overcover dot vercel dot app.",

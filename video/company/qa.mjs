@@ -1,6 +1,6 @@
 // Independent QA of the finished film: decode integrity, black frames, loudness,
 // stereo, per-scene audio presence, frame->source timeline, and hashes.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -34,6 +34,12 @@ function stderrOf(args) {
   try { execFileSync("ffmpeg", args, { stdio: ["ignore", "pipe", "pipe"] }); } catch (e) { return (e.stderr || "").toString() + (e.stdout || "").toString(); }
   return "";
 }
+// Some ffmpeg filters (loudnorm summary, volumedetect) write to stderr;
+// spawnSync captures it whether the process exits 0 or not.
+function outputOf(args) {
+  const r = spawnSync("ffmpeg", args, { encoding: "utf8" });
+  return (r.stderr || "") + (r.stdout || "");
+}
 
 const report = {};
 report.master = probe(master);
@@ -41,7 +47,7 @@ report.web = probe(web);
 report.master_sha256 = sha(master);
 report.web_sha256 = sha(web);
 report.poster_sha256 = sha(path.join(OUT, "poster.png"));
-report.poster = probe2(path.join(OUT, "poster.png"));
+
 
 function probe2(f) {
   const j = JSON.parse(run("ffprobe", ["-v", "error", "-print_format", "json", "-show_streams", f]));
@@ -58,12 +64,19 @@ const bf = stderrOf(["-v", "info", "-i", master, "-vf", "blackdetect=d=0.3:pix_t
 report.black_frames = (bf.match(/black_start/g) || []).length;
 
 // loudness
-const ld = stderrOf(["-v", "info", "-i", master, "-af", "loudnorm=print_format=summary", "-f", "null", "-"]);
+const ld = outputOf(["-hide_banner", "-i", master, "-af", "loudnorm=print_format=summary", "-f", "null", "-"]);
 report.loudness = {
   integrated: (ld.match(/Input Integrated:\s*([-\d.]+)/) || [])[1],
   true_peak: (ld.match(/Input True Peak:\s*([-\d.]+)/) || [])[1],
   lra: (ld.match(/Input LRA:\s*([-\d.]+)/) || [])[1],
 };
+
+// per-scene audio presence: mean volume at sample points through the timeline
+report.scene_audio = {};
+for (const t of [10, 30, 60, 90, 120, 150, 175]) {
+  const vd = outputOf(["-hide_banner", "-ss", String(t), "-t", "3", "-i", master, "-af", "volumedetect", "-f", "null", "-"]);
+  report.scene_audio["t" + t] = (vd.match(/mean_volume:\s*([-\d.]+) dB/) || [])[1] || null;
+}
 
 fs.writeFileSync(path.join(OUT, "qa.json"), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));

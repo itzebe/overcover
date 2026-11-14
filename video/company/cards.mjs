@@ -128,6 +128,49 @@ const CARDS = {
       </div>
       <div class="foot">Invariant enforced on-chain: reserved capital ≤ pool capital</div></div>`),
 
+  journey: shell(`
+    .wrap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 130px}
+    .kick{font-family:${MONO};font-size:17px;letter-spacing:.34em;text-transform:uppercase;color:${T.gold};margin-bottom:26px}
+    h2{font-family:${SERIF};font-size:72px;line-height:1.08;max-width:24ch}
+    .steps{margin-top:60px;display:flex;align-items:stretch;gap:0}
+    .step{flex:1;padding:0 20px;position:relative}
+    .step:not(:first-child){border-left:1px solid rgba(238,243,239,.16)}
+    .n{font-family:${MONO};font-size:16px;color:${T.gold};letter-spacing:.14em}
+    .t{margin-top:14px;font-family:${SERIF};font-size:28px;line-height:1.18;color:${T.onField}}
+    .d{margin-top:12px;font-size:20px;line-height:1.42;color:${T.onField2}}
+    .accent{position:absolute;left:130px;top:118px;width:110px;height:5px;background:${T.accent}}
+  `, `<div class="accent"></div><div class="wrap">${kicker("The customer journey is live")}
+      <h2>Buying cover is a working flow, not a mock-up.</h2>
+      <div class="steps">
+        <div class="step"><div class="n">01</div><div class="t">Discover</div><div class="d">A catalogue read live from the contract.</div></div>
+        <div class="step"><div class="n">02</div><div class="t">Select &amp; quote</div><div class="d">The contract prices the cover; the page only displays it.</div></div>
+        <div class="step"><div class="n">03</div><div class="t">Buy</div><div class="d">One buy_cover, signed in the buyer's own wallet.</div></div>
+        <div class="step"><div class="n">04</div><div class="t">Policy</div><div class="d">An active policy with payout reserved from the pool.</div></div>
+      </div></div>`),
+
+  evidence: shell(`
+    .wrap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 130px}
+    .kick{font-family:${MONO};font-size:17px;letter-spacing:.34em;text-transform:uppercase;color:${T.gold};margin-bottom:26px}
+    h2{font-family:${SERIF};font-size:68px;line-height:1.08;max-width:26ch}
+    .rows{margin-top:46px;display:flex;flex-direction:column;gap:0;max-width:1560px}
+    .row{display:flex;gap:24px;align-items:baseline;border-top:1px solid rgba(238,243,239,.14);padding:14px 0}
+    .k{font-family:${MONO};font-size:17px;letter-spacing:.1em;text-transform:uppercase;color:${T.gold};width:250px;flex:0 0 250px}
+    .v{font-family:${MONO};font-size:22px;color:${T.onField};word-break:break-all;line-height:1.4}
+    .v small{color:${T.onField2};font-size:19px}
+    .flag{margin-top:26px;border-left:3px solid ${T.accent};padding-left:22px;font-size:23px;color:${T.onField};max-width:1500px;line-height:1.42}
+    .flag b{font-family:${MONO};font-size:20px;letter-spacing:.08em;color:${T.gold};text-transform:uppercase}
+    .accent{position:absolute;left:130px;top:112px;width:110px;height:5px;background:${T.accent}}
+  `, `<div class="accent"></div><div class="wrap">${kicker("Verified on the public chain")}
+      <h2>The purchase path is real. Here is exactly what was verified.</h2>
+      <div class="rows">
+        <div class="row"><div class="k">Contract</div><div class="v">contract.ovc-v3-ctl-2f6c4c.testnet <small>· NEAR testnet</small></div></div>
+        <div class="row"><div class="k">Purchase call</div><div class="v">buy_cover · 0.10 NEAR payout · 0.0050 NEAR premium <small>· Success</small></div></div>
+        <div class="row"><div class="k">Resulting policy</div><div class="v">policy #3 · heat-lagos · status active <small>· payout reserved</small></div></div>
+        <div class="row"><div class="k">Transaction</div><div class="v">45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn</div></div>
+      </div>
+      <div class="flag"><b>Signed by the project's agent.</b> This on-chain purchase was signed programmatically. A human-wallet purchase on this hardened contract is the one acceptance step still outstanding — the console is ready for it.</div>
+      </div>`),
+
   close: shell(`
     .wrap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 130px}
     .kick{font-family:${MONO};font-size:17px;letter-spacing:.34em;text-transform:uppercase;color:${T.gold};margin-bottom:30px}

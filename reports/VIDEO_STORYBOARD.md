@@ -1,7 +1,7 @@
 # Overcover company film — storyboard and narration script
 
 **Deliverable:** `overcover-company-film.mp4` (master) and `overcover-company-film-web.mp4` (web).
-**Target:** 1920×1080 · 16:9 · 30 fps · H.264/AAC · stereo. **Runtime:** ~2 min 33 s.
+**Target:** 1920×1080 · 16:9 · 30 fps · H.264/AAC · stereo. **Runtime:** ~3 min 09 s.
 **Audience:** institutional investors, insurers and capital providers, NEAR ecosystem participants,
 technical evaluators, strategic partners.
 
@@ -28,9 +28,10 @@ animates for its own sake.
 | 02 | Introducing Overcover | 20.1 s | What the company builds; the live console. |
 | 03 | Why NEAR | 23.1 s | The real NEAR integration and deployed identity. |
 | 04 | The product lifecycle | 25.0 s | Define → buy & reserve → observe → challenge → settle. |
-| 05 | Security and capital integrity | 30.0 s | Signed observations, quorum, bonds, invariant, TEE honesty. |
-| 06 | Architecture and differentiation | 27.2 s | It is infrastructure, not a frontend. |
-| 07 | Overcover | 13.9 s | Minimal close: what it is, where to verify it. |
+| 05 | The customer journey, exercised | 36.4 s | The live purchase journey, and the on-chain purchase that proves it works. |
+| 06 | Security and capital integrity | 30.0 s | Signed observations, quorum, bonds, invariant, TEE honesty. |
+| 07 | Architecture and differentiation | 27.2 s | It is infrastructure, not a frontend. |
+| 08 | Overcover | 13.7 s | Minimal close: what it is, where to verify it. |
 
 ## Shot-by-shot script
 
@@ -73,7 +74,25 @@ animates for its own sake.
   can challenge it with a bond. An independent resolver settles the dispute. And settlement itself
   is a single comparison, run exactly once."*
 
-### Scene 05 — Security and capital integrity (30.0 s)
+### Scene 05 — The customer journey, exercised (36.4 s)
+- **Shot 1 (7.8 s)** — Designed card: the four journey steps (Discover → Select & quote → Buy → Policy).
+- **Shot 2 (7.8 s)** — Live product selection (`heat-lagos`: trigger 40.0 °C, premium 5.00 %).
+- **Shot 3 (7.3 s)** — Live contract quote (premium 0.0150 NEAR; payout reserved 0.30 NEAR).
+- **Shot 4 (7.3 s)** — Live purchase surface ("Buy this cover with your own wallet"; destination
+  `contract.ovc-v3-ctl-2f6c4c.testnet · verified hardened module`).
+- **Shot 5 (6.8 s)** — Live policy register (policies with the contract's own status).
+- **Shot 6 (9.0 s)** — Designed card: the verified on-chain purchase (contract, `buy_cover`,
+  resulting policy #3 `active`, transaction `45A1s3hz…`), with the honest flag that it was signed by
+  the project's agent and that a human-wallet purchase is the outstanding acceptance step.
+- **Narration:** *"This is the customer journey, captured on the live console. A buyer discovers the
+  catalogue, reads the terms, and the contract quotes the price — five percent of the payout, fixed
+  in code, not by the page. One buy_cover is signed, and a policy is issued with its payout reserved
+  from the pool before it is sold. That path is real and verifiable: policy three on the hardened
+  contract is active on-chain, with reserved capital behind it. The signature is the one step a
+  headless browser cannot make — the console is ready for a person to sign this same call in their
+  own wallet, and that human acceptance step is the next milestone."*
+
+### Scene 06 — Security and capital integrity (30.0 s)
 - **Shot 1 (9.8 s)** — Designed card: six controls + the TEE honesty note.
 - **Shot 2 (6.7 s)** — Live "Observations & disputes".
 - **Shot 3 (6.2 s)** — Live "What is live, what is not, and what is blocked".
@@ -85,7 +104,7 @@ animates for its own sake.
   code ran inside a secure enclave — but execution integrity is not proof that an observation is
   true. That distinction is the security model."*
 
-### Scene 06 — Architecture and differentiation (27.2 s)
+### Scene 07 — Architecture and differentiation (27.2 s)
 - **Shot 1 (10.7 s)** — Designed card: observation sources → NEAR contract → clients, with the
   invariant stated.
 - **Shot 2 (5.6 s)** — Live "insurance factory".
@@ -96,7 +115,7 @@ animates for its own sake.
   is enforced by invariant, not by policy. A console, an autonomous agent, and a permissionless
   factory all read and write the same contract — through the same rules."*
 
-### Scene 07 — Overcover (13.9 s)
+### Scene 08 — Overcover (13.7 s)
 - **Shot 1 (6.1 s)** — Live console hero, slow pull back.
 - **Shot 2 (9.1 s)** — Designed close card: console URL, contract id, `npm run verify:proof`.
 - **Narration:** *"Overcover. Capital-backed parametric insurance infrastructure on NEAR. On testnet,
@@ -109,3 +128,9 @@ See `reports/VIDEO_CLAIM_VERIFICATION.md` → "Deliberately NOT claimed". In sho
 funding or partnership; no users, revenue, policies-sold or capital-under-management figures; no
 "audited"; the TEE layer is labelled a prototype; and the closing scene states plainly that the
 deployment is testnet and unaudited.
+
+It also does **not** claim a human-wallet purchase. Scene 05 shows the live journey and the real
+on-chain purchase, and states on the card that the purchase was **signed by the project's agent**,
+with the human-wallet signature named as the outstanding acceptance step. The full evidence, and why
+the earlier "human" purchase (legacy v1 tx `87n1pdeA…`) is **not** a human-wallet purchase, is in
+`reports/VIDEO_CUSTOMER_JOURNEY_EVIDENCE.md`.

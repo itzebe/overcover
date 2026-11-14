@@ -1,9 +1,26 @@
 # Human / external-authority actions required
 
-Two items need a human or an external authority. Everything else in this delivery is complete and
+Three items need a human or an external authority. Everything else in this delivery is complete and
 verifiable without them.
 
-## 1. Refresh the GitHub API token — PR could not be opened automatically
+## 1. Record a genuine human-wallet purchase on hardened v3 (the outstanding acceptance test)
+
+**Status:** outstanding. **No human-wallet purchase exists on v3 or v1** — every recorded `buy_cover`
+signer is a scripted/agent account, and the only purchase ever called "human" (legacy v1
+`87n1pdeA…`) was signed programmatically on the legacy contract. Full evidence:
+`reports/VIDEO_CUSTOMER_JOURNEY_EVIDENCE.md`.
+
+**What is already verified (no human needed):** the live customer journey is captured read-only, and
+the purchase path on hardened v3 is real — `buy_cover` tx `45A1s3hz16hXLGdf9YNgfuZf46QrxvN1yhNgFZ8sznyn`
+produced policy #3 (`active`, reserved capital). That purchase was signed by the project's agent.
+
+**Action (a person, ~10 minutes):** follow `docs/HUMAN_ACCEPTANCE_TEST.md` — open
+<https://overcover.vercel.app/>, connect a funded NEAR **testnet** wallet, buy one cover, and record
+the resulting transaction hash and policy id. Then update
+`reports/VIDEO_CUSTOMER_JOURNEY_EVIDENCE.md` §4 and the film's claim table. **Never paste a private
+key or seed phrase into chat or a commit.**
+
+## 2. Refresh the GitHub API token — PR could not be opened automatically
 
 **Status:** the branch is pushed; the pull request could not be opened by the agent.
 
@@ -29,13 +46,13 @@ verifiable without them.
    Use base `main`, head `feat/overcover-company-film`. The PR body is provided verbatim in
    `reports/VIDEO_PR_BODY.md` in this branch.
 
-## 2. Watch the master film end-to-end
+## 3. Watch the master film end-to-end
 
 The QA in `reports/VIDEO_QA_REPORT.md` is **programmatic** (decode integrity, black-frame detection,
 perceptual-hash scene matching, EBU R128 loudness, font-size scaling). The reviewer environment used
 to build the film cannot display images to the reviewer, so **no human has watched the film frame by
 frame**. Before publishing the film externally, a person should watch the master
-(`video/company/out/overcover-company-film.mp4`, SHA-256 `b5009b5b…f28000`) end-to-end and confirm
+(`video/company/out/overcover-company-film.mp4`, SHA-256 `5f6e5758…ca2d0d`) end-to-end and confirm
 pacing and tone.
 
 ## Not required, but noted

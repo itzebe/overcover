@@ -1,6 +1,6 @@
 # Overcover company film
 
-A ~2 min 33 s, 1920×1080, 30 fps narrated product film for institutional and technical audiences.
+A ~3 min 09 s, 1920×1080, 30 fps narrated product film for institutional and technical audiences.
 Every frame of product footage is the **live production console** driven in a real Chromium; every
 designed card is rendered from HTML with the console's own palette and type roles. Nothing is
 staged and no figure is invented — see `reports/VIDEO_CLAIM_VERIFICATION.md`.
@@ -17,27 +17,36 @@ Hashes and technical metadata for the shipped files are recorded in
 
 ## How it is made
 
-Three steps, each a script in this directory. They need Chromium (playwright-core), `ffmpeg`,
+Four steps, each a script in this directory. They need Chromium (playwright-core), `ffmpeg`,
 `ffprobe`, and `python3 -m piper` (Piper neural TTS) with a voice model under `voices/`.
 
 ```bash
 node capture-frames.mjs      # 1. screenshot the live console (frames/)
-node cards.mjs               # 2. render the designed cards (cards/)
-node build.mjs               # 3. synthesise narration, render shots, crossfade, mux (out/)
-node qa.mjs                  # 4. independent QA → out/qa.json
+node capture-journey.mjs     # 2. capture the live purchase journey (frames-journey/)
+node cards.mjs               # 3. render the designed cards (cards/)
+node build.mjs               # 4. synthesise narration, render shots, crossfade, mux (out/)
+node qa.mjs                  # 5. independent QA → out/qa.json
+node validate-cards.mjs      # 6a. no card overflows 1920×1080
+node verify-cards.mjs        # 6b. card text clears WCAG AA contrast
 ```
 
 - `scenes.mjs` is the single source of truth: the narration text and the shot list. Change the film
-  by editing that file and re-running steps 1–3.
+  by editing that file and re-running steps 1–4.
 - `capture-frames.mjs` scrolls the production console to each section and screenshots it at
   1920×1080. Point it at a local build with `node capture-frames.mjs http://localhost:PORT/`.
-- `cards.mjs` renders the title/NEAR/lifecycle/security/architecture/close cards with Chromium.
+- `capture-journey.mjs` captures the **customer journey** read-only (no wallet connected, nothing
+  signed): discover → select → quote → purchase surface → policy register → legacy disclosure. It
+  also writes the on-page text to `frames-journey/journey-text.json`.
+- `cards.mjs` renders the title/NEAR/lifecycle/journey/evidence/security/architecture/close cards
+  with Chromium.
 - `build.mjs` synthesises each narration line (so picture length follows the voice), renders every
   shot with a slow Ken-Burns move, crossfades the scenes, lays the narration plus a generated
   ambient bed, and muxes master + web.
 - `remux.mjs` rebuilds only the audio and re-muxes, for quick audio changes without a full re-render.
 
-Intermediate `seg/`, `audio/`, `frames/`, `cards/` are regenerable and git-ignored.
+Intermediate `seg/`, `audio/`, `frames/`, `cards/` are regenerable and git-ignored. `frames-journey/`
+(the read-only customer-journey captures + `journey-text.json`) **is committed** as the evidence for
+scene 05, so the scene can be checked without re-running the capture.
 
 ## Honesty rules for this film
 
@@ -45,6 +54,9 @@ Intermediate `seg/`, `audio/`, `frames/`, `cards/` are regenerable and git-ignor
 - The deployment is stated as **NEAR testnet** and **unaudited** on screen and in the narration.
 - The attestation/TEE layer is described as a **prototype**; the film states that execution
   integrity is not proof that an observation is true.
+- The purchase scene shows the **real** on-chain purchase and states plainly that it was **signed by
+  the project's agent**; a human-wallet purchase is named as the outstanding acceptance step. The
+  film never implies a human bought cover — see `reports/VIDEO_CUSTOMER_JOURNEY_EVIDENCE.md`.
 - No endorsement, funding, partnership, user count, revenue or capital-under-management is claimed.
 
 ## Voices

@@ -989,9 +989,13 @@ from the chain (evidence `proof/agent-purchases-v3.json`). The agent key is not 
   not a substitute for a third-party audit.
 - **Wallet-stack dependency advisories (pre-audit SEC-5).** All **high and moderate** advisories are
   now cleared via forward `overrides` (nanoid 5.1.16, bn.js 5.2.5, base-x 3.0.11,
-  decode-uri-component 0.5.1); `npm audit` reports **19 low / 0 high / 0 moderate** (dev-only `elliptic`
-  and transitive parents). No exploit path was found in the shipped static page. Recommended follow-up:
-  drop the overrides once `@near-wallet-selector` ships the patched transitive ranges.
+  decode-uri-component 0.5.1); `npm audit` reports **19 low / 0 high / 0 moderate** (one root
+  advisory — `elliptic` GHSA-848j-6mx2-7j84 — plus its transitive parents). `elliptic@6.6.1` **is**
+  present in the shipped `ui/vendor/wallet-bundle.js` (via `@near-js/crypto` → `secp256k1` and via
+  `crypto-browserify`), so it is *not* dev-only; it is a low-severity CWE-1240 finding with **no
+  non-breaking fix** (the only "fix" is a semver-major downgrade of `crypto-browserify`). It is used
+  for ECDSA operations and browser polyfills, not for anything the page trusts for authority — the
+  page holds no key and signs nothing. Documented and accepted, not suppressed.
 - **Agent rate limits and idempotency are per-process**, not a global distributed limit. Buys are
   serialized within one process, so a single service instance cannot be raced; a multi-instance
   deployment must centralise spend state.
@@ -1150,3 +1154,26 @@ owner-controlled; no simulated deployment was substituted.
 `docs/HUMAN_ACCEPTANCE_TEST.md`. The hardened v3 redeploy (`node driver/redeploy-v3.mjs`), legacy v1
 containment (`node driver/upgrade.js`) and the OutLayer adapter deploy (`outlayer deploy`) are also
 owner-only but are not prerequisites for that acceptance.
+
+### Controlled-release readiness pass (2026-11-14, `feat/owner-authority-reconciliation-testnet`)
+
+Full report: `reports/FINAL-CONTROLLED-RELEASE-READINESS.md`. Verdict: **CONDITIONAL GO** for owner-led
+human testing on the existing v3 contract; **NO-GO** for declaring the hardened module deployed (owner
+key required). Re-confirmed from the deployed bytes this session: production v3 = `a97034e6…`
+(lacks SEC-7/SEC-9), hardened reference = `811e0427…`, legacy v1 = `1f30ccf1…` (lacks SEC-1). All
+**26** transactions in `proof/controlled-v3-deploy.json` re-resolved on-chain **26/26 SUCCESS**. Suite:
+model 74/74, sim 79/79, console 132/132, agent 54/54, agent-eval 33/33, factory 11/11, deploy 21/21,
+outlayer 34/34; `verify:proof` 13/13, `verify:connectivity` 13/13, `verify:factory` 22/22,
+`verify:upgrade` 8/8, `verify:upgrade-preservation` PRESERVED, `verify:sec1-takeover` 17/17,
+`verify:migration` 6/6, `axe` 0 @320–1440, `ui:qa` PASS. Production `ui/index.html` and all six
+discoverability endpoints (`robots.txt`, `sitemap.xml`, `llms.txt`, `llms-full.txt`, `products.json`,
+`products.schema.json`) are byte-identical to the repo. `npm audit` 19 low / 0 high / 0 critical
+(transitive `elliptic`; no non-breaking fix). **Fixed:** the committed reconciliation report held full
+NEAR **public** keys as `ed25519:<44 chars>`, which the CI secret-scan regex matches — they are public
+(equal to the on-chain `view_access_key_list`), no secret was exposed, but they were truncated to
+`ed25519:XXXXXXXX…` so the CI `verify` job cannot fail on a false positive (guard not weakened). **New:**
+`npm run verify:preservation` — a state-preservation verifier that diffs every live state view against
+`proof/preservation-snapshot.json` across the code-only redeploy and re-asserts `reserved ≤ capital`.
+**Blocked (owner key):** the v3 redeploy and the legacy v1 `set_paused`; **blocked (human):** the v3
+wallet purchase. Rust and `neard` are absent locally, so `test:contract` and the `*:sandbox` suites run
+in CI (`REQUIRE_SANDBOX=1`) on the PR.

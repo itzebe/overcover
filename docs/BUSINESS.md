@@ -41,8 +41,10 @@ the same contract writes rainfall cover too.
 - An observation is published for the city and date. If the reading is **at or
   above the product's threshold**, the payout is released to the beneficiary; if
   not, the reserve is released back to the pool.
-- A published reading can be **challenged** within a bond-backed window; the
-  challenge is what makes a single attestor tolerable.
+- A reading is finalised only when a **quorum of independent operators** sign the
+  same value, and a finalised reading can be **challenged** within a bond-backed
+  window; an **independent resolver quorum** decides the dispute. No single
+  operator, and not the owner, can set the index or resolve a dispute alone.
 
 The buyer is either a person with a wallet or an autonomous agent with an account.
 Both end in the same object: an on-chain policy anyone can read.

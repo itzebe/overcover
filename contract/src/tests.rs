@@ -1892,6 +1892,114 @@ fn sec7_a_backdated_reading_can_arrive_after_the_report_delay() {
 }
 
 // --------------------------------------------------------------------------
+// Key rotation and recovery — the authority-management procedure a successor
+// operator must be able to rely on. The oracle key of an operator can be
+// replaced by the owner without changing the account, and the rotated key is
+// the only one that then produces accepted readings.
+// --------------------------------------------------------------------------
+
+/// A reading submitted with `seed`'s key, from operator account `i`, with an
+/// explicit nonce (so a rotation test can drive the nonce deliberately).
+fn submit_with_seed(
+    c: &mut Overcover, i: u8, seed: u8, metric: &str, city: &str, date: u64, value: u64,
+    reported_at: u64, nonce: u64,
+) {
+    let operator = op(i);
+    let sig = sign_reading(&operator, metric, city, date, value, reported_at, nonce, seed);
+    ctx(operator, 0, reported_at);
+    c.submit_reading(
+        metric.to_string(), city.to_string(), date, value, reported_at,
+        default_expiry(reported_at), b"ev".to_vec(), nonce, sig,
+    );
+}
+
+#[test]
+fn rot1_rotated_operator_key_is_the_only_accepted_key() {
+    let mut c = setup();
+    // op1's key is replaced with a distinct key (seed 9) by the owner.
+    ctx(owner(), 0, 0);
+    c.rotate_operator_key(op(1), pubkey(9));
+    assert_eq!(c.get_operator(op(1)).unwrap().public_key, pubkey(9), "the stored key must be the new one");
+
+    let day3 = 3 * 24 * 3600;
+    // The OLD key no longer verifies for op1's account.
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        submit_with_seed(&mut c, 1, 1, "", "berlin", day3, 250, day3 + 60, 0)
+    }));
+    assert!(r.is_err(), "the old key must be rejected after rotation");
+
+    // The NEW key is accepted.
+    submit_with_seed(&mut c, 1, 9, "", "berlin", day3, 250, day3 + 60, 0);
+    assert_eq!(c.get_operator(op(1)).unwrap().readings, 1, "the new key's reading is counted");
+}
+
+#[test]
+fn rot2_only_the_owner_can_rotate_a_key() {
+    let mut c = setup();
+    // A non-owner (even a registered operator) cannot rotate a key.
+    ctx(op(2), 0, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.rotate_operator_key(op(1), pubkey(9))
+    }));
+    assert!(r.is_err(), "a non-owner must not rotate an operator key");
+    assert_eq!(c.get_operator(op(1)).unwrap().public_key, pubkey(1), "op1's key is unchanged");
+
+    // A non-owner cannot add an operator either.
+    ctx(op(2), 0, 0);
+    let r2 = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.add_operator(op(4), pubkey(4))
+    }));
+    assert!(r2.is_err(), "a non-owner must not add an operator");
+}
+
+#[test]
+fn rot3_rotation_preserves_pool_and_policy_state() {
+    let mut c = setup();
+    ctx("lp1.testnet".parse().unwrap(), 1000 * ONE, 0);
+    c.deposit();
+    ctx("biz.testnet".parse().unwrap(), 3 * ONE, 0);
+    let id = c.buy_cover("rain-berlin-20mm".to_string(), U128(100 * ONE), 3 * 24 * 3600, None);
+    let pool_before = c.get_pool();
+
+    ctx(owner(), 0, 0);
+    c.rotate_operator_key(op(2), pubkey(9));
+
+    let pool_after = c.get_pool();
+    assert_eq!(pool_before.capital, pool_after.capital, "rotation must not touch capital");
+    assert_eq!(pool_before.reserved, pool_after.reserved, "rotation must not touch reservations");
+    assert!(c.get_policy(id).is_some(), "rotation must not drop policies");
+    assert!(c.reconcile(), "reconciliation must still balance after rotation");
+}
+
+#[test]
+fn rot4_rotation_requires_a_32_byte_key() {
+    let mut c = setup();
+    ctx(owner(), 0, 0);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.rotate_operator_key(op(1), vec![1, 2, 3])
+    }));
+    assert!(r.is_err(), "a malformed key must be refused");
+    // Rotating an account that is not an operator fails closed.
+    let r2 = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.rotate_operator_key(op(9), pubkey(9))
+    }));
+    assert!(r2.is_err(), "rotating an unknown operator must fail closed");
+}
+
+#[test]
+fn rot5_rotation_does_not_disturb_other_operators() {
+    let mut c = setup();
+    ctx(owner(), 0, 0);
+    c.rotate_operator_key(op(1), pubkey(9));
+    // op2 and op3 keep their original keys and can still report.
+    let day3 = 3 * 24 * 3600;
+    submit_with_seed(&mut c, 2, 2, "", "berlin", day3, 250, day3 + 60, 0);
+    submit_with_seed(&mut c, 3, 3, "", "berlin", day3, 250, day3 + 60, 0);
+    submit_with_seed(&mut c, 1, 9, "", "berlin", day3, 250, day3 + 60, 0);
+    assert_eq!(count_observations(&c), 1, "a rotated key still forms part of the quorum");
+}
+
+// --------------------------------------------------------------------------
 // Stateful invariant fuzzing — reserved <= capital must survive a long,
 // randomised sequence of every state-changing action.
 //

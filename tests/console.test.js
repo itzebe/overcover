@@ -609,6 +609,10 @@ test("the disclosures required by the mission are present verbatim in spirit", (
   for (const need of [/Multi-operator oracle, quorum-finalised/, /Independent resolvers decide disputes/]) {
     assert.ok(need.test(SCRIPT), `v2 disclosure missing from script: ${need}`);
   }
+  // The challenge-window disclosure must be set from the LIVE contract config, not
+  // hard-coded, so the page never states a window the contract does not use.
+  assert.ok(/Challenge window: /.test(SCRIPT), "the challenge window must be stated from the live config");
+  assert.ok(/cfg\.challenge_window_sec/.test(SCRIPT), "the window disclosure must read the contract's challenge_window_sec");
 });
 
 test("the hero illustration is an inline SVG (no remote image dependency)", () => {

@@ -126,15 +126,19 @@ key and nothing signed. Only a local service the operator runs can send a purcha
 
 - Testnet only, with test funds. Not for real money.
 - The contract has not been professionally audited.
-- The index reading is currently signed by a single trusted attestor key, not a
-  decentralised oracle.
-- The contract owner resolves disputes (a human step); the owner cannot move pool
-  capital.
-- The live demonstration uses a 60-second challenge window; production would use a
-  longer one.
-- The live contract carries 22 products, of which 2 are the canonical named products
+- The default contract (`contract.ovc-v3-ctl-2f6c4c.testnet`) finalises each index
+  reading by a quorum of independent operators that each sign with their own key,
+  and decides disputes by a quorum of independent resolvers — not a single attestor
+  and not the owner. The operators currently read one shared free upstream
+  (Open-Meteo), so independent signing does not by itself make the data independent.
+- The challenge window on the default contract is 3600 seconds, read live from the
+  contract's config. The original v1 module at `contract.attestor-overcover.testnet`
+  uses a single attestor, a 60-second window and an unauthenticated `migrate()`; it
+  is legacy, read-only in the console, and not a purchase destination.
+- The legacy v1 contract carries 22 products, of which 2 are the canonical named products
   and 20 are demo-generated test rows; the console groups the latter so the real
-  cover stays legible.
+  cover stays legible. The default v3 contract carries the canonical temperature
+  product plus any permissionless factory products.
 - Parametric, not indemnity: a payout follows the reading meeting the trigger, and a
   loss that does not meet the trigger is not covered.
 

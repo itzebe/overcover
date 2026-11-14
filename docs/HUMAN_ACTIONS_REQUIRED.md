@@ -1,6 +1,6 @@
 # Issues requiring human or external authority
 
-**As of:** 2026-11-14 · **Branch:** `main` (`f0e0b07…`, the deployed build; PRs #45/#47/#48 merged) · **Contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
+**As of:** 2026-11-14 · **Branch:** `feat/owner-authority-reconciliation-testnet` (`c8a32f5d` + this mission's commit) · **Default contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
 
 This is the separate register of work that **cannot** be completed from an agent environment
 because it needs a private key, a human-controlled wallet, or an external service account. Nothing
@@ -39,6 +39,12 @@ Rollback is the same command pointed at the previous module (`a97034e6…`); it 
 
 ```bash
 npm run verify:proof   # the deployed module must now match 811e0427… and SOURCE AHEAD must be gone
+npm run verify:preservation -- \
+  --expect-sha256 811e0427ec467582913a47400ecf1b7c272ddea20ff5074f04a4513d896c0a7f
+# ^ re-reads every state view and diffs it against proof/preservation-snapshot.json.
+#   Expect PRESERVATION PASS: owner, products, all policies, pool accounting and the
+#   reserved <= capital invariant unchanged; only the code hash differs. Run
+#   `npm run verify:preservation:snapshot` once before the redeploy to (re)record the baseline.
 ```
 
 ## B. Live human wallet approval on v3 (the outstanding acceptance test)
@@ -69,11 +75,15 @@ against the exact deployed bytecode (`npm run verify:sec1-takeover`, 17/17) and 
 console (labelled *Legacy build*, buying disabled), but the contract-level fix needs an in-place
 upgrade.
 
-**Current live state (read over public RPC, 2026-11-13).** The legacy module exports an owner-only
-`set_paused`, but there is no `get_paused`; the flag is read via `get_pool`, which returns
-**`paused: false`** (solvent `true`). The owner is `owner.attestor-overcover.testnet` — a different
-account from the contract account, and neither key is available here. So the contract is **not**
-paused and **not** repaired; nothing here signed anything for the legacy account.
+**Current live state (read over public RPC, 2026-11-14; full dump `proof/legacy-reconciliation.json`).**
+The legacy module exports an owner-only `set_paused`, but there is no `get_paused`; the flag is read
+via `get_pool`, which returns **`paused: false`** (solvent `true`). The pool holds
+**capital 14.05 NEAR, reserved 10.50 NEAR** across **15 policies** (13 active, 1 settled-paid, 1
+settled-no-pay); the account balance is **18.55 NEAR**. The owner is
+`owner.attestor-overcover.testnet` — a different account from the contract account, and neither key is
+available here. So the contract is **not** paused and **not** repaired; nothing here signed anything
+for the legacy account. See `reports/LEGACY_POLICYHOLDER_RECONCILIATION.md` and
+`reports/LEGACY_CONTAINMENT_AND_MIGRATION_PLAN.md`.
 
 **What is needed.** The `FullAccess` key on `contract.attestor-overcover.testnet`
 (`ed25519:CwZBmKyV…`), which is **not recoverable from the chain** and not in this environment — see
@@ -112,16 +122,20 @@ Console or Bing Webmaster Tools, to which this environment has no account.
 **squash-merged to `main`** as `c209cbf49f24217e122a0dbcdc2c326debc015a6`. Vercel auto-deployed that
 exact commit to production (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, READY).
 
-**Current state (2026-11-14, resolved).** The token works again: `GET /user` returns `itzebe` with
-`admin`/`push` on `itzebe/overcover`. This session pushed and squash-merged **PR #47** (legacy
-`code_hash` correction), **PR #44** (SEC-1 remediation tests + operator runbook), **PR #46**
-(release-truth closeout, rebased onto the current `main`) and **PR #41** (OutLayer attestation POC,
-rebased; `package.json` conflict resolved). A closeout PR **#49** records the reconciliation. No
-credential is required from a human to publish documentation-only work.
+**Current state (2026-11-14, later).** The credential is **again returning HTTP 401 for both read
+and write**. The stored GitHub OAuth token (`~/.openhands/git-credentials/github.token`, and the
+token returned by the `git-credential-helper` exchange at `app.all-hands.dev/api/v1/webhooks/secrets`)
+is rejected by `api.github.com` — `GET /user` and `GET /repos/itzebe/overcover` both return 401, and
+`git push` fails with `Invalid username or token`. The exchange endpoint itself returns 200, so the
+failure is on the GitHub side: the workspace's GitHub authorization appears revoked, not merely
+rate-limited. As a result this session **could not push** the `feat/owner-authority-reconciliation-testnet`
+commits `f3debc9` (CI secret-scan fix) and `313f429` (successor architecture + legacy-continuity
+decision); they are committed locally and await a working credential.
+
+**Smallest human action.** Re-authorize the GitHub connection for this workspace (or supply a token
+with `contents:write` + `pull_requests:write` on `itzebe/overcover`), then run
+`git push origin feat/owner-authority-reconciliation-testnet`. Nothing else blocks publication:
+the commits are ready and CI is expected to pass once the secret-scan fix is pushed.
 
 **What remains human-only.** The operations that need a NEAR signing key this environment does not
-hold (v3 redeploy, legacy v1 pause, the live v3 purchase) — see sections A–E. Publishing code and
-docs no longer needs a human.
-
-**Historical note (2026-11-13).** Earlier in the release-closure session the stored token briefly
-returned HTTP 401 on writes; that is no longer the case.
+hold (v3 redeploy, legacy v1 pause, the live v3 purchase) — see sections A–E.

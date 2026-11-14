@@ -57,12 +57,15 @@ License: MIT
 
 - Testnet only, with test funds. Not for real money.
 - The contract has not been professionally audited.
-- The index reading is currently signed by a single trusted attestor key, not a
-  decentralised oracle.
-- The contract owner resolves disputes (a human step); the owner cannot move pool
-  capital.
-- The live demonstration uses a 60-second challenge window; production would use a
-  longer one.
+- The default contract (`contract.ovc-v3-ctl-2f6c4c.testnet`) finalises each index
+  reading by a quorum of independent operators that each sign with their own key,
+  and decides disputes by a quorum of independent resolvers — not a single attestor
+  and not the owner. The operators currently read one shared free upstream
+  (Open-Meteo), so independent signing does not by itself make the data independent.
+- The challenge window on the default contract is 3600 seconds, read live from the
+  contract's config. The original v1 module at `contract.attestor-overcover.testnet`
+  uses a single attestor, a 60-second window and an unauthenticated `migrate()`; it
+  is legacy, read-only in the console, and not a purchase destination.
 - **Deployment status.** The hardened v3 module is deployed to the account in the
   line above (code hash `CQR8x1kW…`, wasm sha256 `a97034e6…`): it carries the SEC-1
   `migrate()` guard, so a third party cannot seize the contract. This repository's

@@ -1,0 +1,230 @@
+{
+  "generated_at": "2026-11-14T17:26:44.834Z",
+  "now": 1794677204,
+  "network": "testnet",
+  "contracts": {
+    "v3": {
+      "account_id": "contract.ovc-v3-ctl-2f6c4c.testnet",
+      "pool": {
+        "capital": "1425000000000000000000000",
+        "reserved": "200000000000000000000000",
+        "available": "1225000000000000000000000",
+        "held_bonds": "0",
+        "premiums_collected": "25000000000000000000000",
+        "total_paid": "300000000000000000000000",
+        "total_deposited": "1600000000000000000000000",
+        "total_withdrawn": "0",
+        "bonds_forfeited": "100000000000000000000000",
+        "policy_count": 3,
+        "solvent": true,
+        "paused": false
+      },
+      "reconcile": true,
+      "invariant": true,
+      "policy_count": 3,
+      "active_count": 2,
+      "reserved_identity_holds": true,
+      "solvent": true,
+      "locked_count": 2,
+      "locked_reserved": "200000000000000000000000",
+      "payable_now_count": 0,
+      "payable_now": "0",
+      "rows": [
+        {
+          "id": 2,
+          "buyer": "buyer.ovc-v3-ctl-2f6c4c.testnet",
+          "beneficiary": "buyer.ovc-v3-ctl-2f6c4c.testnet",
+          "product_id": "heat-lagos-factory",
+          "payout": "100000000000000000000000",
+          "threshold": 400,
+          "obs_date": 1794496590,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 3,
+          "buyer": "oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet",
+          "beneficiary": "oc-agent-demo.ovc-v3-ctl-2f6c4c.testnet",
+          "product_id": "heat-lagos",
+          "payout": "100000000000000000000000",
+          "threshold": 400,
+          "obs_date": 1794507078,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        }
+      ]
+    },
+    "legacy_v1": {
+      "account_id": "contract.attestor-overcover.testnet",
+      "pool": {
+        "capital": "14050000000000000000000000",
+        "reserved": "10500000000000000000000000",
+        "available": "3550000000000000000000000",
+        "held_bonds": "0",
+        "premiums_collected": "600000000000000000000000",
+        "total_paid": "1000000000000000000000000",
+        "total_deposited": "21000000000000000000000000",
+        "total_withdrawn": "6650000000000000000000000",
+        "bonds_forfeited": "100000000000000000000000",
+        "policy_count": 15,
+        "solvent": true,
+        "paused": false
+      },
+      "reconcile": true,
+      "invariant": true,
+      "policy_count": 15,
+      "active_count": 13,
+      "reserved_identity_holds": true,
+      "solvent": true,
+      "locked_count": 9,
+      "locked_reserved": "8500000000000000000000000",
+      "payable_now_count": 4,
+      "payable_now": "2000000000000000000000000",
+      "rows": [
+        {
+          "id": 1,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794315395272-3",
+          "payout": "1000000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794315429,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 2,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794315450827-7",
+          "payout": "500000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794315460,
+          "state": "SETTLEABLE_PAYS",
+          "reason": "value 1 meets threshold 1"
+        },
+        {
+          "id": 5,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794319206542-3",
+          "payout": "1000000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794319240,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 6,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794319261805-7",
+          "payout": "500000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794319271,
+          "state": "SETTLEABLE_PAYS",
+          "reason": "value 1 meets threshold 1"
+        },
+        {
+          "id": 7,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794319315964-3",
+          "payout": "1000000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794319350,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 8,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794319370961-7",
+          "payout": "500000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794319381,
+          "state": "SETTLEABLE_PAYS",
+          "reason": "value 1 meets threshold 1"
+        },
+        {
+          "id": 9,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794337387611-3",
+          "payout": "1000000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794337421,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 10,
+          "buyer": "grower-overcover.testnet",
+          "beneficiary": "grower-overcover.testnet",
+          "product_id": "p-1794337442850-7",
+          "payout": "500000000000000000000000",
+          "threshold": 1,
+          "obs_date": 1794337453,
+          "state": "SETTLEABLE_PAYS",
+          "reason": "value 1 meets threshold 1"
+        },
+        {
+          "id": 11,
+          "buyer": "oc-agent-mwb87z4k.testnet",
+          "beneficiary": "oc-agent-mwb87z4k.testnet",
+          "product_id": "rain-lagos",
+          "payout": "1000000000000000000000000",
+          "threshold": 2,
+          "obs_date": 1794355321,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 12,
+          "buyer": "oc-agent-mwb87z4k.testnet",
+          "beneficiary": "oc-agent-mwb87z4k.testnet",
+          "product_id": "rain-bergen-dry",
+          "payout": "500000000000000000000000",
+          "threshold": 5000,
+          "obs_date": 1794355564,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 13,
+          "buyer": "oc-agent-mwb87z4k.testnet",
+          "beneficiary": "oc-agent-mwb87z4k.testnet",
+          "product_id": "rain-lagos",
+          "payout": "1000000000000000000000000",
+          "threshold": 2,
+          "obs_date": 1794522722,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 14,
+          "buyer": "oc-agent-mwb87z4k.testnet",
+          "beneficiary": "oc-agent-mwb87z4k.testnet",
+          "product_id": "rain-lagos",
+          "payout": "1000000000000000000000000",
+          "threshold": 2,
+          "obs_date": 1794609217,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        },
+        {
+          "id": 15,
+          "buyer": "human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet",
+          "beneficiary": "human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet",
+          "product_id": "rain-lagos",
+          "payout": "1000000000000000000000000",
+          "threshold": 2,
+          "obs_date": 1794609443,
+          "state": "LOCKED",
+          "reason": "no reading was ever reported"
+        }
+      ]
+    }
+  }
+}

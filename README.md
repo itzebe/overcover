@@ -298,10 +298,14 @@ service-auth hardening — is in [`docs/SECURITY_PRE_AUDIT.md`](docs/SECURITY_PR
 
 ## Honest limitations
 
-- The oracle is a **single trusted attestor** with a bonded dispute path, not yet a decentralised
-  oracle. The dispute path is implemented, unit-tested, and has been **exercised on the live demo**
-  in both directions (upheld and nullified) — but it still relies on the owner to resolve.
-- The demo uses a **60-second challenge window**; production uses 3600 s.
+- **Oracle.** The default hardened contract (`contract.ovc-v3-ctl-2f6c4c.testnet`) finalises a
+  reading by a **3-of-5 operator quorum** and decides disputes by an **independent resolver quorum**;
+  the owner cannot set the index or resolve a dispute alone. The operators currently read one shared
+  free upstream (Open-Meteo), so independent signing does not by itself make the data independent.
+  The original v1 module (`contract.attestor-overcover.testnet`, legacy and read-only) uses a single
+  attestor and owner-resolved disputes.
+- The default contract's challenge window is **3600 s**, read from contract config; the legacy v1
+  demo used a 60-second window.
 - The demo reports the **same real Open-Meteo reading** the threshold was derived from, so the
   outcome is deterministic. The reading is genuine; it is pinned, not fabricated.
 - The legacy v1 address carries **22 products** (2 canonical named products — `rain-lagos`,

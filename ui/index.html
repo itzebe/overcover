@@ -1208,7 +1208,7 @@
         <li><b>Testnet only, unaudited.</b> This runs on NEAR testnet with test funds. The contract has not been professionally audited and is not for real money.</li>
         <li id="disc-oracle"><b>Single trusted attestor.</b> The index reading is currently signed by one key, not a decentralised oracle. It can be challenged, but the challenge is not yet trustless.</li>
         <li id="disc-resolvers"><b>The owner resolves disputes.</b> Step 06 is a human decision by the contract owner. The owner has no power to move pool capital, but it does decide disputes.</li>
-        <li><b>60-second challenge window.</b> The live demonstration uses a 60-second window; a production deployment would use a longer one.</li>
+        <li id="disc-window"><b>60-second challenge window.</b> The original module uses a 60-second window; the hardened default's window is read live from the contract and shown below.</li>
         <li><b>Parametric, not indemnity.</b> A payout follows the reading meeting the trigger. It does not compensate an assessed loss, and a loss that does not meet the trigger is not covered.</li>
       </ul>
     </div>
@@ -1934,6 +1934,14 @@
     if (lbl) lbl.textContent = isV2
       ? "Oracle quorum · resolvers · dispute bond · challenge window"
       : "Attestor · dispute bond · challenge window";
+    var dWin = el("disc-window");
+    if (dWin && cfg && cfg.challenge_window_sec) {
+      var w = Number(cfg.challenge_window_sec);
+      var wLabel = w % 3600 === 0 ? (w / 3600) + "-hour" : (w % 60 === 0 ? (w / 60) + "-minute" : w + "-second");
+      dWin.innerHTML = "<b>Challenge window: " + wLabel + ".</b> A reading may be disputed for " +
+        w + " seconds (" + wLabel + ") after it is reported; during that window it cannot settle a policy. " +
+        "The window is a contract config value, read live from the contract — not a fixed constant on this page.";
+    }
     if (!isV2) return;
     var step4 = el("step-04"), step6 = el("step-06");
     if (step4) {

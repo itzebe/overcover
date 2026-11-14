@@ -448,6 +448,41 @@ test("the first screen answers what/risk/who/how/trust, not chain metrics", () =
   assert.ok(!/blockchain|smart contract|on-chain/i.test(hero), "the hero must not lead with blockchain jargon");
 });
 
+test("the contract security disclosure lives in the proof section, never above the hero", () => {
+  // The deployment-build disclosure is evidence, not the pitch. It must not be
+  // the first thing a visitor meets: the hero leads, the disclosure sits with
+  // the other proof material further down the page.
+  const heroAt = HTML.indexOf('<section class="hero"');
+  const bannerAt = HTML.indexOf('id="sec-banner"');
+  assert.ok(heroAt !== -1, "the hero must be present");
+  assert.ok(bannerAt !== -1, "the security disclosure must be present");
+  assert.ok(bannerAt > heroAt, "the security disclosure must come after the hero, not before it");
+
+  // It must be a real <details> disclosure inside the proof section, so it is
+  // keyboard-operable and grouped with the other evidence.
+  const proofAt = HTML.indexOf('aria-labelledby="proof-h"');
+  const statusAt = HTML.indexOf('id="status"');
+  assert.ok(proofAt !== -1 && statusAt > proofAt, "the proof section must be present");
+  assert.ok(bannerAt > proofAt && bannerAt < statusAt,
+    "the security disclosure must sit inside the proof section, close to the contract proof");
+  const around = HTML.slice(bannerAt - 60, bannerAt + 260);
+  assert.match(around, /<details id="sec-banner" class="sec-status"/, "the disclosure must be a <details> element");
+  assert.match(HTML, /<summary>[\s\S]*id="sec-tag"[\s\S]*id="sec-summary"[\s\S]*<\/summary>/, "the disclosure must have a keyboard-focusable <summary>");
+});
+
+test("the security disclosure states the migration guard only, and never calls the un-deployed build live", () => {
+  // The live v3 module carries the SEC-1 migration guard. The SEC-6/7/9
+  // lifecycle hardening is a SEPARATE build that is not deployed. The disclosure
+  // must say so, and must not present the later build as live.
+  const script = SCRIPT;
+  const hardened = script.slice(script.indexOf('trust.state === "hardened"'), script.indexOf('trust.state === "legacy"'));
+  assert.match(hardened, /migrate\(\)/, "the hardened copy must name the migration guard");
+  assert.match(hardened, /unless the contract calls itself/i, "the guard's rule must be stated");
+  assert.match(hardened, /separate build and is not yet deployed/i,
+    "the disclosure must say the SEC-6/7/9 hardening is a separate, not-yet-deployed build");
+  assert.ok(!/SEC-6\/7\/9[\s\S]{0,80}is live/i.test(script), "the console must never claim the SEC-6/7/9 build is live");
+});
+
 test("the page describes a parametric mechanism honestly, without over-claiming", () => {
   // Honest: settlement follows a rule; it does not claim every claim auto-approves.
   assert.ok(/no adjuster, no queue/.test(HTML), "the parametric advantage must be stated");

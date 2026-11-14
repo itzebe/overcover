@@ -122,16 +122,20 @@ Console or Bing Webmaster Tools, to which this environment has no account.
 **squash-merged to `main`** as `c209cbf49f24217e122a0dbcdc2c326debc015a6`. Vercel auto-deployed that
 exact commit to production (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, READY).
 
-**Current state (2026-11-14, resolved).** The token works again: `GET /user` returns `itzebe` with
-`admin`/`push` on `itzebe/overcover`. This session pushed and squash-merged **PR #47** (legacy
-`code_hash` correction), **PR #44** (SEC-1 remediation tests + operator runbook), **PR #46**
-(release-truth closeout, rebased onto the current `main`) and **PR #41** (OutLayer attestation POC,
-rebased; `package.json` conflict resolved). A closeout PR **#49** records the reconciliation. No
-credential is required from a human to publish documentation-only work.
+**Current state (2026-11-14, later).** The credential is **again returning HTTP 401 for both read
+and write**. The stored GitHub OAuth token (`~/.openhands/git-credentials/github.token`, and the
+token returned by the `git-credential-helper` exchange at `app.all-hands.dev/api/v1/webhooks/secrets`)
+is rejected by `api.github.com` — `GET /user` and `GET /repos/itzebe/overcover` both return 401, and
+`git push` fails with `Invalid username or token`. The exchange endpoint itself returns 200, so the
+failure is on the GitHub side: the workspace's GitHub authorization appears revoked, not merely
+rate-limited. As a result this session **could not push** the `feat/owner-authority-reconciliation-testnet`
+commits `f3debc9` (CI secret-scan fix) and `313f429` (successor architecture + legacy-continuity
+decision); they are committed locally and await a working credential.
+
+**Smallest human action.** Re-authorize the GitHub connection for this workspace (or supply a token
+with `contents:write` + `pull_requests:write` on `itzebe/overcover`), then run
+`git push origin feat/owner-authority-reconciliation-testnet`. Nothing else blocks publication:
+the commits are ready and CI is expected to pass once the secret-scan fix is pushed.
 
 **What remains human-only.** The operations that need a NEAR signing key this environment does not
-hold (v3 redeploy, legacy v1 pause, the live v3 purchase) — see sections A–E. Publishing code and
-docs no longer needs a human.
-
-**Historical note (2026-11-13).** Earlier in the release-closure session the stored token briefly
-returned HTTP 401 on writes; that is no longer the case.
+hold (v3 redeploy, legacy v1 pause, the live v3 purchase) — see sections A–E.

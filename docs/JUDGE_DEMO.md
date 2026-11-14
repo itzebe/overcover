@@ -217,7 +217,7 @@ contract where the factory is live. Say instead:
   permissionless factory is on the address a judge is looking at."*
 
 *Why it is credible:* the discovery agent's determinism and evidence hashing are unit-tested
-(`npm run test:factory`, 11/11), and the console's honesty rule — a proposal is never shown ACTIVE
+(`npm run test:factory`, 11/11), `npm run verify:factory` (22/22) covers the on-chain rules, and the console's honesty rule — a proposal is never shown ACTIVE
 without the contract — is regression-tested (`npm run test:console`).
 
 ## Closing payoff (10 s)
@@ -242,8 +242,8 @@ without the contract — is regression-tested (`npm run test:console`).
 | 8 | Unauthorized purchase denied | `403` with reasons | `npm run verify:connectivity` |
 | 8b | Wrong-network wallet refused | Buy disabled + reason; no call built | `npm run test:console` (wrong-network cases) |
 | 9 | No key is exposed | No `ed25519:` in tracked files or the bundle | `git grep -nIE 'ed25519:'`; `verify:connectivity` check 7 |
-| 10 | Deployed v3 code == this source | `a97034e6…` (500023 bytes) | `npm run verify:proof` |
-| 11 | Tests pass | model 66/0, contract 76/0, console 108/0, agent 53/0, sim 71/0, agent-eval 33/0, factory 11/0, deploy 21/0 | `npm test` |
+| 10 | Deployed v3 is a recognised Overcover build; this source is *ahead* of it | deployed `a97034e6…` (500023 bytes); source builds to `811e0427…` (SEC-6/7/9, not yet redeployed) — `verify:proof` prints `SOURCE AHEAD OF DEPLOYMENT` | `npm run verify:proof` |
+| 11 | Tests pass | model 74/74, contract 88/0, console 132/0, agent 54/0, sim 79/0, agent-eval 33/0, factory 11/0, deploy 21/0 | `npm test` |
 | 12 | Production is the deployed commit | the production deployment's `meta.githubCommitSha` = the tip of `main` | `GET /v6/deployments?...&target=production` |
 | 13 | The decentralised design + SEC-1 closure hold on a *deployed* module | 39/39 sandbox · **40/40 live testnet** | `npm run verify:controlled-v3:sandbox`; `npm run verify:controlled-v3` |
 | 14 | The v3 upgrade preserves live state | state preserved + the migrated policy settles | `npm run verify:upgrade-preservation` |

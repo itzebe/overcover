@@ -138,7 +138,7 @@ If the operator holds `ed25519:CwZBmKyV…`, the non-destructive in-place upgrad
 existing address without touching the pool or policies:
 
 ```bash
-npm run verify:sandbox              # 21/21 (compiled wasm on a real neard)
+npm run verify:sandbox              # 28/28 (compiled wasm on a real neard)
 npm run verify:upgrade-preservation # state preserved + the migrated policy still settles
 node driver/upgrade.js --plan       # prints the exact operations + costs; sends nothing
 node driver/upgrade.js              # DeployContract + self-call migrate + reconfigure

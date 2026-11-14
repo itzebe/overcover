@@ -66,7 +66,7 @@ which are on `main` yet.
 
 - **The v2 lifecycle** (PR #9): multi-operator oracle quorum, per-operator replay
   nonces, independent resolver disputes, metric-agnostic products. Proven on a
-  **local `neard` 2.14.0** node — `npm run verify:sandbox` 21/21 — but **not on
+  **local `neard` 2.14.0** node — `npm run verify:sandbox` 28/28 — but **not on
   testnet**. The live contract is still v1.
 
 ## What is simulated

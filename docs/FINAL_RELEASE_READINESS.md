@@ -1,6 +1,6 @@
 # Final release readiness register
 
-**As of:** 2026-11-12 (V3-default + final-closure session) · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main`
+**As of:** 2026-11-14 (release-closure session; PRs #45/#47/#48 merged) · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (`f0e0b07…`, the deployed production build)
 **Default contract (hardened v3):** `contract.ovc-v3-ctl-2f6c4c.testnet` · **Legacy address (v1, readable, not a purchase destination):** `contract.attestor-overcover.testnet` · **Production:** https://overcover.vercel.app/
 
 The console now reads **and signs against the hardened v3 contract by default**. v3 is metric-agnostic
@@ -201,7 +201,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
 | Vercel deployment | FIXED AND VERIFIED | Project `overcover`; production alias `overcover.vercel.app`. | `GET /v6/deployments?…&target=production` shows a READY production deployment. |
-| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | 2026-11-13: `main` = `7f95f992e29ec36314b4af213a4978d888e7e127` (PR #37, squash-merge); the production deployment `dpl_Byu6DQq5fRub978RxRQ9XfuAmK2j` reports `meta.githubCommitSha = 7f95f992…` (READY) and the public alias `overcover.vercel.app` returns HTTP 200. Prior: PR #36 `c25bb77d…`, PR #34 `392dbab6…`. |
+| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | 2026-11-14: `main` = `f0e0b073a377750b17254833cfdcd59b055b4841` (PR #48, squash-merge; the security-disclosure placement fix); the production deployment `dpl_9BS9gaQykq9Rypb9ztstYNP4j8e7` reports `meta.githubCommitSha = f0e0b073a377…` (READY) and the public alias `overcover.vercel.app` returns HTTP 200 with that exact page — its inline-script hash `sha256-zVUGF7AJ…` equals the pinned `vercel.json` CSP hash, and the served bytes match `main`'s `ui/index.html` (sha256 `9d778bc8…`). Prior: PR #45 `c209cbf4…` (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, inline-script hash `sha256-oPtOeIa…`), PR #43 `7e7a5102…`, PR #37 `7f95f992…`. |
 | API availability | NOT APPLICABLE | The console is a static page reading public NEAR RPC; there is no product API. | — |
 | Browser functionality | FIXED AND VERIFIED | Page loads and renders live contract state. | `verify:live` (5 widths, 0 console errors); browser probe: 0 console errors. |
 | Wallet compatibility | FIXED AND VERIFIED (integration) | HERE + Meteor; honest availability. | `verify:connectivity`; `ui:qa`. Live extension approval BLOCKED BY HUMAN ACTION. |
@@ -305,7 +305,7 @@ suite re-ran green. So the harness is a real guard, not decoration.
 ### Release gate re-run (this session)
 
 All green, locally: model 74/74 (0 exploitable) · contract **88** (was 83; +5 fuzz seeds) · console
-**127** · agent **54** · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
+**132** · agent **54** · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
 · `verify:upgrade-preservation` PRESERVED · `verify:connectivity` 13/13 · `verify:sandbox` 28/28 ·
 `verify:factory` 22/22 · `verify:controlled-v3:sandbox` **39/39** (incl. SEC-1 refused on the compiled
 wasm, owner unchanged after the refused `migrate`). `axe` 0 violations at 7 widths. `test:onchain`
@@ -326,9 +326,11 @@ accounting behaviour, and deployed nothing.
    hash-pinned CSP (`script-src 'self' 'sha256-…'`, no `unsafe-inline` for script) plus
    `object-src`/`base-uri`/`frame-ancestors`/`form-action` locked. Verified in a real browser under the
    served header (`npm run ui:qa`). The old note that a strict policy "would need `unsafe-inline`" was
-   wrong: hashing removes the need. **Caveat (honest):** the deployed **production** site still serves
-   the pre-CSP build; the header lands when this branch reaches `main`. Verified by
-   `curl -sI https://overcover.vercel.app/` — no `content-security-policy` present today.
+   wrong: hashing removes the need. **Status (2026-11-14):** the header is live in production —
+   PR #45 landed it (`c209cbf4…`), and PR #48 (`f0e0b07…`) updated the pinned inline-script hash after
+   moving the security disclosure; `curl -sI https://overcover.vercel.app/` returns
+   `content-security-policy` whose `script-src` hash matches the page's current inline script
+   (`sha256-zVUGF7AJ…`).
 2. **SEC-10 — a code-only hardening deploy would have disabled buying (LOW).** The console's
    `TRUSTED` build map is now a list of approved builds, so the pending SEC-6/7/9 module does not
    silently lock the buy button. Regression test added.
@@ -623,8 +625,10 @@ a redeploy of `contract.ovc-v3-ctl-2f6c4c.testnet` (operator key; not performed 
     state plainly that the on-chain transaction was signed programmatically with the page's exact
     arguments, that a live extension approval is not captured, and how a judge completes it.
 11. **CI did not run the independent proof.** Added `verify:proof` and `verify:agent` to
-    `.github/workflows/ci.yml`, so the "deployed bytecode == this source" claim is checked on every
-    push.
+    `.github/workflows/ci.yml`, so the bytecode claim is checked on every push: the **legacy v1**
+    module is asserted byte-identical to its published sha256, and the **v3** module is asserted to be
+    a recognised Overcover build (with `SOURCE AHEAD OF DEPLOYMENT` reported honestly when the source
+    is newer — see item 5).
 12. **The wasm build was not byte-reproducible across build environments.** Once CI ran
     `verify:proof`, the bytecode check failed (`4172cd8e…` vs the deployed `1f30ccf1…`) even though
     the toolchain was identical (`rustc 1.99.1 (58cf8f9c3)`), the committed `Cargo.lock` resolved the
@@ -1037,4 +1041,45 @@ executed. Full evidence: `docs/SECURITY_HARDENING_MISSION.md` §10, plus `proof/
 | OutLayer adapter deploy | **BLOCKED** | needs `outlayer` CLI + funded FullAccess operator key |
 | On-chain suite (`test:onchain`) | **SKIPPED** | 95 pass / 1 fail; live file needs `keys/identities.json` |
 | Release regression suites | **PASS** | sec1 17/17, upgrade 8/8, upgrade-preservation ok, sandbox 28/28, controlled-v3 39/39, factory 22/22, connectivity 13/13, proof 13/13, live ok, axe 0, ui:qa ok |
-| PR #43 | **DRAFT** | head `f5f60ec9beecdf076a337d9052f9cd601f766412` |
+| PR #43 | **MERGED** | squash-merged to `main` as `7e7a5102ea74ef13d1b9f0ca6639f1b8c400f97b` (2026-11-13T13:53:33Z) |
+| PR #47 / #44 / #46 | **MERGED / MERGED / THIS PR** | #47 legacy `code_hash` fix and #44 SEC-1 remediation merged 2026-11-14; #46 (this docs closeout) rebased onto `main` |
+
+### Authority re-verification and byte-level deployment proof (2026-11-13, second pass)
+
+Wallet authority was re-established from scratch rather than assumed. There is **no NEAR signing
+material anywhere in this environment**: no `~/.near-credentials`, no `keys/`, no `OVC_V3_SECRET_KEY`,
+no `near`/`outlayer` CLI, and no NEAR entry among the registered secrets. Read from NEAR RPC:
+
+| Account | Balance | Access keys | Held by this environment |
+| --- | --- | --- | --- |
+| `contract.ovc-v3-ctl-2f6c4c.testnet` | 6.62 NEAR | one `ed25519:B5iWCqs9…` **FullAccess** | no |
+| `contract.attestor-overcover.testnet` | 18.55 NEAR | one `ed25519:CwZBmKyV…` **FullAccess** | no |
+
+Both contracts have exactly one FullAccess key and this environment holds neither secret, so **no
+authorized on-chain write can be performed here** — a fact, not a limitation of effort.
+
+**Byte-level guard proof.** The deployed and source modules were fetched/built and searched directly
+(not via the wasm data-section string table, which concatenates neighbouring literals):
+
+| Guard string | Deployed `a97034e6…` | Source `811e0427…` |
+| --- | --- | --- |
+| SEC-1 `migrate may only be called by the contract account itself` | PRESENT | PRESENT |
+| expiry / min-lead / `INVARIANT: reserved > capital` | PRESENT | PRESENT |
+| resolver-independence (`an operator that signed the reading may not resolve it`) | PRESENT | PRESENT |
+| `settled_no_pay` (status name only) | PRESENT | PRESENT |
+| **SEC-7 `no reading was ever reported`** | **absent** | PRESENT |
+| **SEC-9 `observation date too far in the future (max lead exceeded)`** | **absent** | PRESENT |
+
+Two guards — the SEC-7 terminal-state message and the SEC-9 unbounded-lead message — are **absent
+from the deployed module and present in the source**. (The `settled_no_pay` status name is present in
+both; that name alone does not prove the SEC-6 reservation-release *logic* is deployed, so the
+authoritative statement remains `verify:proof` → `SOURCE AHEAD OF DEPLOYMENT` and the size gap below.)
+
+The hardened source rebuilds **byte-for-byte** to `811e0427…` (500342 B) from a `cargo clean` build
+with the pinned toolchain (1.99.1); the live module is `a97034e6…` (500023 B, 319 B smaller). This
+independently confirms the "source ahead of deployment" claim at the guard-string level. The
+code-only, state-preserving redeploy remains prepared and fails closed without the operator key.
+
+**Pre-deployment v3 state captured** (unchanged; `paused=false`, pool solvent): capital 1.4250,
+reserved 0.2000, available 1.2250 NEAR; 2 products, 3 policies, 5 operators (quorum 3), 5 resolvers,
+1 observation, 1 metric — the state a redeploy must preserve.

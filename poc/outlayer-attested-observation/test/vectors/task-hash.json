@@ -1,0 +1,259 @@
+{
+  "algorithm": "outlayer.task_hash.v1",
+  "source": "worker/src/tdx_attestation.rs",
+  "vectors": [
+    {
+      "name": "minimal_required",
+      "fields": {
+        "task_type": "execute",
+        "task_id": 1,
+        "output_hash": "abababababababababababababababababababababababababababababababab"
+      },
+      "sha256": "fc2187b75b4beaa36716487e9bff86177eb39fe47b9097d97a9b5c57d3ac97e9",
+      "parts": [
+        {
+          "field": "task_type",
+          "bytes_hex": "65786563757465"
+        },
+        {
+          "field": "task_id",
+          "bytes_hex": "0100000000000000"
+        },
+        {
+          "field": "output_hash",
+          "bytes_hex": "61626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162"
+        }
+      ]
+    },
+    {
+      "name": "full_project_execution",
+      "fields": {
+        "task_type": "execute",
+        "task_id": 89277,
+        "build_target": "wasm32-wasip2",
+        "wasm_hash": "3c2a2e51fa7ab5db33b69d670ab50692431f3a487bb3d8baf6eb1b2ecf4f9c47",
+        "input_hash": "760f9869d6bb0e4aeec9406fd10c1282aab26812817386fef124d72a926c26b8",
+        "output_hash": "3ed7955ac4432ce891c327d38b12df5452b7891fdf839456bc4bd6ab4ff18242",
+        "project_id": "connectors.outlayer.testnet/connector-probe",
+        "caller_account_id": "e24c4f45097bca96e8f668f3b41c5b8744347e5bb9353679f781d5605620c911",
+        "timestamp": 1794560156,
+        "attached_usd": "0"
+      },
+      "sha256": "78a2832f7d2b476f8d7f1ed3929cd0ec4fa60335e50cd762a09b023ed46c612d",
+      "parts": [
+        {
+          "field": "task_type",
+          "bytes_hex": "65786563757465"
+        },
+        {
+          "field": "task_id",
+          "bytes_hex": "bd5c010000000000"
+        },
+        {
+          "field": "build_target",
+          "bytes_hex": "7761736d33322d776173697032"
+        },
+        {
+          "field": "wasm_hash",
+          "bytes_hex": "33633261326535316661376162356462333362363964363730616235303639323433316633613438376262336438626166366562316232656366346639633437"
+        },
+        {
+          "field": "input_hash",
+          "bytes_hex": "37363066393836396436626230653461656563393430366664313063313238326161623236383132383137333836666566313234643732613932366332366238"
+        },
+        {
+          "field": "output_hash",
+          "bytes_hex": "33656437393535616334343332636538393163333237643338623132646635343532623738393166646638333934353662633462643661623466663138323432"
+        },
+        {
+          "field": "caller_account_id",
+          "bytes_hex": "65323463346634353039376263613936653866363638663362343163356238373434333437653562623933353336373966373831643536303536323063393131"
+        },
+        {
+          "field": "project_id",
+          "bytes_hex": "636f6e6e6563746f72732e6f75746c617965722e746573746e65742f636f6e6e6563746f722d70726f6265"
+        },
+        {
+          "field": "timestamp",
+          "bytes_hex": "9cd0f66a00000000"
+        },
+        {
+          "field": "attached_usd",
+          "bytes_hex": "30"
+        }
+      ]
+    },
+    {
+      "name": "large_ids",
+      "fields": {
+        "task_type": "compile",
+        "task_id": 1099511627776,
+        "repo": "https://github.com/x/y",
+        "commit": "deadbeef",
+        "build_target": "wasm32-wasip1",
+        "output_hash": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "block_height": 277488223
+      },
+      "sha256": "1cf2f30cf6e30f833c1e476e97de83c7634352ad502c5f9543ae9283cf4e10de",
+      "parts": [
+        {
+          "field": "task_type",
+          "bytes_hex": "636f6d70696c65"
+        },
+        {
+          "field": "task_id",
+          "bytes_hex": "0000000000010000"
+        },
+        {
+          "field": "repo",
+          "bytes_hex": "68747470733a2f2f6769746875622e636f6d2f782f79"
+        },
+        {
+          "field": "commit",
+          "bytes_hex": "6465616462656566"
+        },
+        {
+          "field": "build_target",
+          "bytes_hex": "7761736d33322d776173697031"
+        },
+        {
+          "field": "output_hash",
+          "bytes_hex": "63646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364"
+        },
+        {
+          "field": "block_height",
+          "bytes_hex": "5f228a1000000000"
+        }
+      ]
+    },
+    {
+      "name": "with_secrets",
+      "fields": {
+        "task_type": "execute",
+        "task_id": 5,
+        "repo": "r",
+        "commit": "c",
+        "output_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "secrets_ref": "alice.near/production",
+        "timestamp": 1700000000
+      },
+      "sha256": "2c951cd176e6367b97ac3cf358f8d5c75401242b812c834f0439f6a0c92a4016",
+      "parts": [
+        {
+          "field": "task_type",
+          "bytes_hex": "65786563757465"
+        },
+        {
+          "field": "task_id",
+          "bytes_hex": "0500000000000000"
+        },
+        {
+          "field": "repo",
+          "bytes_hex": "72"
+        },
+        {
+          "field": "commit",
+          "bytes_hex": "63"
+        },
+        {
+          "field": "output_hash",
+          "bytes_hex": "65656565656565656565656565656565656565656565656565656565656565656565656565656565656565656565656565656565656565656565656565656565"
+        },
+        {
+          "field": "secrets_ref",
+          "bytes_hex": "616c6963652e6e6561722f70726f64756374696f6e"
+        },
+        {
+          "field": "timestamp",
+          "bytes_hex": "00f1536500000000"
+        }
+      ]
+    },
+    {
+      "name": "nulls_skipped",
+      "fields": {
+        "task_type": "execute",
+        "task_id": 7,
+        "repo": null,
+        "commit": null,
+        "output_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "block_height": null,
+        "attached_usd": null
+      },
+      "sha256": "01fb32a6d57bd964f67dfdc1dce9bed2f7ee1cefdd1eec7cadefd1630bfeeb4f",
+      "parts": [
+        {
+          "field": "task_type",
+          "bytes_hex": "65786563757465"
+        },
+        {
+          "field": "task_id",
+          "bytes_hex": "0700000000000000"
+        },
+        {
+          "field": "output_hash",
+          "bytes_hex": "66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666"
+        }
+      ]
+    },
+    {
+      "name": "real_outlayer_execution",
+      "fields": {
+        "task_type": "execute",
+        "task_id": 89277,
+        "build_target": "wasm32-wasip2",
+        "wasm_hash": "3c2a2e51fa7ab5db33b69d670ab50692431f3a487bb3d8baf6eb1b2ecf4f9c47",
+        "input_hash": "760f9869d6bb0e4aeec9406fd10c1282aab26812817386fef124d72a926c26b8",
+        "output_hash": "3ed7955ac4432ce891c327d38b12df5452b7891fdf839456bc4bd6ab4ff18242",
+        "project_id": "connectors.outlayer.testnet/connector-probe",
+        "caller_account_id": "e24c4f45097bca96e8f668f3b41c5b8744347e5bb9353679f781d5605620c911",
+        "timestamp": 1794560156,
+        "attached_usd": "0"
+      },
+      "sha256": "78a2832f7d2b476f8d7f1ed3929cd0ec4fa60335e50cd762a09b023ed46c612d",
+      "report_data_expected": "78a2832f7d2b476f8d7f1ed3929cd0ec4fa60335e50cd762a09b023ed46c612d",
+      "parts": [
+        {
+          "field": "task_type",
+          "bytes_hex": "65786563757465"
+        },
+        {
+          "field": "task_id",
+          "bytes_hex": "bd5c010000000000"
+        },
+        {
+          "field": "build_target",
+          "bytes_hex": "7761736d33322d776173697032"
+        },
+        {
+          "field": "wasm_hash",
+          "bytes_hex": "33633261326535316661376162356462333362363964363730616235303639323433316633613438376262336438626166366562316232656366346639633437"
+        },
+        {
+          "field": "input_hash",
+          "bytes_hex": "37363066393836396436626230653461656563393430366664313063313238326161623236383132383137333836666566313234643732613932366332366238"
+        },
+        {
+          "field": "output_hash",
+          "bytes_hex": "33656437393535616334343332636538393163333237643338623132646635343532623738393166646638333934353662633462643661623466663138323432"
+        },
+        {
+          "field": "caller_account_id",
+          "bytes_hex": "65323463346634353039376263613936653866363638663362343163356238373434333437653562623933353336373966373831643536303536323063393131"
+        },
+        {
+          "field": "project_id",
+          "bytes_hex": "636f6e6e6563746f72732e6f75746c617965722e746573746e65742f636f6e6e6563746f722d70726f6265"
+        },
+        {
+          "field": "timestamp",
+          "bytes_hex": "9cd0f66a00000000"
+        },
+        {
+          "field": "attached_usd",
+          "bytes_hex": "30"
+        }
+      ]
+    }
+  ]
+}

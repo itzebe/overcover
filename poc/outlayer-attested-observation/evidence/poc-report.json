@@ -1,0 +1,153 @@
+{
+  "schema": "overcover.outlayer-poc.report.v1",
+  "steps": [
+    {
+      "step": "pin_adapter_wasm",
+      "status": "LIVE",
+      "wasm_sha256": "8db646bc0a45a179398060da502d7e54a98c04aef0bfddf5ec7911c91679a9a8"
+    },
+    {
+      "step": "adapter_execution",
+      "status": "LIVE",
+      "source": "https://api.open-meteo.com/v1/forecast?latitude=6.45&longitude=3.39&current=temperature_2m"
+    },
+    {
+      "step": "normalize_observation",
+      "status": "VERIFIED",
+      "evidence_hash": "73b98b44d18d9a8b884d901e80d352db4acd6340b0bd5dc9782b37736e176d30"
+    },
+    {
+      "step": "real_outlayer_execution",
+      "status": "VERIFIED",
+      "call_id": "d79b387e-c986-4551-aea5-f92a24bed0df"
+    },
+    {
+      "step": "verify_attestation",
+      "status": "VERIFIED",
+      "checks": {
+        "report_data_binds_task": true,
+        "report_data_tail_zero": true,
+        "measurements_approved": true
+      }
+    },
+    {
+      "step": "operator_quorum",
+      "status": "VERIFIED",
+      "reached": true,
+      "preflight_ok": true,
+      "preflight_reasons": []
+    }
+  ],
+  "statuses": {
+    "adapter_execution": "LIVE",
+    "observation_normalization": "VERIFIED",
+    "attestation": "VERIFIED",
+    "operator_quorum": "VERIFIED",
+    "settlement_readiness": "VERIFIED",
+    "outlayer_hosted_execution": "VERIFIED"
+  },
+  "wasm": {
+    "path": "/workspace/project/overcover/poc/outlayer-attested-observation/adapter/target/wasm32-wasip2/release/overcover-observation-adapter.wasm",
+    "sha256": "8db646bc0a45a179398060da502d7e54a98c04aef0bfddf5ec7911c91679a9a8",
+    "size": 415213
+  },
+  "execution": {
+    "input_hash": "2f40eccfc3c3c8dc8eac5f74d9bc7b2fa3bd2eaaf8745538925009be0791fd31",
+    "output_hash": "bb9d35349d39db5f2961ed3564324146201ccf81588142d559802d2408fe115f",
+    "source": {
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=6.45&longitude=3.39&current=temperature_2m",
+      "name": "open-meteo",
+      "http_status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "fetched_at": 1794560370
+    }
+  },
+  "observation": {
+    "metric_id": "temperature_c",
+    "city": "lagos",
+    "obs_date": "2026-11-13",
+    "value_tenths": 289,
+    "reported_at": 1794559500,
+    "expiry": 1794645900,
+    "evidence_hash": "73b98b44d18d9a8b884d901e80d352db4acd6340b0bd5dc9782b37736e176d30",
+    "provenance": {
+      "adapter": "overcover-observation-adapter",
+      "adapter_version": "0.1.0",
+      "value_pointer": "/current/temperature_2m",
+      "value_scale": 10,
+      "source_reported_at": 1794559500,
+      "raw_sha256": "73b98b44d18d9a8b884d901e80d352db4acd6340b0bd5dc9782b37736e176d30",
+      "attestation_binds": "wasm_hash, input_hash, output_hash, worker_identity"
+    },
+    "source": {
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=6.45&longitude=3.39&current=temperature_2m",
+      "name": "open-meteo",
+      "http_status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "fetched_at": 1794560370
+    },
+    "raw": "{\"latitude\":6.4323373,\"longitude\":3.3948028,\"generationtime_ms\":0.025272369384765625,\"utc_offset_seconds\":0,\"timezone\":\"GMT\",\"timezone_abbreviation\":\"GMT\",\"elevation\":7.0,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\"},\"current\":{\"time\":\"2026-11-13T08:45\",\"interval\":900,\"temperature_2m\":28.9}}"
+  },
+  "attestation": {
+    "ok": true,
+    "checks": {
+      "report_data_binds_task": true,
+      "report_data_tail_zero": true,
+      "measurements_approved": true
+    },
+    "expected_report_data": "78a2832f7d2b476f8d7f1ed3929cd0ec4fa60335e50cd762a09b023ed46c612d",
+    "quote_report_data": "78a2832f7d2b476f8d7f1ed3929cd0ec4fa60335e50cd762a09b023ed46c612d0000000000000000000000000000000000000000000000000000000000000000",
+    "measurements": {
+      "mrtd": "7fe60787222bd394cb516abca2435f22f035ab2cc9c0a4b4b3b148e46297f3d931a237b72f359052c6e657d8c1409173",
+      "rtmr0": "573aadb4d478839c803c4b1d3e03dd748976b63a89622f377e32a54dd60546e88ec2097f595ceafc324f48a0d0d31db6",
+      "rtmr1": "e7b3ffa0e72b50557d85f7ecd8dc98a4ffc3dd6f82d01f122ef522d61361abeac310d70d2877e56be9c9408d9bcc320c",
+      "rtmr2": "764489f277a8540189761e72b4238ba36d4d647e11bd958d8ab5522af2a4867b0ff63e06b0c4967f1857236244040a5d",
+      "rtmr3": "d85416a5a567dd0313fd66c309f736ec608d1e0e0c246d069517a616bd3d01d6a6bef8f2f6467d239ce3754de16f99b6"
+    },
+    "intel": {
+      "ran": true,
+      "ok": true,
+      "output": "{\"status\":\"UpToDate\",\"advisory_ids\":[],\"report\":{\"TD10\":{\"tee_tcb_svn\":\"0e010400000000000000000000000000\",\"mr_seam\":\"346bc77a1846cac214dd2e8edeb9ee4349449d6c3f9ff2c52149a634c27b7fd1bd314c2ef6b973eeebd55742952531a1\",\"mr_signer_seam\":\"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"seam_attributes\":\"0000000000000000\",\"td_attributes\":\"0000001000000000\",\"xfam\":\"e702060000000000\",\"mr_td\":\"7fe60787222bd394cb516abca2435f22f035ab2cc9c0a4b4b3b148e46297f3d931a237b72f359052c6e657d8c1409173\",\"mr_config_id\":\"01c3a3dcc776fd5b49c394f6b42d1b38c5b6882e4d5784ce845e0d294ab2cdbeab000000000000000000000000000000\",\"mr_owner\":\"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"mr_owner_config\":\"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"rt_mr0\":\"573aadb4d478839c803c4b1d3e03dd748976b63a89622f377e32a54dd60546e88ec2097f595ceafc324f48a0d0d31db6\",\"rt_mr1\":\"e7b3ffa0e72b50557d85f7ecd8dc98a4ffc3dd6f82d01f122ef522d61361abeac310d70d2877e56be9c9408d9bcc320c\",\"rt_mr2\":\"764489f277a8540189761e72b4238ba36d4d647e11bd958d8ab5522af2a4867b0ff63e06b0c4967f1857236244040a5d\",\"rt_mr3\":\"d85416a5a567dd0313fd66c309f736ec608d1e0e0c246d069517a616bd3d01d6a6bef8f2f6467d239ce3754de16f99b6\",\"report_data\":\"78a2832f7d2b476f8d7f1ed3929cd0ec4fa60335e50cd762a09b023ed46c612d0000000000000000000000000000000000000000000000000000000000000000\"}},\"ppid\":\"9f36722ff08e45e9af3939792e76ace5\",\"qe_status\":{\"status\":\"UpToDate\",\"advisory_ids\":[]},\"platform_status\":{\"status\":\"UpToDate\",\"advisory_ids\":[]}}",
+      "status": "UpToDate"
+    },
+    "real_execution": {
+      "call_id": "d79b387e-c986-4551-aea5-f92a24bed0df",
+      "task_id": 89277,
+      "project_id": "connectors.outlayer.testnet/connector-probe",
+      "wasm_hash": "3c2a2e51fa7ab5db33b69d670ab50692431f3a487bb3d8baf6eb1b2ecf4f9c47",
+      "input_hash": "760f9869d6bb0e4aeec9406fd10c1282aab26812817386fef124d72a926c26b8",
+      "output_hash": "3ed7955ac4432ce891c327d38b12df5452b7891fdf839456bc4bd6ab4ff18242",
+      "worker_measurement": "d85416a5a567dd0313fd66c309f736ec608d1e0e0c246d069517a616bd3d01d6a6bef8f2f6467d239ce3754de16f99b6",
+      "source": "https://testnet-api.outlayer.ai/attestations/by-call/d79b387e-c986-4551-aea5-f92a24bed0df"
+    },
+    "status": "VERIFIED"
+  },
+  "quorum": {
+    "threshold": 2,
+    "total": 3,
+    "signatures": [
+      {
+        "operator": "op-alpha.testnet",
+        "public_key_hex": "3da25248cdf43f4052b96d0822e5867cfdced11d5f37ddb8fa895fa032d3fc74",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d616c7068612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238397c313739343535393530307c313739343634353930307c307c0000002073b98b44d18d9a8b884d901e80d352db4acd6340b0bd5dc9782b37736e176d30",
+        "signature_len": 64
+      },
+      {
+        "operator": "op-beta.testnet",
+        "public_key_hex": "ba4eaa95bccc73890a6ef4ee048d5b87f5940b702ab1976b1a7baca7c6a6311f",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d626574612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238397c313739343535393530307c313739343634353930307c307c0000002073b98b44d18d9a8b884d901e80d352db4acd6340b0bd5dc9782b37736e176d30",
+        "signature_len": 64
+      },
+      {
+        "operator": "op-gamma.testnet",
+        "public_key_hex": "bb61b259d57400e4e3847785c0dd963e468347c5571f79bf869f5d7f3c77007b",
+        "message_hex": "6f766572636f7665723a76333a6f62736572766174696f6e7c636f6e74726163742e6f76632d76332d63746c2d3266366334632e746573746e65747c6f702d67616d6d612e746573746e65747c74656d70657261747572655f637c6c61676f737c323032362d31312d31337c3238397c313739343535393530307c313739343634353930307c307c0000002073b98b44d18d9a8b884d901e80d352db4acd6340b0bd5dc9782b37736e176d30",
+        "signature_len": 64
+      }
+    ],
+    "preflight": {
+      "ok": true,
+      "reasons": []
+    }
+  }
+}

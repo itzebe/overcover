@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-14T15:54:12.141Z",
+  "generated_at": "2026-11-14T17:18:30.591Z",
   "rpc": "https://rpc.testnet.fastnear.com",
   "network": "testnet",
   "contracts": {
@@ -12,7 +12,7 @@
       },
       "access_keys": [
         {
-          "public_key": "ed25519:B5iWCqs99Ww7ZJcjZpuPdXtUPSQKrvUCauzRqA136GVT",
+          "public_key": "ed25519:B5iWCqs9…",
           "permission": "FullAccess"
         }
       ],
@@ -484,7 +484,7 @@
       },
       "access_keys": [
         {
-          "public_key": "ed25519:CwZBmKyVjtsUYXfZSWWpedw63MDg2UfngQY7A98eiRre",
+          "public_key": "ed25519:CwZBmKyV…",
           "permission": "FullAccess"
         }
       ],

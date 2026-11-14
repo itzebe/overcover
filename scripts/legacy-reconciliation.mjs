@@ -64,6 +64,13 @@ async function accountState(account) {
   return { amount_yocto: r.amount, code_hash: r.code_hash, storage_usage: r.storage_usage };
 }
 
+// Public keys are truncated to `ed25519:ABCDEFGH…`. A public key is not a secret, but a full
+// `ed25519:` string trips the repository's deliberately fail-closed secret scanner
+// (`.github/workflows/ci.yml`, "Fail if a secret is tracked"), which cannot tell a public key
+// from a private one. The truncation keeps the key identifiable without tripping that guard;
+// the full value is always re-readable from `view_access_key_list`.
+const truncKey = (k) => (typeof k === "string" && k.length > 20 ? k.slice(0, 16) + "…" : k);
+
 async function accessKeys(account) {
   const res = await fetch(RPC, {
     method: "POST", headers: { "content-type": "application/json" },
@@ -72,7 +79,7 @@ async function accessKeys(account) {
   });
   const j = await res.json();
   return (j.result?.keys || []).map((k) => ({
-    public_key: k.public_key,
+    public_key: truncKey(k.public_key),
     permission: typeof k.access_key.permission === "string"
       ? k.access_key.permission : Object.keys(k.access_key.permission)[0],
   }));
@@ -89,7 +96,18 @@ for (const [label, account] of Object.entries(CONTRACTS)) {
 }
 
 const dest = path.join(root, "proof", "legacy-reconciliation.json");
-fs.writeFileSync(dest, JSON.stringify(out, null, 2) + "\n");
+const serialized = JSON.stringify(out, null, 2) + "\n";
+
+// Defend the artifact at its source: a full `ed25519:` string here would trip CI's
+// fail-closed secret scanner even though a public key is not a secret. Fail loudly if
+// the truncation above ever stops applying.
+const leaked = serialized.match(/ed25519:[0-9A-Za-z]{40,}/);
+if (leaked) {
+  console.error(`REFUSING to write: dump contains a full key string (${leaked[0].slice(0, 20)}…). ` +
+    "Truncate it — CI's secret scanner cannot tell a public key from a private one.");
+  process.exit(1);
+}
+fs.writeFileSync(dest, serialized);
 
 const near = (y) => (y == null ? "?" : (Number(y) / 1e24).toFixed(4));
 for (const [label, e] of Object.entries(out.contracts)) {

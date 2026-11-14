@@ -44,6 +44,12 @@ A or B can, and both need a key that does not exist.**
   **documented external-authority blocker**, not an engineering gap.
 - **What is not at risk:** the project cannot itself move, withdraw or reassign any legacy capital
   (it holds no key), and no action has been taken that changes any policyholder's entitlement.
+- **What is already in motion, by the contract's own rules:** 4 active policies (#2, #6, #8, #10)
+  have a valid reading that meets the threshold, so **any** account may call `resolve()` on them at
+  any time and each pays 0.50 NEAR (2.00 NEAR total) to the beneficiary. That is the product working
+  permissionlessly, not a breach — but it means the legacy payout leg is not frozen. The remaining 9
+  active policies have no reading and their 8.50 NEAR of reservation is stranded (v1 has no release
+  path). Reproduced by `npm run verify:settleability`.
 
 ## 4. Migration design (to be used only if authority is ever restored)
 

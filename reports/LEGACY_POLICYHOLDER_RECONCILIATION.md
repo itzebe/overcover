@@ -69,9 +69,13 @@ and one human-demo sub-account). Every policy's beneficiary equals its buyer.
   and labelled *Legacy build*, gated on the deployed code hash), so no purchase is steered there by
   the project's own UI. A third party using a raw RPC call could still buy.
 - **Settlement (`resolve`, permissionless).** A policy can settle only against a valid,
-  undisputed, non-nullified reading for its `(city, obs_date)`. Producing that reading requires the
-  **attestor key**, which is not held. So the 13 active policies **cannot be settled by the
-  project or by an ordinary third party** — the payout leg is inert for want of a valid reading.
+  undisputed, non-nullified reading for its `(city, obs_date)` whose challenge window has elapsed.
+  **4 of the 13 active policies already have such a reading** — #2, #6, #8 and #10, each `value 1 ≥
+  threshold 1` — so **any account can call `resolve()` on them today and each pays 0.50 NEAR** to its
+  beneficiary (2.00 NEAR in total). The other **9 active policies have no reading** and, because a
+  reading can no longer be produced for their `(city, obs_date)`, `resolve()` reverts `"no
+  observation"` and their **8.50 NEAR of reservation is stranded** on this address. Reproduced
+  read-only by `npm run verify:settleability` (`proof/legacy-settleability.json`).
 - **Disputes (`resolve_dispute`, owner).** Owner-gated; the owner key is not held.
 - **`withdraw`, owner-only methods.** Gated; keys not held.
 

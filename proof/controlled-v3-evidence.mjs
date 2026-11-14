@@ -1,5 +1,5 @@
-// Reads the PUBLIC state of the two controlled-v3 contract accounts that the
-// deployment proof stood up on NEAR testnet and writes proof/controlled-v3-deploy.json.
+// Reads the PUBLIC state of the controlled-v3 contract accounts that the
+// deployment proof stood up on NEAR testnet and writes proof/controlled-v3-onchain-evidence.json.
 //
 // The generated identity graph's keys were lost when the first two runs aborted
 // mid-lifecycle (before the incremental-persistence fix), so the FULL 29-check
@@ -20,6 +20,7 @@ const WASM = path.join(root, "contract/target/wasm32-unknown-unknown/release/ove
 const OUT = path.join(root, "proof/controlled-v3-onchain-evidence.json");
 
 const CONTRACTS = [
+  { account: "contract.ovc-v3-ctl-mwgci3u8.testnet", label: "run 4 (2026-11-14; faucet root; 40/40 checks on the HARDENED module — SEC-1/6/7/9 present, sha256 811e0427…)" },
   { account: "contract.ovc-v3-ctl-2f6c4c.testnet", label: "run 3 (funded-root harness; 40/40 checks: permissionless factory + factory purchase + SEC-1)" },
   { account: "contract.ovc-v3-ctl-mwd32f3w.testnet", label: "run 1 (pre-fix harness; buy_cover reached via a separate probe)" },
   { account: "contract.ovc-v3-ctl-mwd3judn.testnet", label: "run 2 (post gas/funding fix; full lifecycle to buy_cover)" },

@@ -1109,3 +1109,44 @@ transitive advisory: `elliptic` "risky cryptographic primitive" (GHSA-848j-6mx2-
 non-breaking fix** (`fixAvailable` is a semver-major downgrade of `crypto-browserify` to 3.5.1, which
 would be a supply-chain regression). The code is used for ECDSA verification and browser polyfills; the
 console holds no key and signing happens in the wallet extension. Documented, not suppressed.
+
+### Final production closeout (2026-11-14)
+
+The reconciliation PR #49 was **merged** (squash) → `main` = `a05378d90a1c5ac52705daf8c2b680ed051dc58b`.
+Production `dpl_55Png5TRLiwwSQgb5pTNFd6Jx218` (READY) reports `meta.githubCommitSha = a05378d90a…` and
+serves `ui/index.html` byte-identical to `main` (`9d778bc863729d58…`). Full detail:
+`reports/FINAL-PRODUCTION-CLOSEOUT.md`.
+
+**Independently re-verified this session on `a05378d`.** The hardened artifact was rebuilt from source
+with the pinned toolchain (`rustup 1.99.1`, wasm32-unknown-unknown) and reproduced exactly —
+sha256 `811e0427ec467582913a47400ecf1b7c272ddea20ff5074f04a4513d896c0a7f`. The Rust suite now runs
+locally too: **92 passed / 0 failed**. Live WASM bytes were read over RPC and searched for each guard:
+live **v3 HAS the SEC-1 guard but lacks SEC-6/7/9** (pre-fix build, 500023 B); live **legacy v1 lacks
+SEC-1** (344857 B). This confirms the "SOURCE AHEAD OF DEPLOYMENT" state from the deployed bytes, not
+from source.
+
+**Gates, all green on `a05378d`:** model 74/74, sim 79/79, contract 92/92, console 132/132, agent 54/54,
+agent-eval 33/33, factory 11/11, deploy 21/21; `verify:proof` 13/13, `verify:migration` 6/6,
+`verify:sec1-takeover` 17/17, `verify:release-ops` 4 ok/5 blocked, `verify:sandbox` 28/28,
+`verify:upgrade` 8/8, `verify:upgrade-preservation` PRESERVED, `verify:controlled-v3:sandbox` 39/39,
+`verify:factory` 22/22, `verify:agent`, `verify:connectivity` 13/13, `verify:live`, `poc:outlayer:test`
+34/34, `axe` 0 @320–1440, `ui:qa` PASS, `ui:viewports` PASS. Production browser smoke at 320/360/390/
+430/768/1024/1440 px: overflow 0, one `h1`, hero-first (security banner **not** above the hero), 0
+console errors. CI on merged `main`: `verify` SUCCESS (run `43581236007`).
+
+**BLOCKED, not skipped** — `npm run verify:controlled-v3` (real testnet) needs a funded root; the NEAR
+faucet returns `429 Rate limit exceeded, retry in 6 hours` (probed this session). `npm run test:onchain`
+needs `keys/identities.json` (absent). The same controlled-v3 harness runs green on `neard` (39/39).
+
+**Operator authority — resolved.** No environment variable holds an `ed25519:` signing key
+(`NEAR_INTENTS_AGENT_API_KEY` is a JWT); no registered secret provides a NEAR signer; `keys/` and
+`~/.near-credentials/` are absent; no file holds an `ed25519:` private key. The v3 (`ed25519:B5iWCqs9…`)
+and legacy (`ed25519:CwZBmKyV…`) accounts each have one `FullAccess` key whose private half is not
+here. This environment cannot sign for either account and cannot obtain a fresh funded account.
+Therefore the hardened v3 redeploy, the legacy v1 containment and the human v3 purchase remain
+owner-controlled; no simulated deployment was substituted.
+
+**Remaining owner-controlled action:** the live human v3 purchase — procedure in
+`docs/HUMAN_ACCEPTANCE_TEST.md`. The hardened v3 redeploy (`node driver/redeploy-v3.mjs`), legacy v1
+containment (`node driver/upgrade.js`) and the OutLayer adapter deploy (`outlayer deploy`) are also
+owner-only but are not prerequisites for that acceptance.

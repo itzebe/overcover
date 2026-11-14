@@ -16,7 +16,7 @@ import { chromium } from "playwright-core";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -29,8 +29,15 @@ const EXEC =
 
 const BASE = process.argv[2] || "https://overcover.vercel.app/";
 const ONLY = process.argv[3] ? process.argv[3].split(",") : null; // optional scene-id filter
-const W = 1600;
-const H = 900;
+const W = Number(process.env.VIDEO_W || 1920);
+const H = Number(process.env.VIDEO_H || 1080);
+
+// The verified human-purchase panel, built by `video/render-evidence.mjs` from
+// the chain (see `video/verify-human-purchase.mjs`). Recorded as its own scene.
+const EVIDENCE_PANEL = pathToFileURL(path.join(ROOT, "video", "evidence", "human-panel.html")).href;
+// The live console reading the legacy contract, where the recorded human
+// purchase (policy 15) can be seen as contract state.
+const LEGACY_VIEW = "https://overcover.vercel.app/?contract=contract.attestor-overcover.testnet";
 
 // Each scene carries the narration spoken over it. `capture.mjs` synthesises
 // that line to audio, measures it, and holds the recorded clip for exactly that
@@ -40,7 +47,7 @@ const SCENES = [
   {
     id: "01-open",
     narrate:
-      "An autonomous agent can now move money with no person in the loop — but it cannot buy insurance, because every insurer underwrites a legal person. And if we let it spend freely, one bug drains the account. So what happens when an agent needs protection, but cannot be trusted with unlimited spending?",
+      "An autonomous agent can move money with no person in the loop — but it cannot buy insurance, and if it spends freely, one bug drains the account. What happens when an agent needs protection, but cannot be trusted with unlimited spending?",
     async run(page, hold) {
       await page.evaluate(() => window.scrollTo(0, 0));
       await settle(page, 1500);
@@ -50,7 +57,7 @@ const SCENES = [
   {
     id: "02-products",
     narrate:
-      "Overcover is a parametric risk mutual on N.E.A.R. Risk is defined, not negotiated: each product fixes the city, index, trigger and payout, and never changes. Buying reserves the payout from the pool, so a promise is always backed. This is the live cover, read from the contract.",
+      "Overcover is a parametric risk mutual on N.E.A.R. Risk is defined, not negotiated: each product fixes the city, index, trigger and payout, and buying reserves the payout from the pool. This is the live cover, read from the contract.",
     async run(page, hold) {
       await scrollTo(page, "#cover");
       await holdWithSpotlight(page, hold, ["#products .card", "#cover-h"]);
@@ -59,7 +66,7 @@ const SCENES = [
   {
     id: "03-settlement",
     narrate:
-      "A claim settles in seconds, not weeks. Cover is defined before purchase, and the payout is reserved when you buy. An operator reports a signed index reading; anyone can challenge it with a bond; a resolver settles the dispute. Then settlement is one comparison, run once.",
+      "A claim settles in seconds, not weeks. An operator reports a signed index reading; anyone can challenge it with a bond; a resolver settles the dispute. Settlement is one comparison, run once.",
     async run(page, hold) {
       await scrollTo(page, "#how");
       await holdWithSpotlight(page, hold, ["#how .steps", "#how-h"]);
@@ -68,7 +75,7 @@ const SCENES = [
   {
     id: "04-quote",
     narrate:
-      "This is the human journey. Pick a product and a payout. The premium is not written into the page — it is a live quote from the contract's own method, the exact number buy cover would charge. Move the slider, and the contract requotes.",
+      "This is the human journey. Pick a product and a payout. The premium is not written into the page — it is a live quote from the contract's own method. Move the slider, and the contract requotes.",
     async run(page, hold) {
       await scrollTo(page, "#q-product");
       await settle(page, 1500);
@@ -94,28 +101,52 @@ const SCENES = [
     async run(page, hold) {
       await scrollTo(page, "#buy-panel");
       await settle(page, 1200);
-      // Open the wallet picker so the approval surface is visible.
-      const btn = page.locator("#buy-wallet-connect");
+      // Open the wallet picker so the approval surface is visible. The button
+      // is re-rendered by the page's own script, so select it by its live
+      // attributes rather than the initial markup id.
+      const btn = page.locator('#buy-wallet-slot [data-wallet="connect"], #wallet-slot [data-wallet="connect"]').first();
       if (await btn.count()) {
         await btn.click().catch(() => {});
-        await settle(page, 1500);
+        await settle(page, 1800);
       }
-      await holdWithSpotlight(page, hold, ["#buy-panel", "#wallet-choices", "dialog[open]"]);
+      await holdWithSpotlight(page, hold, ["#wallet-dialog[open] #wallet-choices", "#buy-panel"]);
     },
   },
   {
-    id: "06-policies",
+    id: "06-human",
+    url: EVIDENCE_PANEL,
     narrate:
-      "A person and an autonomous agent end in the same place: a verifiable on-chain policy. Here are the policies the contract has written — each names its buyer, product, payout and status. The page shows only what the contract stores, and never invents a status.",
+      "This is the real human purchase: one buy cover call, half a N.E.A.R. of premium for a one N.E.A.R. payout on Lagos rainfall. Not a screenshot — the hash, the signer and the policy are fetched from N.E.A.R. R.P.C. every time this video is built, and six checks confirm the buyer owns the policy.",
+    async run(page, hold) {
+      await settle(page, 800);
+      await holdWithSpotlight(page, hold, ["h1", ".cols", ".checks"]);
+    },
+  },
+  {
+    id: "07-human-policy",
+    url: LEGACY_VIEW,
+    narrate:
+      "Here is that policy in the live console, reading the contract it was made on: policy fifteen, rain Lagos, one N.E.A.R. payout, active. Plainly, it was signed programmatically on the legacy v one address — a real, verifiable on-chain policy.",
+    async run(page, hold) {
+      await settle(page, 2500);
+      await scrollTo(page, "#policies");
+      await settle(page, 1500);
+      await holdWithSpotlight(page, hold, ["#policies tbody tr", "#policies-h", "#sec-banner"]);
+    },
+  },
+  {
+    id: "08-policies",
+    narrate:
+      "A person and an agent end in the same place: a verifiable on-chain policy. Here are the policies the default contract has written, each naming its buyer, product, payout and status.",
     async run(page, hold) {
       await scrollTo(page, "#policies");
       await holdWithSpotlight(page, hold, ["#policies .scroll", "#policies-h"]);
     },
   },
   {
-    id: "07-agent",
+    id: "09-agent",
     narrate:
-      "Now the autonomous agent. It has its own N.E.A.R. account and key, which stays server-side. It reads the same products and quotes, but checks its own authorization before spending. Its spending policy has hard ceilings, with no override — a proposal it may not make is refused before any transaction is sent.",
+      "Now the autonomous agent, with its own N.E.A.R. account and server-side key. It reads the same products and quotes, but checks its own authorization before spending. Its spending policy has hard ceilings — a purchase it may not make is refused before any transaction is sent.",
     async run(page, hold) {
       await scrollTo(page, "#agent-panel");
       await settle(page, 1500);
@@ -123,18 +154,18 @@ const SCENES = [
     },
   },
   {
-    id: "08-factory",
+    id: "10-factory",
     narrate:
-      "Anyone can add cover. A discovery agent reads a real public forecast and prepares a proposal, with the source and the hash of what it saw. Anyone submits it, and the contract decides whether it qualifies — no owner approval. A valid proposal activates as a product.",
+      "Anyone can add cover. A discovery agent reads a real public forecast and prepares a proposal, with the source and the hash of what it saw. Anyone submits it; the contract decides whether it qualifies.",
     async run(page, hold) {
       await scrollTo(page, "#factory");
       await holdWithSpotlight(page, hold, ["#factory-body", "#factory-h"]);
     },
   },
   {
-    id: "09-proof",
+    id: "11-proof",
     narrate:
-      "Don't trust the page. Every figure has a curl behind it: the pool proves it can pay, and the deployed contract is byte-for-byte the source in the repository. Overcover replaces the underwriter and the adjuster with an immutable product, reserved capital, and a signed index with bonded disputes.",
+      "Don't trust the page. Every figure has a curl behind it: the pool proves it can pay, and the deployed contract is byte-for-byte the source in the repository.",
     async run(page, hold) {
       await scrollTo(page, "#figs");
       await holdWithSpotlight(page, 6, ["#figs"]);
@@ -212,7 +243,7 @@ async function main() {
       recordVideo: { dir: RAW, size: { width: W, height: H } },
     });
     const page = await ctx.newPage();
-    await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.goto(scene.url || BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
     await settle(page, 2500);
     const video = page.video();
     await scene.run(page, scene.hold);

@@ -232,10 +232,13 @@ Full procedure: `docs/HUMAN_ACCEPTANCE_TEST.md`.
   and not paused at the contract level — blocked on the legacy owner key (action B).
 - The **human v3 purchase** has not occurred; the recorded human purchase is on legacy v1 (PR #39) and
   must not be read as a v3 purchase (action C).
-- `verify:sandbox`, `verify:controlled-v3:sandbox`, `test:contract`, `test:onchain` were **not run in
-  this sandbox** — no Rust toolchain and no `neard` here. They run in **CI** (`.github/workflows/ci.yml`
-  installs Rust 1.99.1 + wasm target and runs them with `REQUIRE_SANDBOX=1`), which executes on the PR.
-  `test:onchain` additionally needs funded `keys/identities.json` (absent).
+- `verify:sandbox`, `verify:controlled-v3:sandbox`, `test:contract` cannot run in this sandbox (no Rust
+  toolchain, no `neard`) — but **CI passed all of them on this exact HEAD `b9d50d1`** (run
+  `43609018228`, conclusion `success`): Rust contract unit tests, the full lifecycle on a real `neard`
+  (sandbox), the SEC-1 takeover reproduction, the compiled-wasm `migrate()` guard, the in-place
+  upgrade-state-preservation proof, the controlled-v3 deploy + SEC-1 closure on the deployed module,
+  the permissionless factory end-to-end, and the tracked-secret scan. `test:onchain` additionally needs
+  funded `keys/identities.json` (absent) and is not part of CI.
 - 19 low-severity transitive npm advisories (`elliptic`) — assessed, accepted, no non-breaking fix.
 - Crawler **access** is verified; **indexing** is not (no Search Console access).
 

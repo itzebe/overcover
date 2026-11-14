@@ -28,7 +28,9 @@ key or seed phrase into chat or a commit.**
 - SSH push works via the deploy key bound to `itzebe/overcover`
   (`git@github.com:itzebe/overcover.git`, key at `/workspace/credentials/overcover/overcover_deploy`).
 - The branch is on the remote:
-  `feat/overcover-company-film` = `10b4b57ee26373edfa1c5f6d24d693f0f7a73060` (single commit on `main`).
+  `feat/overcover-company-film` = `f7a6be8` (3 commits ahead of `main` = `0f79dc6`).
+- The API path was retried this session and still fails: `curl https://api.github.com/user` → **HTTP
+  401**, and the `create_pr` tool returns **"Invalid github token"**.
 
 **What is blocked**
 - The GitHub REST/GraphQL API rejects the configured credentials:

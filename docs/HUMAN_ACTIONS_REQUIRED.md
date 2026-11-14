@@ -1,6 +1,6 @@
 # Issues requiring human or external authority
 
-**As of:** 2026-11-14 · **Branch:** `main` (`f0e0b07…`, the deployed build; PRs #45/#47/#48 merged) · **Contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
+**As of:** 2026-11-14 · **Branch:** `feat/owner-authority-reconciliation-testnet` (`c8a32f5d` + this mission's commit) · **Default contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
 
 This is the separate register of work that **cannot** be completed from an agent environment
 because it needs a private key, a human-controlled wallet, or an external service account. Nothing
@@ -75,11 +75,15 @@ against the exact deployed bytecode (`npm run verify:sec1-takeover`, 17/17) and 
 console (labelled *Legacy build*, buying disabled), but the contract-level fix needs an in-place
 upgrade.
 
-**Current live state (read over public RPC, 2026-11-13).** The legacy module exports an owner-only
-`set_paused`, but there is no `get_paused`; the flag is read via `get_pool`, which returns
-**`paused: false`** (solvent `true`). The owner is `owner.attestor-overcover.testnet` — a different
-account from the contract account, and neither key is available here. So the contract is **not**
-paused and **not** repaired; nothing here signed anything for the legacy account.
+**Current live state (read over public RPC, 2026-11-14; full dump `proof/legacy-reconciliation.json`).**
+The legacy module exports an owner-only `set_paused`, but there is no `get_paused`; the flag is read
+via `get_pool`, which returns **`paused: false`** (solvent `true`). The pool holds
+**capital 14.05 NEAR, reserved 10.50 NEAR** across **15 policies** (13 active, 1 settled-paid, 1
+settled-no-pay); the account balance is **18.55 NEAR**. The owner is
+`owner.attestor-overcover.testnet` — a different account from the contract account, and neither key is
+available here. So the contract is **not** paused and **not** repaired; nothing here signed anything
+for the legacy account. See `reports/LEGACY_POLICYHOLDER_RECONCILIATION.md` and
+`reports/LEGACY_CONTAINMENT_AND_MIGRATION_PLAN.md`.
 
 **What is needed.** The `FullAccess` key on `contract.attestor-overcover.testnet`
 (`ed25519:CwZBmKyV…`), which is **not recoverable from the chain** and not in this environment — see

@@ -79,14 +79,18 @@ auth, dependency advisories) are in **`docs/SECURITY_PRE_AUDIT.md`**.
 
 ## Trust boundary and honest residual risk
 
-- **The oracle is a single attestor.** It is not decentralised. The mitigation is the **bonded
-  dispute path**, which is implemented, unit-tested, and has been exercised on the live testnet demo
-  in **both** directions (a reading upheld with the bond forfeited; a reading rejected and
-  nullified). It still depends on the **owner** to resolve a dispute, which is a centralisation
-  point and the most important thing to decentralise next.
-- **The owner is trusted for policy, not for funds.** The owner can publish products, rotate the
-  attestor, pause purchases, and resolve disputes. The owner has **no method to move pool capital**;
-  the only payout path is `resolve`, which follows the signed reading and the immutable product.
+- **The oracle on the default contract is a multi-operator quorum; the legacy v1 oracle is a single
+  attestor.** On `contract.ovc-v3-ctl-2f6c4c.testnet` a reading is finalised only by a 3-of-5 operator
+  quorum and disputes are decided by an independent resolver quorum; the owner cannot set the index or
+  resolve a dispute alone. The operators currently read one shared free upstream (Open-Meteo), so
+  independent signing does not by itself make the data independent. The **legacy** v1 module
+  (`contract.attestor-overcover.testnet`) still uses a single attestor with owner-resolved disputes,
+  mitigated by the bonded dispute path (exercised on the live demo in both directions). Decentralising
+  the index *source* remains the most important next step.
+- **The owner is trusted for policy, not for funds.** The owner can publish products, register and
+  rotate operator keys, pause purchases, and set the quorum. The owner **cannot** resolve a dispute
+  alone and has **no method to move pool capital**; the only payout path is `resolve`, which follows
+  the quorum-finalised signed reading and the immutable product.
 - **The index source is Open-Meteo**, a free public API, read and cross-checked by the driver before
   signing. Its honesty is enforced downstream by the challenge mechanism, not by trusting the API.
 - **Testnet only, no audit.** The contract has not been professionally audited. It is deployed to

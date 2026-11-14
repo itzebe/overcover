@@ -212,10 +212,14 @@ without touching the wallet-selector major:
 | `base-x` (via `bs58`) | 2.0.6 | 3.0.11 | homograph (high) |
 | `decode-uri-component` (via `query-string`) | 0.2.2 | 0.5.1 | exponential-decoding DoS (high) |
 
-Result: `npm audit` **19 low / 0 high / 0 moderate**. The residual 19 low advisories are
-`elliptic` (via `crypto-browserify`, a **devDependency** used only to build the bundle; the 6.x line
-is the patched one and the advisory is informational), plus the transitive wallet-lib parents that
-still list an affected range in their own metadata.
+Result: `npm audit` **19 low / 0 high / 0 moderate**. The residual 19 low advisories are one root
+finding — `elliptic` "risky cryptographic primitive" (GHSA-848j-6mx2-7j84, CWE-1240) — plus the
+transitive parents that list an affected range in their own metadata. `elliptic@6.6.1` **is** present
+in the shipped `ui/vendor/wallet-bundle.js` (via `@near-js/crypto` → `secp256k1` and via
+`crypto-browserify`), so it is **not** dev-only; there is no non-breaking fix (the only "fix" is a
+semver-major downgrade of `crypto-browserify`). It is used for ECDSA operations and browser
+polyfills, and the page holds no key, so it carries no authority over any user's funds. Documented and
+accepted rather than suppressed.
 
 **Why the leaves were safe to bump.** All four are patch/minor moves within their major (except
 `base-x` 2→3 and `decode-uri-component` 0.2→0.5, both of which are bug-fix lines with no API change

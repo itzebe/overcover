@@ -22,9 +22,10 @@ transactions. Nothing is staged.
 > temperature products), with a domain-separated multi-operator oracle quorum, independent dispute
 > resolvers, a per-policy challenge window, a frozen per-dispute resolver threshold, a permissionless
 > product factory, and a state-preserving in-place `migrate`. It is deployed and verified on NEAR
-> testnet (`npm run verify:controlled-v3`, 40/40) and its deployed bytes are **byte-identical to this
-> repository's source** (sha256 `a97034e65fb0c53f…`, 500,023 bytes — `npm run verify:proof`). The
-> legacy address `contract.attestor-overcover.testnet` still runs the original **v1** module
+> testnet (`npm run verify:controlled-v3`, 40/40). Its deployed module is the recognised v3 build
+> (sha256 `a97034e65fb0c53f…`, 500,023 bytes). **This repository's source is now ahead of it**: the
+> SEC-6/7/9 settlement fixes build to sha256 `811e0427…` (500,342 bytes) and are **not yet deployed**;
+> `npm run verify:proof` reports `SOURCE AHEAD OF DEPLOYMENT`. The legacy address `contract.attestor-overcover.testnet` still runs the original **v1** module
 > (single attestor, owner-resolved disputes, and an unauthenticated `migrate()`); the console can
 > still read it, labels it **Legacy build**, and **disables buying there**. Open
 > **https://overcover.vercel.app/?contract=contract.attestor-overcover.testnet** to show that

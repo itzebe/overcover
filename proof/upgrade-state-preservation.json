@@ -11,7 +11,7 @@
   "before": {
     "config": {
       "owner": "owner.test.near",
-      "attestor": "5vJ8CixJruHjsSboyPKY9CiPhxztA4BUBadxKjrCazVX",
+      "attestor": "7c2vip6zipDThDax7M2Y3eNEyPY9gJ7jdgiJtpKDukRE",
       "challenge_bond": "100000000000000000000000",
       "challenge_window_sec": 1,
       "settle_delay_sec": 0
@@ -40,8 +40,8 @@
         "threshold_tenths": 400,
         "payout": 3e+23,
         "premium": 3e+22,
-        "obs_date": 1794551600,
-        "issued_at": 1794551598,
+        "obs_date": 1794674342,
+        "issued_at": 1794674340,
         "status": "active",
         "paid_amount": 0,
         "observed_value": 0,
@@ -57,7 +57,7 @@
   "after": {
     "config": {
       "owner": "owner.test.near",
-      "attestor": "5vJ8CixJruHjsSboyPKY9CiPhxztA4BUBadxKjrCazVX",
+      "attestor": "7c2vip6zipDThDax7M2Y3eNEyPY9gJ7jdgiJtpKDukRE",
       "challenge_bond": "100000000000000000000000",
       "challenge_window_sec": 1,
       "settle_delay_sec": 0,
@@ -91,9 +91,9 @@
         "threshold_tenths": 400,
         "payout": 3e+23,
         "premium": 3e+22,
-        "obs_date": 1794551600,
+        "obs_date": 1794674342,
         "challenge_window_sec": 1,
-        "issued_at": 1794551598,
+        "issued_at": 1794674340,
         "status": "active",
         "paid_amount": 0,
         "observed_value": 0,

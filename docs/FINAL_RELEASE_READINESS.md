@@ -989,9 +989,13 @@ from the chain (evidence `proof/agent-purchases-v3.json`). The agent key is not 
   not a substitute for a third-party audit.
 - **Wallet-stack dependency advisories (pre-audit SEC-5).** All **high and moderate** advisories are
   now cleared via forward `overrides` (nanoid 5.1.16, bn.js 5.2.5, base-x 3.0.11,
-  decode-uri-component 0.5.1); `npm audit` reports **19 low / 0 high / 0 moderate** (dev-only `elliptic`
-  and transitive parents). No exploit path was found in the shipped static page. Recommended follow-up:
-  drop the overrides once `@near-wallet-selector` ships the patched transitive ranges.
+  decode-uri-component 0.5.1); `npm audit` reports **19 low / 0 high / 0 moderate** (one root
+  advisory — `elliptic` GHSA-848j-6mx2-7j84 — plus its transitive parents). `elliptic@6.6.1` **is**
+  present in the shipped `ui/vendor/wallet-bundle.js` (via `@near-js/crypto` → `secp256k1` and via
+  `crypto-browserify`), so it is *not* dev-only; it is a low-severity CWE-1240 finding with **no
+  non-breaking fix** (the only "fix" is a semver-major downgrade of `crypto-browserify`). It is used
+  for ECDSA operations and browser polyfills, not for anything the page trusts for authority — the
+  page holds no key and signs nothing. Documented and accepted, not suppressed.
 - **Agent rate limits and idempotency are per-process**, not a global distributed limit. Buys are
   serialized within one process, so a single service instance cannot be raced; a multi-instance
   deployment must centralise spend state.

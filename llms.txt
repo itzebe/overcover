@@ -1,0 +1,102 @@
+# Overcover
+
+> Overcover is an open-source, fully-collateralised parametric insurance mutual
+> that runs on NEAR testnet. Institutions, operators and autonomous agents buy a
+> policy that pays out if a signed public index reading — rainfall or temperature —
+> meets a trigger fixed in an immutable on-chain product before purchase. The payout
+> is reserved from a capital pool, and settlement follows the signed reading — no
+> adjuster, no claims queue. It is a testnet prototype with test funds only.
+
+Canonical site: https://overcover.vercel.app/
+Source: https://github.com/itzebe/overcover
+Network: NEAR testnet
+Contract (hardened, default for new cover): contract.ovc-v3-ctl-2f6c4c.testnet
+Legacy address (original v1 module, readable but not a purchase destination): contract.attestor-overcover.testnet
+License: MIT
+
+## What it is
+
+- A browser console with no backend and no API key. Every figure on the page is a
+  direct read from the NEAR testnet contract via public JSON-RPC `call_function`
+  views. If a read fails, the page says so instead of showing a stale number.
+- Parametric, not indemnity: a payout follows the reading meeting the trigger, and
+  a loss that does not meet the trigger is not covered.
+- Supported wallets: HERE Wallet (sign in with email or a social account inside the
+  HERE app, no extension needed) and Meteor Wallet (a browser extension). The
+  retired MyNearWallet integration has been removed.
+- The only transaction the site can create is a single `buy_cover` call. The
+  wallet's function-call access key is scoped to `buy_cover` alone.
+
+## How the economic loop works
+
+1. Liquidity providers deposit capital into the pool.
+2. A policy is bought: the premium is paid, and the policy's maximum payout is
+   reserved from the pool the moment it is written, so it cannot be withdrawn
+   while the policy is live.
+3. An attestor signs a public index reading (rainfall or temperature) for a city and date.
+4. If the reading meets the trigger, the reserved payout settles to the policy
+   holder; the reading can be challenged with a bond during the challenge window,
+   and a disputed reading cannot settle a policy.
+5. The contract refuses any transaction that would leave the pool promising more
+   than it holds (reserved ≤ capital is re-checked on-chain).
+
+## Wallet and security model
+
+- No private key, seed phrase or signing secret ever reaches the browser page or
+  the repository. Signing happens inside the user's wallet.
+- The site never calls an owner-only method: deposit, reset, add_shock,
+  owner_withdraw, set_lifeline_enabled and seed_merchant are not exposed publicly.
+- The public agent console is read-only: it evaluates a purchase with the same
+  spending-limits policy engine the agent service runs (`agent/limits.mjs`, bundled
+  to `ui/vendor/policy.js`), using the engine's default limits and the live contract
+  quote. It holds no key and signs nothing. The agent service itself runs on
+  localhost by default, is dry-run by default, and is not hosted publicly; the site
+  states this rather than implying a hosted agent.
+
+## Known limitations
+
+- Testnet only, with test funds. Not for real money.
+- The contract has not been professionally audited.
+- The index reading is currently signed by a single trusted attestor key, not a
+  decentralised oracle.
+- The contract owner resolves disputes (a human step); the owner cannot move pool
+  capital.
+- The live demonstration uses a 60-second challenge window; production would use a
+  longer one.
+- **Deployment status.** The hardened v3 module is deployed to the account in the
+  line above (code hash `CQR8x1kW…`, wasm sha256 `a97034e6…`): it carries the SEC-1
+  `migrate()` guard, so a third party cannot seize the contract. This repository's
+  source is **ahead** of it: the SEC-6/7/9 settlement fixes build to sha256
+  `811e0427…` but are **not yet deployed**; the code-only, state-preserving redeploy
+  is prepared and reversible but needs the operator signing key.
+- **Legacy containment is pending.** The legacy v1 address is read-only in the
+  console and buying there is refused, but contract-level pausing needs the legacy
+  owner key, which the deployment automation does not hold. This is a documented
+  external-authority blocker, not a code gap.
+- **A human purchase on v3 is still outstanding.** The human purchase recorded in
+  the project history was made against the legacy module and is not evidence of a
+  purchase on the hardened v3 account.
+- **The hardware-attested observation adapter is a tested prototype, not deployed.**
+  It is optional provenance and never replaces operator signatures, quorum or
+  disputes.
+
+## Machine-readable catalogue (for agents)
+
+- [products.json](https://overcover.vercel.app/products.json) is the whole
+  insurance catalogue as JSON, generated from live contract state by
+  `scripts/products-feed.mjs` — never hand-written. It lists every product, which
+  ones are actually offered (`offerings`), the trigger rule, the premium formula,
+  the payout bounds, remaining capacity, and the exact `buy_cover` call shape.
+- [products.schema.json](https://overcover.vercel.app/products.schema.json) is the
+  JSON Schema (draft 2020-12) for that feed. **All money fields are exact decimal
+  integer strings in yoctoNEAR** (1 NEAR = 10^24 yoctoNEAR); never parse them as
+  floating point, which would round values above 2^53.
+- An agent decides whether to buy with the spending-limits engine
+  (`agent/limits.mjs`): hard per-policy and rolling-24h caps, allow-lists, a
+  cooldown, and a kill switch. A refused purchase never reaches the network.
+
+## More detail
+
+- [Full description for language models](https://overcover.vercel.app/llms-full.txt)
+- [Source repository and README](https://github.com/itzebe/overcover)
+- [NEAR testnet block explorer for the contract](https://testnet.nearblocks.io/address/contract.ovc-v3-ctl-2f6c4c.testnet)

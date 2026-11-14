@@ -1,0 +1,3084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="description" content="Overcover — fully-collateralised parametric insurance for institutions, operators and autonomous agents. Cover is defined up front as an immutable product, the payout is reserved from a capital pool, and settlement follows a signed public index reading. Live on NEAR testnet; every figure is read from the contract." />
+<title>Overcover — parametric insurance, settled on contract rules</title>
+<link rel="canonical" href="https://overcover.vercel.app/" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="theme-color" content="#10251d" />
+<meta name="application-name" content="Overcover" />
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Overcover" />
+<meta property="og:title" content="Overcover — parametric insurance, settled on contract rules" />
+<meta property="og:description" content="Cover is defined up front, the payout is reserved from a capital pool, and settlement follows a signed public reading. Live on NEAR testnet; every figure is read from the contract." />
+<meta property="og:url" content="https://overcover.vercel.app/" />
+<meta property="og:image" content="https://overcover.vercel.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Overcover — parametric insurance settled on contract rules, on NEAR testnet." />
+<meta property="og:locale" content="en_US" />
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Overcover — parametric insurance, settled on contract rules" />
+<meta name="twitter:description" content="Cover is defined up front, the payout is reserved from a capital pool, and settlement follows a signed public reading. Live on NEAR testnet." />
+<meta name="twitter:image" content="https://overcover.vercel.app/og.png" />
+<meta name="twitter:image:alt" content="Overcover — parametric insurance settled on contract rules, on NEAR testnet." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2310251d'/%3E%3Cpath d='M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z' fill='none' stroke='%23f0c987' stroke-width='2'/%3E%3C/svg%3E" />
+<style>
+  /* ============================================================
+     OVERCOVER — visual system
+     Direction: "underwritten, not advertised". A calm institutional
+     risk ledger: deep evergreen field, warm paper, one amber accent
+     reserved for money and the protection stroke.
+     ============================================================ */
+  :root {
+    --paper: #f6f4ee; --card: #ffffff; --card-2: #fbfaf6;
+    --ink: #131a16; --ink2: #3a443d; --muted: #58635b;
+    --line: #e3e0d6; --line2: #cbc7ba;
+    --accent: #8f4a12; --accent-w: #f3e8d8;
+    --good: #176b45; --good-w: #e6f1ea;
+    --warn: #7d5300; --warn-w: #f8f0dd;
+    --bad: #9c2b2b; --bad-w: #f7e8e8;
+    /* the field: hero + dark bands */
+    --field: #10251d; --field-2: #17352a; --field-line: #2c4a3d;
+    --on-field: #eef3ef; --on-field-2: #b9c9c0;
+    --gold: #e0aa55; --gold-soft: #f0c987;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", Georgia, serif;
+    --maxw: 1120px; --r: 10px; --r2: 14px;
+    --s3: 18px; --s4: 30px; --s5: 48px; --s6: 76px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { letter-spacing: -.02em; line-height: 1.15; }
+  h2, h3 { margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  .field a, .on-field a { color: var(--gold-soft); }
+  .skip { position: absolute; left: -9999px; top: 0; background: var(--ink); color: #fff; padding: 10px 14px; z-index: 40; font-weight: 600; }
+  .skip:focus { left: 12px; top: 12px; }
+  .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  [hidden] { display: none !important; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
+  main { padding-bottom: 0; }
+  main > section { min-width: 0; }
+  .band { padding-top: var(--s6); }
+  .eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  .field .eyebrow { color: var(--gold); }
+  .lead { font-size: 17px; color: var(--ink2); max-width: 62ch; }
+  .sect-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 26px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .sect-head h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 680; font-family: var(--serif); letter-spacing: -.01em; }
+  .sect-note { font-size: 14px; color: var(--muted); max-width: 58ch; margin: 0; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+
+  /* ---------------- header ---------------- */
+  .mast { position: sticky; top: 0; z-index: 30; background: rgba(246,244,238,.92); backdrop-filter: saturate(140%) blur(8px); border-bottom: 1px solid var(--line); }
+  .mast-in { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; padding-top: 13px; padding-bottom: 13px; }
+  .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .mark { flex: none; width: 32px; height: 32px; }
+  .brand h1 { font-size: 18px; font-weight: 720; margin: 0; letter-spacing: -.01em; }
+  .brand .tagline { margin: 1px 0 0; font-size: 12px; color: var(--muted); }
+  .mast-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .net { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink2); border: 1px solid var(--line2); background: var(--card); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.live { background: var(--good); box-shadow: 0 0 0 3px var(--good-w); }
+  .dot.stale { background: var(--warn); }
+  .dot.failed { background: var(--bad); }
+  .dot.load { background: var(--line2); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
+  .btn { font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
+  .btn:hover { border-color: var(--ink2); }
+  .btn:active { transform: translateY(1px); }
+  .btn[disabled] { opacity: .55; cursor: default; }
+  /* On phones the brand bar is the only sticky element, so every pixel of its
+     height is viewport the reader loses while scrolling. Compact it to a single
+     row of controls and drop the decorative tagline where it would wrap. Placed
+     after the base rules so the overrides win. */
+  @media (max-width: 640px) {
+    .mast-in { gap: 8px 10px; padding-top: 9px; padding-bottom: 9px; }
+    /* `display: contents` lets the three controls be laid out by the mast's own
+       flex row, so at 320px the bar is two rows (brand, then the controls) rather
+       than three. */
+    .mast-right { display: contents; }
+    .mast-right .btn { padding: 7px 11px; font-size: 13px; min-height: 44px; }
+    .net { padding: 4px 9px; font-size: 11px; gap: 6px; }
+    /* Drop the decorative tagline and the redundant "NEAR testnet ·" prefix (the
+       page is a testnet console throughout) so the read-state pill, Connect
+       wallet and Refresh fit on one row instead of wrapping to two. */
+    .brand .tagline { display: none; }
+    .net .net-net { display: none; }
+  }
+
+  /* ---------------- primary navigation ---------------- */
+  .nav { background: var(--card); border-bottom: 1px solid var(--line); }
+  .nav-in { display: flex; gap: 4px; align-items: stretch; overflow-x: auto; scrollbar-width: none; }
+  .nav-in::-webkit-scrollbar { display: none; }
+  .nav-in a { flex: none; display: inline-flex; align-items: center; min-height: 46px; padding: 0 13px; font-size: 13.5px; font-weight: 600; color: var(--ink2); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .nav-in a:first-child { padding-left: 0; }
+  .nav-in a:hover { color: var(--ink); border-bottom-color: var(--line2); text-decoration: none; }
+  .nav-in a:focus-visible { outline-offset: -2px; }
+
+  /* ---------------- hero ---------------- */
+  .hero { background: linear-gradient(168deg, var(--field) 0%, #0d1f18 62%, #12291f 100%); color: var(--on-field); position: relative; overflow: hidden; }
+  .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 78% -10%, rgba(224,170,85,.14), transparent 60%); }
+  .hero-in { position: relative; z-index: 1; display: grid; gap: 40px; padding-top: 60px; padding-bottom: 56px; }
+  @media (min-width: 940px) { .hero-in { grid-template-columns: minmax(0,1.06fr) minmax(0,.94fr); align-items: center; gap: 48px; padding-top: 74px; padding-bottom: 70px; } }
+  .hero h2 { font-family: var(--serif); font-size: clamp(30px, 5.4vw, 52px); font-weight: 660; letter-spacing: -.02em; max-width: 19ch; color: #fff; }
+  .hero h2 em { font-style: normal; color: var(--gold-soft); }
+  .hero .sub { font-size: clamp(16px, 2vw, 18.5px); color: var(--on-field-2); margin: 20px 0 0; max-width: 46ch; }
+  .hero .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 0; }
+  .btn-gold { font: inherit; font-size: 15px; font-weight: 680; color: #241a06; background: var(--gold-soft); border: 1px solid var(--gold-soft); border-radius: 9px; padding: 12px 20px; cursor: pointer; min-height: 46px; }
+  .btn-gold:hover { background: #f6d79c; }
+  .btn-ghost { font: inherit; font-size: 15px; font-weight: 600; color: var(--on-field); background: transparent; border: 1px solid var(--field-line); border-radius: 9px; padding: 12px 18px; cursor: pointer; min-height: 46px; }
+  .btn-ghost:hover { border-color: var(--on-field-2); }
+  .hero .proof-line { margin: 22px 0 0; font-size: 13px; color: var(--on-field-2); display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .hero .proof-line .dot { width: 8px; height: 8px; }
+  .hero-art { position: relative; }
+  .hero-art svg { display: block; width: 100%; height: auto; }
+  .art-cap { font-size: 12.5px; color: var(--on-field-2); margin-top: 12px; line-height: 1.5; }
+  .art-cap b { color: var(--on-field); font-weight: 600; }
+
+  /* ---------------- coverage strip ---------------- */
+  .cov-strip { background: var(--field-2); border-top: 1px solid var(--field-line); color: var(--on-field); }
+  .cov-strip .in { display: grid; gap: 1px; background: var(--field-line); grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .cov-strip .in { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 940px) { .cov-strip .in { grid-template-columns: repeat(4, 1fr); } }
+  .cov-strip .c { background: var(--field-2); padding: 18px 20px; }
+  .cov-strip .c .n { font-family: var(--mono); font-size: 22px; color: #fff; font-variant-numeric: tabular-nums; margin: 0; }
+  .cov-strip .c .k { font-size: 12.5px; color: var(--on-field-2); margin: 5px 0 0; }
+  .cov-strip .c .k b { color: var(--on-field); font-weight: 600; }
+  .cov-strip .live-flag { font-family: var(--mono); font-size: 11px; color: var(--gold); }
+
+  /* ---------------- generic card ---------------- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); }
+  .pad { padding: var(--s4); }
+
+  /* Two-column explanatory split (what / who). One component, no inline styles. */
+  .split { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .split { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .split .card h3 { font-size: 16px; font-weight: 680; margin: 0 0 10px; letter-spacing: -.01em; }
+  .split .card p { color: var(--ink2); font-size: 14.5px; margin: 0; }
+  .split .card p + p { margin-top: 12px; color: var(--muted); font-size: 13.5px; }
+
+  /* Anchors from the nav must not land under the sticky brand bar. */
+  main [id] { scroll-margin-top: 70px; }
+
+  /* ---------------- solvency ---------------- */
+  .solv-top { display: grid; gap: 18px; grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .solv-top { grid-template-columns: 1.2fr 1fr; } }
+  .lbl { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .big { font-family: var(--mono); font-size: clamp(32px, 6vw, 46px); font-weight: 560; letter-spacing: -.03em; line-height: 1; margin: 7px 0 0; font-variant-numeric: tabular-nums; }
+  .big .u { font-size: 15px; color: var(--muted); font-weight: 500; margin-left: 7px; }
+  .bar { height: 18px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
+  .bar .fill { height: 100%; width: 0; background: linear-gradient(90deg, #b9702f, var(--accent)); transition: width .6s cubic-bezier(.22,.61,.36,1); }
+  .bar .fill.over { background: var(--bad); }
+  .bar-cap { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+  .bar-key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  .bar-key span { display: inline-flex; align-items: center; gap: 7px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .sw.a { background: var(--accent); } .sw.b { background: var(--paper); border: 1px solid var(--line2); }
+  .inv { display: grid; grid-template-columns: auto 1fr; gap: 11px; align-items: start; padding: 13px 0 0; border-top: 1px solid var(--line); margin-top: 12px; }
+  .inv:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .inv .glyph { width: 21px; height: 21px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; flex: none; }
+  .inv.ok .glyph { background: var(--good-w); color: var(--good); }
+  .inv.no .glyph { background: var(--bad-w); color: var(--bad); }
+  .inv .name { font-family: var(--mono); font-size: 13px; }
+  .inv .name .val { margin-left: 6px; font-weight: 700; }
+  .inv.ok .val { color: var(--good); } .inv.no .val { color: var(--bad); }
+  .inv .desc { font-size: 13px; color: var(--muted); margin: 3px 0 0; }
+  .fresh { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted); flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .fresh b { color: var(--ink2); font-weight: 650; }
+  .stale-note { border: 1px solid var(--warn); background: var(--warn-w); color: var(--warn); border-radius: var(--r); padding: 11px 14px; font-size: 13.5px; display: flex; gap: 10px; align-items: flex-start; }
+  .fail-note { border: 1px solid var(--bad); background: var(--bad-w); border-radius: var(--r); padding: 14px 16px; }
+  .fail-note .ft { font-weight: 680; margin: 0 0 4px; }
+  .fail-note .fd { margin: 0; font-size: 13.5px; color: var(--ink2); }
+  .fail-note code { font-family: var(--mono); font-size: 12.5px; color: var(--bad); word-break: break-all; }
+
+  /* Contract security status, shown inside the proof section as a quiet
+     disclosure — it is evidence, not the headline. The tag carries the state;
+     the body carries the technical detail and the verified hash. */
+  .sec-status { border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); margin-bottom: 26px; overflow: hidden; }
+  .sec-status[open] { background: var(--card); }
+  .sec-status > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 13px 18px; font-size: 13.5px; color: var(--ink2); }
+  .sec-status > summary::-webkit-details-marker { display: none; }
+  .sec-status > summary::after { content: "\25B8"; margin-left: auto; color: var(--muted); font-size: 12px; }
+  .sec-status[open] > summary::after { content: "\25BE"; }
+  .sec-status > summary:hover { background: var(--card-2); }
+  .sec-status > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .sec-status .tag { flex: none; font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--good); border: 1px solid var(--good); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .sec-status.legacy .tag { color: var(--bad); border-color: var(--bad); }
+  .sec-status.legacy { border-color: var(--bad); background: var(--bad-w); }
+  .sec-status .sec-body { padding: 0 18px 16px; }
+  .sec-status .sec-body p { margin: 0; font-size: 13.5px; color: var(--ink2); }
+  .sec-status .sec-body a { text-decoration: underline; text-underline-offset: 2px; }
+  .sec-status .sec-body code { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  .sec-status .sec-facts { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 12px 0 0; }
+  .sec-status .sec-facts dt { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .sec-status .sec-facts dd { margin: 3px 0 0; font-size: 13px; color: var(--ink2); }
+  @media (max-width: 640px) { .sec-status > summary { flex-wrap: wrap; gap: 8px; } }
+
+  /* ---------------- journey timeline ---------------- */
+  .journey { list-style: none; margin: 0; padding: 0; position: relative; }
+  .journey > li { position: relative; display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 18px; padding-bottom: 30px; }
+  .journey > li:last-child { padding-bottom: 0; }
+  .journey .node { position: relative; }
+  .journey .node .num { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-family: var(--mono); font-size: 13px; font-weight: 700; background: var(--card); border: 1.5px solid var(--line2); color: var(--accent); }
+  .journey > li:not(:last-child) .node::after { content: ""; position: absolute; left: 21.5px; top: 48px; bottom: -30px; width: 2px; background: linear-gradient(var(--line2), var(--line)); }
+  .journey .body { padding-top: 6px; }
+  .journey .t { font-size: 16.5px; font-weight: 680; margin: 0 0 4px; }
+  .journey .d { font-size: 14.5px; color: var(--ink2); margin: 0; max-width: 68ch; }
+  .journey .meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+  .chip { font-family: var(--mono); font-size: 11.5px; color: var(--ink2); background: var(--card-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+  .chip.actor { color: var(--accent); background: var(--accent-w); border-color: #e6cdb0; }
+  @media (min-width: 860px) {
+    .journey { columns: 2; column-gap: 44px; }
+    .journey > li { break-inside: avoid; grid-template-columns: 40px minmax(0,1fr); gap: 14px; }
+    .journey .node .num { width: 40px; height: 40px; }
+    .journey > li:not(:last-child) .node::after { left: 19.5px; }
+  }
+
+  /* ------------- institutional positioning ------------- */
+  .inst { margin: 0; }
+  .inst-pillars { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .inst-pillars { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  .inst-pillars .p { background: var(--card); padding: 22px 24px; }
+  .inst-pillars .p .k { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  .inst-pillars .p h3 { font-size: 15.5px; margin: 0 0 8px; }
+  .inst-pillars .p p { margin: 0; color: var(--ink2); font-size: 14px; line-height: 1.55; }
+  .inst-pillars .p p + p { margin-top: 10px; color: var(--muted); font-size: 13.5px; }
+  /* A link inside a sentence must be distinguishable without relying on colour
+     (WCAG 1.4.1 / axe link-in-text-block), so it is always underlined. */
+  .inst-pillars .p p a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------------- products ---------------- */
+  .prod-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .prod-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .prod { display: flex; flex-direction: column; overflow: hidden; }
+  .prod .head { padding: 20px 22px 16px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--card-2), var(--card)); }
+  .prod .head .top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .prod .head h3 { font-size: 19px; font-weight: 700; font-family: var(--serif); }
+  .prod .head .city { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .prod .head .covered { font-size: 14.5px; color: var(--ink2); margin: 12px 0 0; }
+  .prod .terms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); }
+  .prod .terms > div { background: var(--card); padding: 13px 16px; }
+  .prod .terms .k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  .prod .terms .v { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; margin: 0; }
+  .prod .terms .v small { font-family: var(--sans); font-size: 11.5px; color: var(--muted); }
+  .prod .cap { padding: 16px 22px 20px; border-top: 1px solid var(--line); }
+  .prod .cap .row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12.5px; color: var(--ink2); margin-bottom: 8px; }
+  .capbar { height: 10px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
+  .capbar .cf { height: 100%; background: var(--accent); }
+  .prod .lim { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; padding-left: 16px; position: relative; }
+  .prod .lim::before { content: "!"; position: absolute; left: 0; top: 0; width: 11px; height: 11px; border-radius: 3px; background: var(--warn-w); color: var(--warn); font-size: 9px; font-weight: 800; display: grid; place-items: center; }
+  .prod .lim + .lim { margin-top: 7px; }
+
+  /* ---------------- insurance factory ---------------- */
+  .feat { display: flex; flex-direction: column; overflow: hidden; margin-top: 0; }
+  .feat + .feat { margin-top: 20px; }
+  .feat .head { padding: 20px 22px 16px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--card-2), var(--card)); }
+  .feat .head .top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .feat .head h3 { font-size: 19px; font-weight: 700; font-family: var(--serif); }
+  .feat .head .city { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .ftrack { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 16px 0 0; padding: 0; }
+  .fstep { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; color: var(--muted); position: relative; padding-left: 15px; }
+  .fstep::before { content: ""; position: absolute; left: 0; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--line2); }
+  .fstep.on { color: var(--good); }
+  .fstep.on::before { background: var(--good); }
+  .feat .terms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); }
+  .feat .terms > div { background: var(--card); padding: 13px 16px; }
+  .feat .terms .k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  .feat .terms .v { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; margin: 0; }
+  .feat-ev { padding: 16px 22px; border-top: 1px solid var(--line); background: var(--card-2); }
+  .feat-ev .k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  .feat-ev .v { font-size: 13.5px; color: var(--ink2); margin: 0 0 12px; }
+  .feat-ev .v.mono { font-family: var(--mono); font-size: 12px; word-break: break-all; margin-bottom: 0; }
+  .feat .lim { font-size: 12.5px; color: var(--muted); margin: 0; padding: 14px 22px 18px; border-top: 1px solid var(--line); }
+  .feat .lim.ok { color: var(--good); }
+  .mono { font-family: var(--mono); }
+
+  /* ---------------- tables ---------------- */
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; min-width: 660px; }
+  caption { position: absolute; left: -9999px; }
+  th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  th { color: var(--muted); font-weight: 650; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; background: var(--card-2); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: #fbfaf6; }
+  .sub { color: var(--muted); }
+  .tag { font-size: 11px; font-family: var(--sans); font-weight: 650; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); white-space: nowrap; display: inline-block; }
+  .tag.active, .tag.signed, .tag.available, .tag.quorum { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
+  .tag.settled_paid { color: var(--accent); border-color: #e0bfa2; background: var(--accent-w); }
+  .tag.settled_no_pay { color: var(--muted); }
+  .tag.challenged, .tag.nullified { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
+  .tag.nullified { text-decoration: line-through; }
+  .tag.paused { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
+  .tag.due { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
+  .prod .lim.warn { color: var(--bad); }
+  .prod .lim.warn::before { background: var(--bad-w); color: var(--bad); }
+  .panel .lim { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; }
+  .meter { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .meter .track { width: 54px; height: 6px; background: var(--paper); border: 1px solid var(--line2); border-radius: 999px; overflow: hidden; }
+  .meter .m-fill { height: 100%; background: var(--accent); }
+  .meter .pct { font-size: 12px; color: var(--muted); }
+  .empty { padding: 26px 20px; color: var(--muted); font-size: 14px; }
+  .empty .e-t { color: var(--ink2); font-weight: 680; display: block; margin-bottom: 4px; font-size: 15px; }
+  details.legacy { border-top: 1px solid var(--line); }
+  details.legacy > summary { padding: 14px 16px; cursor: pointer; font-size: 13.5px; color: var(--ink2); background: var(--card-2); list-style: none; }
+  details.legacy > summary::-webkit-details-marker { display: none; }
+  details.legacy > summary::before { content: "\25B8 "; color: var(--muted); }
+  details.legacy[open] > summary::before { content: "\25BE "; }
+  .skel { padding: 16px; display: grid; gap: 11px; }
+  .skel i { display: block; height: 13px; border-radius: 4px; background: linear-gradient(90deg,#eeece6,#f6f4ef,#eeece6); background-size: 200% 100%; animation: sh 1.3s linear infinite; }
+  .skel i:nth-child(2) { width: 82%; } .skel i:nth-child(3) { width: 64%; }
+  @keyframes sh { to { background-position: -200% 0; } }
+
+  /* ---------------- FAQ ---------------- */
+  .faq { border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); overflow: hidden; }
+  .faq details { border-top: 1px solid var(--line); }
+  .faq details:first-child { border-top: 0; }
+  .faq summary { padding: 16px 18px; cursor: pointer; font-size: 15px; font-weight: 640; color: var(--ink); list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::before { content: "\25B8"; color: var(--accent); font-size: 12px; line-height: 1.4; }
+  .faq details[open] > summary::before { content: "\25BE"; }
+  .faq summary:hover { background: var(--card-2); }
+  .faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .faq details > p { margin: 0; padding: 0 18px 18px 40px; font-size: 14.5px; color: var(--ink2); max-width: 74ch; }
+  .faq details > p code { font-family: var(--mono); font-size: 12.5px; background: var(--card-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+  /* ---------------- dashboard figures ---------------- */
+  .figs { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+  .figs > div { background: var(--card); padding: 15px 17px; }
+  .figs .k { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+  .figs .v { font-family: var(--mono); font-size: 18px; font-variant-numeric: tabular-nums; margin: 0; }
+  .figs .v .u { font-size: 12px; color: var(--muted); margin-left: 5px; }
+  @media (min-width: 560px) { .figs { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 900px) { .figs { grid-template-columns: repeat(3, 1fr); } }
+  .glossary { display: grid; gap: 10px; margin-top: 18px; }
+  .glossary div { font-size: 13.5px; color: var(--ink2); }
+  .glossary b { color: var(--ink); font-weight: 650; }
+
+  /* ---------------- quote ---------------- */
+  .quote { display: grid; gap: 22px; padding: var(--s4); }
+  @media (min-width: 860px) { .quote { grid-template-columns: minmax(0,1fr) minmax(0,1.05fr); gap: 34px; } }
+  .qrow { display: grid; gap: 7px; }
+  label { font-size: 13px; font-weight: 650; color: var(--ink2); }
+  select, input[type=range] { font: inherit; }
+  select { padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 32px; }
+  .qout { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .qout > div { background: var(--card); padding: 13px 15px; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .qout .k { font-size: 13px; color: var(--muted); }
+  .qout .v { font-family: var(--mono); font-size: 15.5px; font-variant-numeric: tabular-nums; }
+  .qout .v.hero-v { font-size: 19px; font-weight: 650; color: var(--accent); }
+  .ro { border: 1px solid var(--line2); background: var(--card-2); border-radius: var(--r); padding: 14px 16px; font-size: 13.5px; color: var(--ink2); }
+  .ro b { color: var(--ink); }
+  .ro code { font-family: var(--mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .q-terms { font-size: 13.5px; color: var(--ink2); display: grid; gap: 6px; margin-top: 14px; }
+  .q-terms div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+
+  /* ---------------- wallet + purchase ---------------- */
+  .wallet { display: inline-flex; align-items: center; gap: 8px; }
+  .acct { font-family: var(--mono); font-size: 12px; color: var(--ink2); background: var(--card); border: 1px solid var(--line2); border-radius: 999px; padding: 5px 11px; white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+  .acct b { color: var(--ink); font-weight: 600; }
+  .buy { margin-top: 22px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); padding: 22px 24px; }
+  .buy-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .buy-head h3 { font-family: var(--serif); font-size: 20px; font-weight: 660; letter-spacing: -.01em; margin: 0; }
+  .buy-sub { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+  .buy-grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 18px; }
+  @media (min-width: 720px) { .buy-grid { grid-template-columns: 1fr 1fr; } }
+  .buy input[type=text], .buy input[type=datetime-local] { font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; min-height: 42px; }
+  .sub { font-size: 12.5px; color: var(--muted); }
+  .buy-actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; flex-wrap: wrap; }
+  .buy-status { font-size: 13.5px; color: var(--ink2); }
+  .buy-status.err { color: var(--bad); font-weight: 600; }
+  .buy-status.ok { color: var(--good); font-weight: 600; }
+  .buy-note { margin-top: 18px; border: 1px solid var(--line2); background: var(--card-2); border-radius: var(--r); padding: 14px 16px; font-size: 13px; color: var(--ink2); }
+  .buy-note b { color: var(--ink); }
+  .buy-note code { font-family: var(--mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  /* The exact address the wallet will sign against, stated before the button. */
+  .buy-dest { margin: 18px 0 0; font-size: 13px; color: var(--ink2); }
+  .buy-dest code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+  .buy-dest a { text-decoration: underline; text-underline-offset: 2px; }
+  .buy-dest.blocked { color: var(--bad); }
+  .buy-result { margin-top: 18px; border: 1px solid var(--good); background: var(--good-w); border-radius: var(--r); padding: 16px 18px; }
+  .buy-result.err { border-color: var(--bad); background: var(--bad-w); }
+  .buy-result h4 { margin: 0 0 8px; font-size: 14.5px; color: var(--good); }
+  .buy-result.err h4 { color: var(--bad); }
+  .buy-result p { font-size: 13.5px; color: var(--ink2); margin: 0 0 8px; }
+  .buy-result .mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  .buy-hint { margin: 10px 0 0; font-size: 13px; color: var(--muted); min-height: 1.2em; }
+  .buy-pending { margin: 10px 0 0; border: 1px solid var(--bad); background: var(--bad-w); border-radius: var(--r); padding: 12px 14px; font-size: 13.5px; color: var(--ink); }
+  .buy-pending b { color: var(--bad); }
+
+  /* Wallet picker: a real modal, so a click on "Connect wallet" is answered where
+     the user is looking, at every viewport. */
+  .wp-dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, 94vw); width: 100%; max-height: calc(100vh - 24px); }
+  .wp-dialog::backdrop { background: rgba(19,26,22,.55); }
+  /* Lock the page behind the modal. Progressive enhancement: browsers without
+     :has() simply keep the page scrollable, which is harmless. */
+  body:has(#wallet-dialog[open]) { overflow: hidden; }
+  .wp-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(19,26,22,.28); max-height: calc(100vh - 24px); overflow: auto; }
+  .wp-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0; }
+  .wp-head h2 { font-family: var(--serif); font-size: 20px; font-weight: 660; margin: 0; letter-spacing: -.01em; }
+  .wp-sub { font-size: 13.5px; color: var(--muted); margin: 8px 0 16px; }
+  .wp-intro { font-size: 13.5px; color: var(--ink2); margin: 0 0 14px; }
+  .wp-opt { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .wp-opt:first-child { border-top: 0; }
+  .wp-pick { min-height: 44px; justify-self: start; min-width: 150px; text-align: left; }
+  .wp-opt-off .wp-pick { opacity: .6; }
+  .wp-note { font-size: 12.5px; color: var(--muted); }
+  .wp-note.ok { color: var(--good); }
+  .wp-install { grid-column: 2; font-size: 12.5px; font-weight: 600; color: var(--accent); }
+  .wp-status { margin: 14px 0 0; font-size: 13px; color: var(--ink2); min-height: 1.2em; }
+  .wp-status.err { color: var(--bad); font-weight: 600; }
+  .wp-status.ok { color: var(--good); font-weight: 600; }
+  .wp-empty { font-size: 13.5px; color: var(--ink2); margin: 0; }
+  .wp-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; }
+  .wp-foot a { color: var(--accent); font-weight: 600; }
+
+  /* ---------------- agent console ---------------- */
+  .agent { margin-top: 6px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); padding: 22px 24px; }
+  .agent-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .agent-head h3 { font-family: var(--serif); font-size: 20px; font-weight: 660; letter-spacing: -.01em; margin: 0; }
+  .agent-head code { font-family: var(--mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .mode-switch { display: inline-flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; }
+  .mode-switch .btn-s { border: 0; border-radius: 0; min-height: 40px; }
+  .mode-switch .btn-s[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .agent-grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 18px; }
+  @media (min-width: 720px) { .agent-grid { grid-template-columns: 1fr 1fr; } }
+  .agent input[type=text] { font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; min-height: 42px; }
+  .agent-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  .agent-state { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .agent-state .row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 15px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .agent-state .row:last-child { border-bottom: 0; }
+  .agent-state .row .k { color: var(--muted); }
+  .agent-state .row .v { font-family: var(--mono); font-size: 13px; text-align: right; }
+  .agent-log { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card-2); padding: 12px 14px; max-height: 240px; overflow: auto; }
+  .agent-log h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .agent-log ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .agent-log li { font-family: var(--mono); font-size: 12px; color: var(--ink2); display: flex; gap: 10px; }
+  .agent-log li .t { color: var(--muted); flex: none; }
+  .agent-log li.deny { color: var(--bad); }
+  .agent-log li.ok { color: var(--good); }
+  .verdict { display: flex; gap: 10px; align-items: baseline; padding: 12px 15px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .verdict .badge { font-weight: 700; font-size: 12px; padding: 2px 9px; border-radius: 999px; flex: none; }
+  .verdict .badge.allow { background: var(--good-w); color: var(--good); }
+  .verdict .badge.deny { background: var(--bad-w); color: var(--bad); }
+  .verdict ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink2); }
+
+  /* ---------------- trust ---------------- */
+  .vs { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+  @media (min-width: 780px) { .vs { grid-template-columns: 1fr 1fr; } }
+  .vs > div { background: var(--card); padding: 22px 24px; }
+  .vs .h { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 14px; }
+  .vs .trad .h { color: var(--muted); }
+  .vs .para .h { color: var(--good); }
+  .vs ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .vs li { font-size: 14px; color: var(--ink2); padding-left: 24px; position: relative; }
+  .vs .trad li::before { content: "–"; position: absolute; left: 6px; color: var(--muted); }
+  .vs .para li::before { content: "\2713"; position: absolute; left: 0; color: var(--good); font-weight: 700; }
+  .controls { display: grid; gap: 14px; margin-top: 26px; grid-template-columns: 1fr; }
+  @media (min-width: 700px) { .controls { grid-template-columns: repeat(3, 1fr); } }
+  .ctrl { border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; background: var(--card); }
+  .ctrl .ct { font-size: 14.5px; font-weight: 680; margin: 0 0 5px; display: flex; align-items: center; gap: 8px; }
+  .ctrl .ct .i { width: 20px; height: 20px; border-radius: 5px; background: var(--accent-w); color: var(--accent); display: grid; place-items: center; font-size: 11px; font-weight: 800; flex: none; }
+  .ctrl .cd { font-size: 13px; color: var(--muted); margin: 0; }
+  .disclose { margin-top: 26px; border: 1px solid var(--warn); background: var(--warn-w); border-radius: var(--r2); padding: 20px 24px; }
+  .disclose h3 { font-size: 15px; font-weight: 700; color: var(--warn); margin: 0 0 12px; }
+  .disclose ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .disclose li { font-size: 13.5px; color: #4a3a12; padding-left: 22px; position: relative; }
+  .disclose li::before { content: "!"; position: absolute; left: 0; top: 2px; width: 14px; height: 14px; border-radius: 4px; background: #e6c879; color: #4a3a12; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+  .disclose li b { color: #3a2c0a; }
+
+  /* ---------------- deployment status ledger ---------------- */
+  .status-table { border: 1px solid var(--line); border-radius: var(--r2); overflow-x: auto; background: var(--card); }
+  .status-table table { width: 100%; border-collapse: collapse; }
+  .status-table th, .status-table td { text-align: left; padding: 11px 14px; font-size: 13.5px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .status-table th { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 650; background: var(--card-2); }
+  .status-table tr:last-child td { border-bottom: 0; }
+  .status-table td a { text-decoration: underline; text-underline-offset: 2px; }
+  .status-table .st { font-family: var(--sans); font-size: 11px; font-weight: 650; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); white-space: nowrap; display: inline-block; }
+  .status-table .st.live { color: var(--good); border-color: #a9d2ba; background: var(--good-w); }
+  .status-table .st.prototype { color: var(--warn); border-color: #ddc48a; background: var(--warn-w); }
+  .status-table .st.blocked { color: var(--bad); border-color: #d9a9a9; background: var(--bad-w); }
+  .status-table .st.planned { color: var(--muted); }
+
+  /* ---------------- proof ---------------- */
+  .proof { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+  .proof > div { background: var(--card); padding: 17px 19px; min-width: 0; }
+  .proof .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px; }
+  .proof .val { font-family: var(--mono); font-size: 12.5px; word-break: break-all; margin: 0; color: var(--ink2); }
+  .eq { font-family: var(--mono); font-size: 12.5px; color: var(--ink2); margin: 0; overflow-x: auto; white-space: nowrap; }
+  @media (min-width: 780px) { .proof { grid-template-columns: 1fr 1fr; } }
+  .copy-row { display: flex; gap: 9px; align-items: center; margin-top: 11px; flex-wrap: wrap; }
+  code.cmd { font-family: var(--mono); font-size: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; color: var(--ink2); overflow-x: auto; max-width: 100%; display: block; white-space: pre; }
+  .copied { color: var(--good); font-size: 12.5px; font-weight: 600; }
+  .btn-s { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink2); background: var(--card); border: 1px solid var(--line2); border-radius: 7px; padding: 6px 11px; cursor: pointer; min-height: 34px; }
+  .btn-s:hover { border-color: var(--ink2); }
+  .links { display: grid; gap: 9px; }
+  .links a { font-size: 13.5px; }
+  /* A link inside a sentence must be distinguishable without relying on colour
+     (WCAG 1.4.1 / axe link-in-text-block), so it is always underlined. */
+  .proof .val a { text-decoration: underline; text-underline-offset: 2px; }
+
+  /* ---------------- footer ---------------- */
+  footer { margin-top: var(--s6); background: var(--field); color: var(--on-field-2); }
+  footer .f-in { padding-top: 40px; padding-bottom: 44px; display: grid; gap: 26px; }
+  @media (min-width: 820px) { footer .f-in { grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; } }
+  footer h2 { font-family: var(--serif); font-size: 19px; color: #fff; margin: 0 0 10px; }
+  footer p { font-size: 13.5px; line-height: 1.65; margin: 0; }
+  footer .f-l { max-width: 52ch; }
+  footer .f-col h3 { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin: 0 0 12px; font-family: var(--sans); font-weight: 700; }
+  footer .f-col a { display: block; font-size: 13.5px; color: var(--on-field-2); margin-bottom: 9px; }
+  footer .f-col a:hover { color: #fff; }
+  footer .f-bot { border-top: 1px solid var(--field-line); padding-top: 18px; padding-bottom: 34px; display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; font-size: 12.5px; color: var(--on-field-2); }
+
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://overcover.vercel.app/#org",
+      "name": "Overcover",
+      "url": "https://overcover.vercel.app/",
+      "logo": "https://overcover.vercel.app/og.png",
+      "description": "Overcover is an open-source parametric insurance mutual that runs on NEAR testnet.",
+      "sameAs": ["https://github.com/itzebe/overcover"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://overcover.vercel.app/#website",
+      "url": "https://overcover.vercel.app/",
+      "name": "Overcover",
+      "publisher": { "@id": "https://overcover.vercel.app/#org" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://overcover.vercel.app/#app",
+      "name": "Overcover",
+      "url": "https://overcover.vercel.app/",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/itzebe/overcover/blob/main/LICENSE",
+      "codeRepository": "https://github.com/itzebe/overcover",
+      "description": "A browser console that reads a NEAR testnet smart contract and lets a visitor buy fully-collateralised parametric index insurance cover (rainfall or temperature). Cover terms are fixed in an immutable on-chain product; the payout is reserved from a capital pool; settlement follows a signed, challengeable public index reading. The same catalogue is published machine-readably for autonomous agents.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free to use on NEAR testnet. No payment is collected by Overcover."
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://overcover.vercel.app/#webpage",
+      "url": "https://overcover.vercel.app/",
+      "name": "Overcover — parametric insurance, settled on contract rules",
+      "isPartOf": { "@id": "https://overcover.vercel.app/#website" },
+      "about": { "@id": "https://overcover.vercel.app/#app" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://overcover.vercel.app/#faq",
+      "isPartOf": { "@id": "https://overcover.vercel.app/#webpage" },
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What exactly does Overcover cover?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A single, publicly measurable event: a named city's rainfall or temperature reading meeting a trigger fixed in the product before you buy, on an agreed date. If the reading meets the trigger the policy pays its reserved payout; if it does not, it pays nothing and the premium is retained by the pool. It is parametric, not indemnity — it does not assess a loss after the fact."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who is Overcover for?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle — growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes — and the software agents that run them. It is a poor fit for a loss that needs assessing after the fact."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is the payout guaranteed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The moment a policy is bought, its maximum payout is reserved from the pool and cannot be withdrawn while the policy is live. The contract re-checks reserved ≤ capital after every state change and refuses any transaction that would leave the pool promising more than it holds. The pool identity capital = deposits − withdrawals + premiums + forfeited bonds − payouts is computed on-chain and shown live."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does an autonomous agent buy cover?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The agent has its own NEAR account and key, and a human sets hard spending limits in advance. It reads the same machine-readable catalogue (products.json) a person reads, calls the contract's own quote view, and signs a single buy_cover call — identical to the one a human wallet signs. The public console can evaluate a purchase with the agent's spending-policy engine read-only, but it holds no key and signs nothing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who decides the reading, and can it be disputed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A reading is finalised only by a quorum of independent operators who each sign with their own key; no single operator and not the owner can set the value alone. For a short window anyone may dispute a reading by posting a bond and a counter-value. A quorum of independent resolvers — separate from the operators, and unable to vote twice — decides; the owner cannot resolve a dispute alone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is settlement verified?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Settlement is a single comparison, reading against trigger, run once when the challenge window has passed. The payout, the released reservation and the pool identity are all contract state, readable from public JSON-RPC without trusting the page. The console reproduces every figure from a public RPC endpoint, and a failed read is shown as stale or 'no data' — never as live."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which NEAR contract is current, and which is legacy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The current, hardened contract — the default for new cover — is contract.ovc-v3-ctl-2f6c4c.testnet. The original v1 module lives at contract.attestor-overcover.testnet; it is readable for the record but is not a purchase destination, and the console labels it 'Legacy build' and disables buying there. The console decides which is which by reading the deployed code hash, not from a label on the page."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is this ready for real money?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Overcover runs on NEAR testnet with test funds only, and the contract has not been professionally audited. It is a working prototype: the full lifecycle — purchase, oracle quorum, bonded dispute, settlement and pool accounting — runs on-chain, but it is not for real funds yet."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="mast">
+  <div class="wrap mast-in">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <rect width="32" height="32" rx="7" fill="#10251d"/>
+        <path d="M16 5.5l8.5 3.8v6.4c0 5.4-3.6 8.4-8.5 10.3-4.9-1.9-8.5-4.9-8.5-10.3V9.3z" fill="none" stroke="#f0c987" stroke-width="2"/>
+        <path d="M16 10v8.4M16 18.4l3.4 2.6" fill="none" stroke="#f0c987" stroke-width="1.4" opacity=".55"/>
+      </svg>
+      <div>
+        <h1>Overcover</h1>
+        <p class="tagline">Parametric insurance · settled on contract rules</p>
+      </div>
+    </div>
+    <div class="mast-right">
+      <span class="net"><span id="dot" class="dot load"></span><span id="netlabel">connecting…</span></span>
+      <span id="wallet-slot" class="wallet">
+        <button id="wallet-connect" class="btn" type="button" data-wallet="connect">Connect wallet</button>
+      </span>
+      <button id="refresh" class="btn" type="button">Refresh</button>
+    </div>
+  </div>
+</header>
+
+<!-- Primary navigation. A quiet ledger index: the page is long and evidence-dense,
+     so a reader must be able to orient and jump without hunting. Kept out of the
+     sticky brand bar so it does not eat mobile viewport height. -->
+<nav class="nav" aria-label="Sections">
+  <div class="wrap nav-in">
+    <a href="#what-h">What it covers</a>
+    <a href="#how">How it works</a>
+    <a href="#cover">Cover</a>
+    <a href="#factory">Factory</a>
+    <a href="#quote-h">Price</a>
+    <a href="#trust-h">Trust</a>
+    <a href="#status">Status</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
+
+<main id="main">
+  <div class="wrap"><div id="error-slot"></div></div>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero" aria-labelledby="hero-h">
+    <div class="wrap hero-in">
+      <div>
+        <p class="eyebrow">Programmable parametric risk · live on NEAR testnet</p>
+        <h2 id="hero-h">Insurance for businesses that <em>cannot afford to wait</em> for a claims process.</h2>
+        <p class="sub">Overcover covers one clearly-defined event at a time: a public index reading — rainfall or temperature — meeting a set trigger, in a named city, on a named date. Each product states its own trigger and direction, so the payout follows from contract rules, no adjuster, no queue.</p>
+        <div class="actions">
+          <a class="btn-gold" href="#cover">See the cover available</a>
+          <a class="btn-ghost" href="#how">How a claim settles</a>
+          <button class="btn-ghost" type="button" data-wallet="connect">Connect a wallet</button>
+        </div>
+        <p class="proof-line">
+          <span id="hero-dot" class="dot load" aria-hidden="true"></span>
+          <span id="hero-live">Reading the pool from the contract…</span>
+        </p>
+      </div>
+
+      <div class="hero-art">
+        <!-- Original layered illustration: rainfall outside, shelter within. -->
+        <svg viewBox="0 0 520 340" role="img" aria-labelledby="art-t art-d" focusable="false">
+          <title id="art-t">The risk is outside; the cover is inside</title>
+          <desc id="art-d">A field of falling rain lines above a ground line. Under an unbroken arc of protection, a sheltered row of units stands dry. The arc marks where the contract's rules take over.</desc>
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#17352a"/><stop offset="1" stop-color="#0d1f18"/>
+            </linearGradient>
+            <linearGradient id="shelter" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f0c987"/><stop offset="1" stop-color="#c98a3a"/>
+            </linearGradient>
+            <linearGradient id="rain" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7fa79a" stop-opacity=".05"/><stop offset="1" stop-color="#7fa79a" stop-opacity=".55"/>
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="520" height="340" rx="14" fill="url(#sky)"/>
+          <!-- rain field (the risk) -->
+          <g stroke="url(#rain)" stroke-width="2.4" stroke-linecap="round">
+            <line x1="30" y1="24" x2="22" y2="66"/><line x1="70" y1="14" x2="62" y2="56"/>
+            <line x1="110" y1="30" x2="102" y2="72"/><line x1="150" y1="16" x2="142" y2="58"/>
+            <line x1="190" y1="34" x2="182" y2="76"/><line x1="230" y1="18" x2="222" y2="60"/>
+            <line x1="270" y1="28" x2="262" y2="70"/><line x1="310" y1="12" x2="302" y2="54"/>
+            <line x1="350" y1="32" x2="342" y2="74"/><line x1="390" y1="18" x2="382" y2="60"/>
+            <line x1="430" y1="30" x2="422" y2="72"/><line x1="470" y1="16" x2="462" y2="58"/>
+            <line x1="50" y1="76" x2="42" y2="118"/><line x1="130" y1="82" x2="122" y2="124"/>
+            <line x1="210" y1="72" x2="202" y2="114"/><line x1="290" y1="86" x2="282" y2="128"/>
+            <line x1="370" y1="74" x2="362" y2="116"/><line x1="450" y1="80" x2="442" y2="122"/>
+          </g>
+          <!-- ground -->
+          <line x1="24" y1="252" x2="496" y2="252" stroke="#2c4a3d" stroke-width="2"/>
+          <!-- shelter arc (protection) -->
+          <path d="M96 236 C 150 150, 370 150, 424 236" fill="none" stroke="url(#shelter)" stroke-width="6" stroke-linecap="round"/>
+          <path d="M120 232 C 166 172, 354 172, 400 232" fill="none" stroke="#f0c987" stroke-width="1.4" opacity=".28"/>
+          <!-- the label on the arc -->
+          <text x="260" y="140" text-anchor="middle" font-family="ui-monospace, monospace" font-size="12.5" fill="#f0c987" opacity=".92">the contract's rules take over here</text>
+          <!-- sheltered units (the covered business) -->
+          <g fill="#0d1f18" stroke="#cfe0d6" stroke-width="1.6">
+            <rect x="176" y="204" width="42" height="48" rx="4"/>
+            <rect x="232" y="192" width="42" height="60" rx="4"/>
+            <rect x="288" y="204" width="42" height="48" rx="4"/>
+          </g>
+          <g fill="#f0c987" opacity=".9">
+            <rect x="184" y="214" width="9" height="9" rx="1.5"/><rect x="201" y="214" width="9" height="9" rx="1.5"/>
+            <rect x="240" y="202" width="9" height="9" rx="1.5"/><rect x="257" y="202" width="9" height="9" rx="1.5"/>
+            <rect x="240" y="220" width="9" height="9" rx="1.5"/><rect x="257" y="220" width="9" height="9" rx="1.5"/>
+            <rect x="296" y="214" width="9" height="9" rx="1.5"/><rect x="313" y="214" width="9" height="9" rx="1.5"/>
+          </g>
+          <!-- rain striking the arc, deflected -->
+          <g stroke="#e0aa55" stroke-width="1.6" stroke-linecap="round" opacity=".7">
+            <path d="M150 176 l-9 12"/><path d="M372 176 l9 12"/>
+          </g>
+          <!-- the reading marker -->
+          <g>
+            <circle cx="260" cy="176" r="5" fill="none" stroke="#f0c987" stroke-width="1.6" opacity=".5"/>
+          </g>
+        </svg>
+        <p class="art-cap"><b>Outside:</b> the risk, measured by a public index. <b>Inside:</b> the cover, defined in advance and backed by reserved capital. The arc is the set of rules the contract enforces — not a promise on a page.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COVERAGE STRIP ================= -->
+  <section class="cov-strip" aria-label="Cover in force, read from the contract">
+    <div class="wrap">
+      <div class="in">
+        <div class="c"><p class="n" id="cov-capital">—</p><p class="k">Capital backing policies <span class="live-flag">live</span></p></div>
+        <div class="c"><p class="n" id="cov-reserved">—</p><p class="k">Reserved for potential payouts</p></div>
+        <div class="c"><p class="n" id="cov-active">—</p><p class="k">Policies currently in force</p></div>
+        <div class="c"><p class="n" id="cov-paid">—</p><p class="k">Settlements already paid out</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= WHAT / WHO ================= -->
+  <section class="wrap band" aria-labelledby="what-h">
+    <div class="sect-head">
+      <h2 id="what-h">What Overcover covers, and who it is for</h2>
+      <p class="sect-note">One risk at a time, defined in advance. No underwriting interview, no claim form.</p>
+    </div>
+    <div class="split">
+      <div class="card pad">
+        <h3>The risk it covers</h3>
+        <p>A named city's public index — rainfall or temperature — meets a trigger defined in the product on an agreed date. That single, objectively measurable event is the whole contract. If it happens, the policy pays. If it does not, it does not — and the premium is retained by the pool.</p>
+        <p>Because the trigger is a public reading rather than an assessed loss, there is nothing to argue about and no adjuster to wait for.</p>
+      </div>
+      <div class="card pad">
+        <h3>Who it is for</h3>
+        <p>Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle: growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes, and the software agents that run them.</p>
+        <p>It is a poor fit for a loss that needs assessing after the fact — that is what a traditional policy is for.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSTITUTIONAL POSITIONING ================= -->
+  <section class="wrap band inst" aria-labelledby="inst-h">
+    <div class="sect-head">
+      <h2 id="inst-h">Built for institutions, operators and autonomous agents</h2>
+      <p class="sect-note">Capital, terms and settlement are all on the record. Read them before you commit, and verify them without trusting this page.</p>
+    </div>
+    <div class="inst-pillars">
+      <div class="p">
+        <p class="k">Capital-backed, not promised</p>
+        <h3>Every payout is reserved at purchase</h3>
+        <p>The moment a policy is bought, its maximum payout is reserved from the pool and can no longer be withdrawn while the policy is live. The contract re-checks <code>reserved ≤ capital</code> after every state change and refuses any transaction that would leave the pool promising more than it holds.</p>
+        <p>The pool's identity — <code>capital = deposits − withdrawals + premiums + forfeited bonds − payouts</code> — is computed on-chain and shown live below.</p>
+      </div>
+      <div class="p">
+        <p class="k">Programmable and immutable</p>
+        <h3>Cover is a product, defined before purchase</h3>
+        <p>A product fixes the city, index, trigger, premium rate, payout bounds and capacity cap. Once published it cannot change, so a buyer is never re-priced and there is no discretion at settlement. Any account may underwrite a product with a stake, and any account may provide pool capital — the contract judges the terms, not a committee.</p>
+        <p>The same catalogue is published machine-readably in <a href="/products.json">products.json</a>, so software can price and buy cover without a human in the loop.</p>
+      </div>
+      <div class="p">
+        <p class="k">Verifiable, not trusted</p>
+        <h3>Settlement is a rule, and the result is on the record</h3>
+        <p>An index reading is finalised only by a quorum of independent operators who each sign with their own key. Anyone may challenge a reading by posting a bond, and an independent resolver quorum — separate from the operators, and unable to vote twice — decides. The owner cannot set the index or resolve a dispute alone.</p>
+        <p>Every figure on this page is a direct contract read, reproducible from public JSON-RPC. The security model and its limits are stated in full under <a href="#trust-h">What you should know before trusting this</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HOW A POLICY WORKS ================= -->
+  <section class="wrap band" id="how" aria-labelledby="how-h">
+    <div class="sect-head">
+      <h2 id="how-h">From buying cover to getting paid</h2>
+      <p class="sect-note">Eight steps. Each is a real contract rule, and the actor who triggers it is named.</p>
+    </div>
+    <ol class="journey">
+      <li>
+        <div class="node"><span class="num">01</span></div>
+        <div class="body">
+          <p class="t">Choose protection</p>
+          <p class="d">Pick an available risk product: a city, an index and a trigger level, published in advance.</p>
+          <span class="meta"><span class="chip actor">you</span><span class="chip">list_products</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">02</span></div>
+        <div class="body">
+          <p class="t">Understand the coverage</p>
+          <p class="d">Read the trigger, the premium, the maximum payout, the capacity left and the observation date. These are fixed when the product is published and cannot change afterwards.</p>
+          <span class="meta"><span class="chip actor">you</span><span class="chip">get_product</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">03</span></div>
+        <div class="body">
+          <p class="t">Buy the policy</p>
+          <p class="d">Pay the premium the product fixes, with the exact amount attached as the deposit. The payout is reserved from the pool at that moment, so the promise is backed immediately.</p>
+          <span class="meta"><span class="chip actor">policyholder</span><span class="chip">buy_cover</span></span>
+        </div>
+      </li>
+      <li id="step-04">
+        <div class="node"><span class="num">04</span></div>
+        <div class="body">
+          <p class="t">The risk is observed</p>
+          <p class="d">An attestor submits the index reading for the agreed date, signed with ed25519. The contract checks the signature, the freshness and a single-use nonce before it accepts the value.</p>
+          <span class="meta"><span class="chip actor">attestor</span><span class="chip">report_observation</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">05</span></div>
+        <div class="body">
+          <p class="t">The reading can be challenged</p>
+          <p class="d">For a short window, anyone may dispute the reading by posting a bond and a counter-value. A reading under dispute cannot settle a policy.</p>
+          <span class="meta"><span class="chip actor">anyone</span><span class="chip">challenge_observation</span></span>
+        </div>
+      </li>
+      <li id="step-06">
+        <div class="node"><span class="num">06</span></div>
+        <div class="body">
+          <p class="t">A dispute is resolved</p>
+          <p class="d">The contract owner decides. Upholding the reading forfeits the challenger's bond into the pool; rejecting it nullifies the reading and returns the bond. This step is a human decision — see the disclosures below.</p>
+          <span class="meta"><span class="chip actor">owner</span><span class="chip">resolve_dispute</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">07</span></div>
+        <div class="body">
+          <p class="t">Eligibility and settlement</p>
+          <p class="d">Once the window has passed, the contract compares the validated reading to the trigger. If it meets the trigger the beneficiary is paid; if not, no payout is made. Either way the reservation is released, and this can happen only once.</p>
+          <span class="meta"><span class="chip actor">anyone</span><span class="chip">resolve</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="node"><span class="num">08</span></div>
+        <div class="body">
+          <p class="t">The result is verifiable</p>
+          <p class="d">The payout, the released reservation and the pool identity are contract state. Every figure on this page can be reproduced from a public RPC endpoint, without trusting the page.</p>
+          <span class="meta"><span class="chip actor">anyone</span><span class="chip">get_pool · reconcile</span></span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= COVER AVAILABLE (products) ================= -->
+  <section class="wrap band" id="cover" aria-labelledby="cover-h">
+    <div class="sect-head">
+      <h2 id="cover-h">Cover available now</h2>
+      <p class="sect-note">Each card is an immutable risk definition read from the contract. Capacity is a hard cap on the total outstanding payout for that product.</p>
+    </div>
+    <div id="products">
+      <div class="card"><div class="skel" aria-hidden="true"><i></i><i></i><i></i></div><p class="sr">Loading products…</p></div>
+    </div>
+  </section>
+
+  <!-- ================= INSURANCE FACTORY (permissionless) ================= -->
+  <section class="wrap band" id="factory" aria-labelledby="factory-h">
+    <div class="sect-head">
+      <h2 id="factory-h">The insurance factory — anyone can add cover</h2>
+      <p class="sect-note">A discovery agent reads a real public weather forecast and prepares a proposal. Anyone — not just the protocol owner — submits it with <code>propose_product</code>. The <strong>contract</strong> decides whether it qualifies under fixed underwriting rules; a qualifying proposal activates as an immutable product with no owner transaction. Products shown as <em>active</em> are read from the contract, not from this page.</p>
+    </div>
+    <div id="factory-body">
+      <div class="card"><div class="skel" aria-hidden="true"><i></i><i></i><i></i></div><p class="sr">Loading the discovery feed…</p></div>
+    </div>
+  </section>
+
+  <!-- ================= QUOTE ================= -->
+  <section class="wrap band" aria-labelledby="quote-h">
+    <div class="sect-head">
+      <h2 id="quote-h">Price a policy</h2>
+      <p class="sect-note">A live quote computed by the contract's own <code>quote</code> view — the same number <code>buy_cover</code> would charge for these terms.</p>
+    </div>
+    <div class="card quote">
+      <div>
+        <div class="qrow">
+          <label for="q-product">Which protection</label>
+          <select id="q-product"></select>
+        </div>
+        <div class="qrow" style="margin-top:16px">
+          <label for="q-payout">Payout if the trigger is met</label>
+          <input id="q-payout" type="range" min="0" max="100" value="100" step="1" />
+          <span class="sub" id="q-payout-label" style="font-family:var(--mono);font-size:13px">—</span>
+        </div>
+        <div class="q-terms" id="q-terms"></div>
+      </div>
+      <div>
+        <div class="qout" id="q-out" role="status" aria-live="polite">
+          <div><span class="k">Premium you pay now</span><span class="v hero-v" id="q-premium">—</span></div>
+          <div><span class="k">Payout reserved from the pool</span><span class="v" id="q-reserve">—</span></div>
+          <div><span class="k">Premium rate</span><span class="v" id="q-rate">—</span></div>
+          <div><span class="k">Capacity remaining after this policy</span><span class="v" id="q-capacity">—</span></div>
+        </div>
+        <div class="ro" id="q-readonly" style="margin-top:16px">
+          <b>This is a read-only quote.</b> It reads the contract and holds no key. Buying happens in the panel below, where you sign the transaction in your own wallet — this page never sees your private key and never signs for you.
+        </div>
+      </div>
+    </div>
+
+    <!-- Purchase: the human journey. Every number below is re-checked against the
+         contract; the transaction is signed inside the user's own wallet. -->
+    <div class="buy" id="buy-panel" aria-labelledby="buy-h" tabindex="-1">
+      <div class="buy-head">
+        <div>
+          <h3 id="buy-h">Buy this cover with your own wallet</h3>
+          <p class="buy-sub">You sign the transaction in your wallet. Overcover never sees your key, and the premium is fixed by the contract — not by this page.</p>
+        </div>
+        <span class="wallet" id="buy-wallet-slot">
+          <button id="buy-wallet-connect" class="btn" type="button" data-wallet="connect">Connect wallet</button>
+        </span>
+      </div>
+
+      <div class="buy-grid">
+        <div class="qrow">
+          <label for="b-obsdate">Cover starts (observation date, UTC)</label>
+          <input id="b-obsdate" type="datetime-local" />
+          <span class="sub" id="b-obsnote">The signed reading is taken on this date. It must be in the future.</span>
+        </div>
+        <div class="qrow">
+          <label for="b-beneficiary">Who gets paid (optional)</label>
+          <input id="b-beneficiary" type="text" placeholder="leave blank to pay your own account" autocomplete="off" spellcheck="false" />
+          <span class="sub" id="b-benefnote">Default: your connected account.</span>
+        </div>
+      </div>
+
+      <p class="buy-dest" id="b-dest"></p>
+
+      <div class="buy-actions">
+        <button id="b-buy" class="btn-gold" type="button" disabled>Buy cover</button>
+        <span class="buy-status" id="b-status" role="status" aria-live="polite"></span>
+      </div>
+      <p class="buy-pending" id="b-pending" hidden></p>
+      <p class="buy-hint" id="b-hint"></p>
+
+      <div class="buy-note" id="b-note">
+        <b>What happens when you press Buy:</b> the page re-reads the contract's own quote and re-checks the
+        destination's deployed module, then your wallet asks you to approve a single <code>buy_cover</code> call
+        with exactly that premium attached, sent to the address shown above. If you decline, nothing happens. If
+        the contract refuses (capacity, bounds, pause), you see the contract's own reason and no policy is created.
+      </div>
+
+      <div class="buy-result" id="b-result" hidden></div>
+    </div>
+  </section>
+
+  <!-- ================= AUTONOMOUS AGENT ================= -->
+  <section class="wrap band" id="agent" aria-labelledby="agent-h">
+    <div class="sect-head">
+      <h2 id="agent-h">An autonomous agent can buy cover too</h2>
+      <p class="sect-note">The same contract, driven by software instead of a person. The agent has its own account and its own key; a human sets hard spending limits in advance. This console evaluates a purchase with the agent's own spending-policy engine, read-only in your browser — or connect a local agent service you run yourself to watch it act.</p>
+    </div>
+
+    <div class="agent" id="agent-panel">
+      <div class="agent-head">
+        <div>
+          <h3>Agent console</h3>
+          <p class="buy-sub">Public mode evaluates a purchase with the same <b>spending-policy engine</b> the agent service runs — read-only, in your browser, with no key and nothing signed. Local mode connects to an agent service you run yourself (see <code>agent/README.md</code>) to watch it decide and buy within limits.</p>
+        </div>
+        <span class="mode-switch" role="group" aria-label="Agent mode">
+          <button class="btn-s" type="button" data-mode="readonly" aria-pressed="true">Public (read-only)</button>
+          <button class="btn-s" type="button" data-mode="local" aria-pressed="false">Local service</button>
+        </span>
+      </div>
+
+      <div class="agent-grid">
+        <div class="qrow">
+          <label for="a-product">Product for the agent</label>
+          <select id="a-product"></select>
+        </div>
+        <div class="qrow" id="a-url-wrap" hidden>
+          <label for="a-url">Local agent service URL</label>
+          <input id="a-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="your local agent URL" value="" />
+          <span class="sub">A service you run on your own machine (see <code>agent/README.md</code>). Not used by the public site.</span>
+        </div>
+      </div>
+
+      <div class="agent-actions">
+        <button id="a-connect" class="btn" type="button" hidden>Connect to agent</button>
+        <button id="a-decide" class="btn" type="button">Evaluate with agent policy</button>
+        <button id="a-buy" class="btn" type="button" hidden>Agent buys this cover</button>
+        <button id="a-kill" class="btn" type="button" hidden>Emergency stop</button>
+        <span class="buy-status" id="a-status" role="status" aria-live="polite"></span>
+      </div>
+
+      <div class="agent-state" id="a-state" hidden></div>
+      <div class="agent-log" id="a-log" hidden></div>
+
+      <div class="buy-note" id="a-note">
+        <b>What the agent can do.</b> It can read the contract and call <code>buy_cover</code>. It cannot call any
+        owner-only method, and every purchase is checked against the spending limits before anything is sent.
+        If a limit refuses the purchase, no transaction is created and no funds move. Public mode holds no key
+        and signs nothing; only a local service you run can send a purchase.
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="wrap band" aria-labelledby="dash-h">
+    <div class="sect-head">
+      <h2 id="dash-h">Can the pool pay what it has promised?</h2>
+      <p class="sect-note">The pool's job is to honour every policy it has written. These are its figures, read live from the contract.</p>
+    </div>
+    <div class="card pad">
+      <div class="solv-top">
+        <div>
+          <p class="lbl">Capital backing policies</p>
+          <p class="big" id="capital">—<span class="u">NEAR</span></p>
+          <p class="kicker" style="margin-top:8px">Total capital in the pool. Deposits and premiums, less what has already been paid out.</p>
+        </div>
+        <div>
+          <p class="lbl">Reserved for potential payouts</p>
+          <p class="big" id="reserved" style="color:var(--accent)">—<span class="u">NEAR</span></p>
+          <p class="kicker" style="margin-top:8px">Set aside the moment each policy was bought, so it cannot be withdrawn while the policy is live.</p>
+        </div>
+      </div>
+      <div style="margin-top:22px">
+        <div class="bar" role="img" aria-labelledby="barlbl">
+          <div id="fill" class="fill" style="width:0%"></div>
+        </div>
+        <div class="bar-cap">
+          <span id="barlbl">reserved —% of capital</span>
+          <span id="available-cap">free to underwrite —</span>
+        </div>
+        <div class="bar-key">
+          <span><span class="sw a"></span>Reserved for outstanding policies</span>
+          <span><span class="sw b"></span>Free capital, available to underwrite new cover</span>
+        </div>
+      </div>
+      <div style="margin-top:20px">
+        <div class="inv ok" id="inv-solvent">
+          <span class="glyph" id="inv-solvent-g" aria-hidden="true">?</span>
+          <div>
+            <div class="name">reserved ≤ capital <span class="val" id="inv-solvent-v">…</span></div>
+            <p class="desc">Re-checked on-chain after every state change. If it could ever be false the pool would be promising money it does not hold — so the contract refuses the transaction instead.</p>
+          </div>
+        </div>
+        <div class="inv ok" id="inv-recon">
+          <span class="glyph" id="inv-recon-g" aria-hidden="true">?</span>
+          <div>
+            <div class="name">reconcile <span class="val" id="inv-recon-v">…</span></div>
+            <p class="desc" id="recon-desc">Every NEAR in the pool is accounted for by an identity computed on-chain, not asserted here.</p>
+          </div>
+        </div>
+      </div>
+      <div class="fresh" id="fresh" role="status" aria-live="polite">
+        <span id="fresh-dot" class="dot load"></span><span id="fresh-text">Reading the contract…</span>
+      </div>
+    </div>
+
+    <div class="figs" id="figs" aria-label="Pool figures" style="margin-top:18px">
+      <div><p class="k">Free capital to underwrite</p><p class="v" id="fig-avail">—</p></div>
+      <div><p class="k">Policies in force</p><p class="v" id="fig-active">—</p></div>
+      <div><p class="k">Premiums collected</p><p class="v" id="fig-premiums">—</p></div>
+      <div><p class="k">Paid to beneficiaries</p><p class="v" id="fig-paid">—</p></div>
+      <div><p class="k">Deposited by providers</p><p class="v" id="fig-deposited">—</p></div>
+      <div><p class="k">Withdrawn by providers</p><p class="v" id="fig-withdrawn">—</p></div>
+    </div>
+
+    <div class="glossary">
+      <div><b>Capital</b> is what the pool holds. <b>Reserved</b> is the part already promised to live policies and unavailable to withdraw. <b>Free capital</b> is what remains to underwrite new cover. <b>Reconcile</b> checks that capital equals deposits − withdrawals + premiums + forfeited bonds − payouts.</div>
+    </div>
+  </section>
+
+  <!-- ================= POLICIES ================= -->
+  <section class="wrap band" aria-labelledby="pol-h">
+    <div class="sect-head">
+      <h2 id="pol-h">Policies written</h2>
+      <p class="sect-note">Cover in force and cover settled. Payout, premium and status are contract state; nothing is inferred.</p>
+    </div>
+    <div class="panel" id="policies">
+      <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="sr">Loading policies…</p>
+    </div>
+  </section>
+
+  <!-- ================= ORACLE ================= -->
+  <section class="wrap band" aria-labelledby="obs-h">
+    <div class="sect-head">
+      <h2 id="obs-h">Observations &amp; disputes</h2>
+      <p class="sect-note" id="obs-note">Signed index readings. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected and can never settle a policy.</p>
+    </div>
+    <div class="panel" id="observations">
+      <div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="sr">Loading observations…</p>
+    </div>
+  </section>
+
+  <!-- ================= TRUST ================= -->
+  <section class="wrap band" aria-labelledby="trust-h">
+    <div class="sect-head">
+      <h2 id="trust-h">How this differs from a traditional claim</h2>
+      <p class="sect-note">Not that one is better in every case — they answer different questions. A traditional policy assesses a loss after the fact; Overcover settles a condition defined in advance.</p>
+    </div>
+    <div class="vs">
+      <div class="trad">
+        <p class="h">A traditional claim</p>
+        <ul>
+          <li>The loss is reported, then assessed by an adjuster.</li>
+          <li>The payout is decided after the event, at someone's discretion.</li>
+          <li>Payment arrives on a queue measured in weeks.</li>
+          <li>The policy wording is long, and its interpretation is contestable.</li>
+        </ul>
+      </div>
+      <div class="para">
+        <p class="h">How Overcover settles</p>
+        <ul>
+          <li>The trigger is a public reading, fixed in the product before you buy.</li>
+          <li>Eligibility is a comparison — reading against trigger — not a judgement call.</li>
+          <li>The payout is reserved from capital the pool already holds.</li>
+          <li>Settlement can be replayed and checked by anyone, on-chain.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">1</span>Defined conditions</p><p class="cd">The city, index, trigger, premium and payout bounds are published before purchase and cannot change afterwards. There is no re-pricing after the fact.</p></div>
+      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">2</span>Reserved payout</p><p class="cd">The moment a policy is bought, its payout is reserved. The contract refuses any transaction that would leave the pool promising more than it holds.</p></div>
+      <div class="ctrl"><p class="ct"><span class="i" aria-hidden="true">3</span>Bonded, challengeable reading</p><p class="cd" id="ctrl-oracle">The attestor's reading is signed and verified on-chain, and anyone may dispute it with a bond. A disputed reading cannot settle a policy.</p></div>
+    </div>
+
+    <div class="disclose">
+      <h3>What you should know before trusting this</h3>
+      <ul>
+        <li><b>Testnet only, unaudited.</b> This runs on NEAR testnet with test funds. The contract has not been professionally audited and is not for real money.</li>
+        <li id="disc-oracle"><b>Single trusted attestor.</b> The index reading is currently signed by one key, not a decentralised oracle. It can be challenged, but the challenge is not yet trustless.</li>
+        <li id="disc-resolvers"><b>The owner resolves disputes.</b> Step 06 is a human decision by the contract owner. The owner has no power to move pool capital, but it does decide disputes.</li>
+        <li><b>60-second challenge window.</b> The live demonstration uses a 60-second window; a production deployment would use a longer one.</li>
+        <li><b>Parametric, not indemnity.</b> A payout follows the reading meeting the trigger. It does not compensate an assessed loss, and a loss that does not meet the trigger is not covered.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= PROOF ================= -->
+  <section class="wrap band" aria-labelledby="proof-h">
+    <div class="sect-head">
+      <h2 id="proof-h">Check it for yourself</h2>
+      <p class="sect-note">Everything above is a direct read. Reproduce it, or check it on a block explorer, without trusting this page.</p>
+    </div>
+    <!-- Security status of the contract this page reads, filled from the deployed
+         module's code hash: the hardened build refuses a third-party migrate();
+         the legacy build does not. Hidden until a read tells us which we are on.
+         Kept here with the proof, not above the hero: it is evidence, not the pitch. -->
+    <details id="sec-banner" class="sec-status" hidden>
+      <summary>
+        <span class="tag" id="sec-tag">—</span>
+        <span id="sec-summary">Contract security status</span>
+      </summary>
+      <div class="sec-body">
+        <p id="sec-text">—</p>
+        <dl class="sec-facts" id="sec-facts" hidden></dl>
+      </div>
+    </details>
+    <div class="proof">
+      <div>
+        <p class="lbl">Contract account · NEAR testnet</p>
+        <p class="val"><a id="cid" href="#" rel="noopener">—</a></p>
+        <div class="copy-row"><button class="btn-s" id="copy-cid" type="button">Copy account id</button><span class="copied" id="copied-cid" role="status"></span></div>
+        <p class="lbl" style="margin-top:16px">Deployed code hash</p>
+        <p class="val" id="codehash">—</p>
+        <p class="lbl" style="margin-top:16px" id="oracle-label">Attestor · dispute bond · challenge window</p>
+        <p class="val" id="attestor">—</p>
+      </div>
+      <div>
+        <p class="lbl">Pool identity, computed on-chain</p>
+        <p class="eq" id="eq" tabindex="0" role="region" aria-label="Pool identity, computed on-chain">—</p>
+        <p class="lbl" style="margin-top:16px">Data source</p>
+        <p class="val">Public NEAR testnet JSON-RPC (<span id="src-list">—</span>), <code>call_function</code> views. No server, no API key.</p>
+        <p class="lbl" style="margin-top:16px">Reproduce these figures</p>
+        <code class="cmd" id="cmd" tabindex="0" role="region" aria-label="Reproduce these figures">…</code>
+        <div class="copy-row"><button class="btn-s" id="copy" type="button">Copy command</button><span class="copied" id="copied" role="status"></span></div>
+        <p class="lbl" style="margin-top:16px">Machine-readable catalogue (for agents)</p>
+        <p class="val"><a href="/products.json">products.json</a> · <a href="/products.schema.json">schema</a> — every product, the trigger rule, the premium formula and the exact <code>buy_cover</code> call shape, generated from this contract, not written by hand.</p>
+      </div>
+    </div>
+    <div class="proof" style="margin-top:12px">
+      <div>
+        <p class="lbl">Verified links</p>
+        <div class="links" id="explorer-links"><a href="#" rel="noopener">Contract account on NEAR Blocks</a></div>
+      </div>
+      <div>
+        <p class="lbl">Sample settlements from the recorded demo</p>
+        <div class="links" id="demo-links"><span class="sub" style="font-size:12.5px">Loading…</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap band" id="status" aria-labelledby="status-h">
+    <div class="sect-head">
+      <div>
+        <p class="eyebrow">Honest deployment status</p>
+        <h2 id="status-h">What is live, what is not, and what is blocked</h2>
+      </div>
+      <p class="sect-note">The product vision is fixed; its deployment is not yet complete. This ledger separates code that exists from code that is deployed, and names every external authority it depends on. It is updated by hand and does not change without evidence.</p>
+    </div>
+    <div class="status-table scroll">
+      <table>
+        <caption class="sub" style="text-align:left;padding:10px 14px 0;font-size:12.5px">Deployment status of each capability. “Live” means verified against the deployed contract on NEAR testnet; it does not mean audited.</caption>
+        <thead>
+          <tr><th scope="col">Capability</th><th scope="col">Status</th><th scope="col">Evidence</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Capital pool, policy purchase, reserved payout, oracle quorum, bonded dispute, deterministic settlement</td>
+            <td><span class="st live">Live · testnet</span></td>
+            <td>The full lifecycle runs on-chain against the contract this page reads. Every figure on this page is a direct contract read.</td>
+          </tr>
+          <tr>
+            <td>SEC-1 legacy <code>migrate()</code> guard (a third party cannot seize the contract)</td>
+            <td><span class="st live">Live · testnet</span></td>
+            <td>Deployed to <code>contract.ovc-v3-ctl-2f6c4c.testnet</code> (code hash <code>CQR8x1kW…</code>, wasm sha256 <code>a97034e6…</code>), proven 40/40 by <code>npm run verify:controlled-v3</code>. Closing it on the <em>legacy</em> v1 address still needs that account's owner key (see below).</td>
+          </tr>
+          <tr>
+            <td>SEC-6/7/9 settlement fixes (release reserved capital on a terminal, no-pay settlement)</td>
+            <td><span class="st prototype">Built, not deployed</span></td>
+            <td>This source builds reproducibly to wasm sha256 <code>811e0427…</code>; the live v3 module (<code>a97034e6…</code>) predates it. The code-only, state-preserving redeploy is prepared and reversible but needs the operator signing key. <code>npm run verify:proof</code> reports <code>SOURCE AHEAD OF DEPLOYMENT</code>.</td>
+          </tr>
+          <tr>
+            <td>Legacy v1 containment (<code>set_paused</code>)</td>
+            <td><span class="st blocked">Blocked</span></td>
+            <td>The legacy address <code>contract.attestor-overcover.testnet</code> is read-only here and buying is refused. Contract-level pausing needs the legacy owner key, which the deployment automation does not hold. See <a href="https://github.com/itzebe/overcover/blob/main/docs/AUTHORITY_RECOVERY.md" rel="noopener">authority recovery</a>.</td>
+          </tr>
+          <tr>
+            <td>Human purchase of cover on the hardened module</td>
+            <td><span class="st live">Available · testnet</span></td>
+            <td>The console signs one <code>buy_cover</code> against the live v3 account with the visitor's own wallet. The human purchase recorded in the project history was made against the <em>legacy</em> module; it is not evidence of a purchase on v3, and a recorded human v3 purchase is still outstanding.</td>
+          </tr>
+          <tr>
+            <td>Hardware-attested external observations (TDX adapter)</td>
+            <td><span class="st prototype">Prototype · not deployed</span></td>
+            <td>The adapter builds reproducibly and its attestation path is tested, but it is not published. It is optional provenance: it never replaces operator signatures, oracle quorum or disputes.</td>
+          </tr>
+          <tr>
+            <td>Independent third-party security audit</td>
+            <td><span class="st planned">Not performed</span></td>
+            <td>No external audit has occurred. The adversarial suites and proofs in the repository are the project's own; they are not a substitute for an audit.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="wrap band" id="faq" aria-labelledby="faq-h">
+    <div class="sect-head">
+      <div>
+        <p class="eyebrow">Common questions</p>
+        <h2 id="faq-h">Frequently asked questions</h2>
+      </div>
+      <p class="sect-note">Short, direct answers to what operators, agents and reviewers ask first. Everything here is a property of the deployed contract, not a marketing claim.</p>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>What exactly does Overcover cover?</summary>
+        <p>A single, publicly measurable event: a named city's rainfall or temperature reading meeting a trigger fixed in the product before you buy, on an agreed date. If the reading meets the trigger the policy pays its reserved payout; if it does not, it pays nothing and the premium is retained by the pool. It is parametric, not indemnity &mdash; it does not assess a loss after the fact.</p>
+      </details>
+      <details>
+        <summary>Who is Overcover for?</summary>
+        <p>Operators whose revenue depends on a condition they do not control and cannot wait weeks to settle &mdash; growers and agricultural suppliers, event and outdoor operators, logistics and cold-chain routes &mdash; and the software agents that run them. It is a poor fit for a loss that needs assessing after the fact.</p>
+      </details>
+      <details>
+        <summary>How is the payout guaranteed?</summary>
+        <p>The moment a policy is bought, its maximum payout is reserved from the pool and cannot be withdrawn while the policy is live. The contract re-checks <code>reserved &le; capital</code> after every state change and refuses any transaction that would leave the pool promising more than it holds. The pool identity <code>capital = deposits &minus; withdrawals + premiums + forfeited bonds &minus; payouts</code> is computed on-chain and shown live.</p>
+      </details>
+      <details>
+        <summary>How does an autonomous agent buy cover?</summary>
+        <p>The agent has its own NEAR account and key, and a human sets hard spending limits in advance. It reads the same machine-readable catalogue (<code>products.json</code>) a person reads, calls the contract's own <code>quote</code> view, and signs a single <code>buy_cover</code> call &mdash; identical to the one a human wallet signs. The public console can evaluate a purchase with the agent's spending-policy engine read-only, but it holds no key and signs nothing.</p>
+      </details>
+      <details>
+        <summary>Who decides the reading, and can it be disputed?</summary>
+        <p>A reading is finalised only by a quorum of independent operators who each sign with their own key; no single operator and not the owner can set the value alone. For a short window anyone may dispute a reading by posting a bond and a counter-value. A quorum of independent resolvers &mdash; separate from the operators, and unable to vote twice &mdash; decides; the owner cannot resolve a dispute alone.</p>
+      </details>
+      <details>
+        <summary>How is settlement verified?</summary>
+        <p>Settlement is a single comparison, reading against trigger, run once when the challenge window has passed. The payout, the released reservation and the pool identity are all contract state, readable from public JSON-RPC without trusting the page. The console reproduces every figure from a public RPC endpoint, and a failed read is shown as stale or &ldquo;no data&rdquo; &mdash; never as live.</p>
+      </details>
+      <details>
+        <summary>Which NEAR contract is current, and which is legacy?</summary>
+        <p>The current, hardened contract &mdash; the default for new cover &mdash; is <code>contract.ovc-v3-ctl-2f6c4c.testnet</code>. The original v1 module lives at <code>contract.attestor-overcover.testnet</code>; it is readable for the record but is not a purchase destination, and the console labels it &ldquo;Legacy build&rdquo; and disables buying there. The console decides which is which by reading the deployed code hash, not from a label on the page.</p>
+      </details>
+      <details>
+        <summary>Is this ready for real money?</summary>
+        <p>No. Overcover runs on NEAR testnet with test funds only, and the contract has not been professionally audited. It is a working prototype: the full lifecycle &mdash; purchase, oracle quorum, bonded dispute, settlement and pool accounting &mdash; runs on-chain, but it is not for real funds yet.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap f-in">
+    <div class="f-l">
+      <h2>Overcover</h2>
+      <p>Parametric insurance for businesses that cannot afford to wait for a claims process. Cover is defined in advance, the payout is reserved from a capital pool, and settlement follows a signed public reading — read live from the contract, with nothing to take on trust.</p>
+    </div>
+    <div class="f-col">
+      <h3>Understand the cover</h3>
+      <a href="#what-h">What it covers</a>
+      <a href="#how-h">How a claim settles</a>
+      <a href="#cover">Cover available</a>
+      <a href="#factory">Insurance factory</a>
+      <a href="#quote-h">Buy cover</a>
+      <a href="#agent">For agents</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="f-col">
+      <h3>Verify</h3>
+      <a id="f-cid" href="#" rel="noopener">Contract on NEAR Blocks</a>
+      <a href="https://github.com/itzebe/overcover" target="_blank" rel="noopener">Source repository</a>
+      <a href="#proof-h">Reproduce the figures</a>
+      <a href="#trust-h">Disclosures</a>
+    </div>
+  </div>
+  <div class="wrap f-bot">
+    <span>Overcover · programmable parametric risk · MIT</span>
+    <span>Testnet only — no real funds. Figures are contract state; if a read fails, the page says so instead of showing a stale number as live.</span>
+  </div>
+</footer>
+
+<dialog id="wallet-dialog" class="wp-dialog" aria-labelledby="wp-title" aria-describedby="wp-desc">
+  <div class="wp-box">
+    <form method="dialog" class="wp-head">
+      <h2 id="wp-title">Connect a wallet</h2>
+      <button class="btn-s" type="submit" data-wallet-close aria-label="Close dialog">Close</button>
+    </form>
+    <p class="wp-sub" id="wp-desc">A NEAR wallet holds your account and signs transactions. Overcover never sees your key — you approve each action inside the wallet.</p>
+    <div id="wallet-choices"></div>
+    <p class="wp-status" id="wallet-picker-status" role="status" aria-live="polite"></p>
+    <div class="wp-foot">
+      <a href="#cover" data-buy-jump>Not sure yet? See what you can cover →</a>
+    </div>
+  </div>
+</dialog>
+
+
+<script src="vendor/wallet-bundle.js"></script>
+<script src="vendor/policy.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // Public, CORS-enabled NEAR testnet endpoints. rpc.testnet.near.org is deliberately
+  // absent: it is deprecated and blocks browser requests via CORS.
+  var RPC = [
+    "https://test.rpc.fastnear.com",
+    "https://rpc.testnet.fastnear.com",
+    "https://near-testnet.drpc.org",
+  ];
+  // The contracts this console will sign against, and the module each one runs.
+  // A signature is only ever offered for an address whose deployed code hash
+  // matches the entry here — an allowlist of (address, expected module), not a
+  // label. New purchases default to the HARDENED address; the legacy address
+  // remains readable, but its buy panel is blocked and labelled.
+  var HARDENED_CONTRACT = "contract.ovc-v3-ctl-2f6c4c.testnet";
+  var LEGACY_CONTRACT = "contract.attestor-overcover.testnet";
+  var TRUSTED = {};
+  // Approved modules per deployment. More than one build is accepted so a
+  // code-only hardening deploy (which changes the code hash but not the account)
+  // does not lock buying while the console catches up. The live module and the
+  // SEC-6/7/9 hardening are both accepted for the hardened address; drop the
+  // superseded hash once the new module is live and verified.
+  TRUSTED[HARDENED_CONTRACT] = [
+    "CQR8x1kWkr2zmCWsc5iZYpPPDTcBt5WdBvqAgw7HSvWL", // live module (SEC-1 hardened)
+    "9h296MCND93dzHQn4vVUeEVai3VuohDbo9VJFntpT45C", // SEC-6/7/9 hardening, wasm sha256 811e0427…
+  ];
+  TRUSTED[LEGACY_CONTRACT] = ["36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R"];
+  var DEFAULT_CONTRACT = HARDENED_CONTRACT;
+
+  // ?contract= selects which deployment to READ. A syntactically valid NEAR
+  // account id is accepted so a judge can point the console at any deployment;
+  // whether it may be SIGNED against is decided later, from its code hash.
+  // Anything that is not account-shaped is ignored (we fall back to the default)
+  // rather than fetched, so a malformed value can never steer the read.
+  var ACCOUNT_ID_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
+  var requestedContract = new URLSearchParams(location.search).get("contract");
+  var CONTRACT = (requestedContract && ACCOUNT_ID_RE.test(requestedContract) && requestedContract.length <= 64)
+    ? requestedContract : DEFAULT_CONTRACT;
+  var EXPLORER = "https://testnet.nearblocks.io";
+
+  // Trust state of the contract currently being read. "unknown" until a code
+  // hash is read back and checked against TRUSTED; the buy button stays blocked
+  // until it is "hardened".
+  var trust = { contract: CONTRACT, state: "unknown", codeHash: null, reason: "" };
+  function trustFor(contractId, codeHash) {
+    var expected = TRUSTED[contractId];
+    if (!expected) return { state: "untrusted", codeHash: codeHash || null, reason: "not an approved Overcover address" };
+    if (!codeHash) return { state: "unknown", codeHash: null, reason: "its deployed module has not been read yet" };
+    if (expected.indexOf(codeHash) !== -1) {
+      return { state: contractId === LEGACY_CONTRACT ? "legacy" : "hardened", codeHash: codeHash, reason: "" };
+    }
+    return { state: "untrusted", codeHash: codeHash, reason: "its deployed module does not match the approved build" };
+  }
+
+  // A canonical product has a human id (e.g. "rain-lagos"); the throwaway rows the
+  // demo generated have machine ids like "p-1794315395272-3". They are real contract
+  // state, so they are shown — but folded away so the canonical cover stays legible.
+  var MACHINE_ID = /^p-\d+-\d+$/;
+
+  var el = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  // A URL from the discovery feed is rendered as a link. esc() stops attribute
+  // break-out but not a javascript:/data: scheme, so only http(s) survives; any
+  // other value renders the label as plain text instead of a live link.
+  var safeUrl = function (u) { return /^https?:\/\//i.test(String(u)) ? esc(u) : ""; };
+  var cap = function (s) { s = String(s); return s.charAt(0).toUpperCase() + s.slice(1); };
+  var big = function (y) { try { return BigInt(y); } catch (e) { return null; } };
+  var near = function (y) { var b = big(y); return b === null ? NaN : Number(b) / 1e24; };
+  var fmt = function (y, d) { var v = near(y); return isFinite(v) ? v.toFixed(d === undefined ? 4 : d) : "—"; };
+  var pct = function (a, b) { var n = near(a), d = near(b); return d > 0 ? (n / d) * 100 : 0; };
+  var mm = function (t) { return (Number(t) / 10).toFixed(1) + " mm"; };
+  // Metric-aware value formatting. The metric carries the unit and the trigger
+  // direction, so nothing here assumes rainfall — but when the contract is the
+  // legacy single-index build (no metric metadata), the defaults below reproduce
+  // exactly the rainfall semantics those products use.
+  var METRIC = {};
+  var OPERATORS = [];
+  var CONTRACT_V2 = false;
+  var unitName = function (metricId) {
+    var m = METRIC[metricId];
+    return String((m && m.unit) || "mm/10").replace(/\/\s*10$/, "");
+  };
+  var fmtVal = function (tenths, metricId) {
+    return (Number(tenths) / 10).toFixed(1) + " " + unitName(metricId);
+  };
+  var utc = function (s) { return new Date(Number(s) * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC"; };
+  var hhmm = function (ms) { return new Date(ms).toISOString().slice(11, 19) + " UTC"; };
+  var shortAcct = function (a) { a = String(a || ""); return a.length > 26 ? a.slice(0, 12) + "…" + a.slice(-9) : a; };
+
+  // The contract returns u128 money fields (min_payout, max_payout, reserved,
+  // max_total_coverage, payout, premium) as bare JSON numbers. JSON.parse rounds
+  // any integer above 2^53, so 1 NEAR becomes 999999999999999983222784 and an
+  // exact bound check goes wrong. This parser keeps an oversized integer literal
+  // as a string and a safe one as a number, so BigInt() reproduces the on-chain
+  // value exactly while small integers stay numbers.
+  var MAX_SAFE_BIG = BigInt(Number.MAX_SAFE_INTEGER);
+  function parseBigIntJson(text) {
+    var i = 0, n = text.length;
+    function fail(m) { throw new Error(m + " at offset " + i); }
+    function skipWs() { while (i < n && " \t\n\r".indexOf(text[i]) >= 0) i++; }
+    function parseString() {
+      i++;
+      var out = "";
+      for (;;) {
+        if (i >= n) fail("unterminated string");
+        var c = text[i++];
+        if (c === '"') return out;
+        if (c === "\\") {
+          var e = text[i++];
+          if (e === "u") { out += String.fromCharCode(parseInt(text.slice(i, i + 4), 16)); i += 4; }
+          else if (e === "n") out += "\n";
+          else if (e === "t") out += "\t";
+          else if (e === "r") out += "\r";
+          else if (e === "b") out += "\b";
+          else if (e === "f") out += "\f";
+          else out += e;
+        } else out += c;
+      }
+    }
+    function parseNumber() {
+      var start = i;
+      if (text[i] === "-") i++;
+      while (i < n && text[i] >= "0" && text[i] <= "9") i++;
+      if (text[i] === "." || text[i] === "e" || text[i] === "E") {
+        while (i < n && "0123456789eE+-.".indexOf(text[i]) >= 0) i++;
+        return Number(text.slice(start, i));
+      }
+      var literal = text.slice(start, i);
+      var b = BigInt(literal);
+      return (b > MAX_SAFE_BIG || b < -MAX_SAFE_BIG) ? literal : Number(literal);
+    }
+    function parseValue() {
+      skipWs();
+      var c = text[i];
+      if (c === "{") {
+        i++; var obj = {}; skipWs();
+        if (text[i] === "}") { i++; return obj; }
+        for (;;) {
+          skipWs();
+          if (text[i] !== '"') fail("expected object key");
+          var key = parseString(); skipWs();
+          if (text[i] !== ":") fail("expected ':'");
+          i++; obj[key] = parseValue(); skipWs();
+          if (text[i] === ",") { i++; continue; }
+          if (text[i] === "}") { i++; return obj; }
+          fail("expected ',' or '}'");
+        }
+      }
+      if (c === "[") {
+        i++; var arr = []; skipWs();
+        if (text[i] === "]") { i++; return arr; }
+        for (;;) {
+          arr.push(parseValue()); skipWs();
+          if (text[i] === ",") { i++; continue; }
+          if (text[i] === "]") { i++; return arr; }
+          fail("expected ',' or ']'");
+        }
+      }
+      if (c === '"') return parseString();
+      if (c === "-" || (c >= "0" && c <= "9")) return parseNumber();
+      if (text.slice(i, i + 4) === "true") { i += 4; return true; }
+      if (text.slice(i, i + 5) === "false") { i += 5; return false; }
+      if (text.slice(i, i + 4) === "null") { i += 4; return null; }
+      fail("unexpected token");
+    }
+    var value = parseValue();
+    skipWs();
+    if (i !== n) fail("trailing content");
+    return value;
+  }
+
+  // A NEAR RPC returns call_function output as a byte array on most nodes and as a
+  // base64 string on others. Accepting only one shape blanked the whole page, so both
+  // are handled and anything else is a hard error rather than a silent blank.
+  function decode(result) {
+    var bytes;
+    if (Array.isArray(result)) bytes = Uint8Array.from(result);
+    else if (typeof result === "string") bytes = Uint8Array.from(atob(result), function (c) { return c.charCodeAt(0); });
+    else throw new Error("unexpected RPC result shape");
+    return parseBigIntJson(new TextDecoder().decode(bytes));
+  }
+
+  function post(url, params) {
+    return fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: "overcover", method: "query", params: params }),
+    }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }).then(function (j) {
+      if (j.error) throw new Error((j.error.cause && j.error.cause.name) || j.error.message || "RPC error");
+      if (!j.result) throw new Error("no result");
+      return j.result;
+    });
+  }
+
+  var rpcIndex = 0;
+  function withFailover(fn) {
+    var tries = 0;
+    function attempt() {
+      if (tries >= RPC.length) return Promise.reject(new Error("all RPC endpoints failed"));
+      var url = RPC[(rpcIndex + tries) % RPC.length];
+      tries++;
+      return fn(url).then(
+        function (r) { rpcIndex = (rpcIndex + tries - 1) % RPC.length; return r; },
+        attempt
+      );
+    }
+    return attempt();
+  }
+
+  function view(method, args) {
+    return withFailover(function (url) {
+      return post(url, {
+        request_type: "call_function", finality: "final",
+        account_id: CONTRACT, method_name: method,
+        args_base64: btoa(JSON.stringify(args || {})),
+      }).then(function (r) {
+        if (r.result === undefined) throw new Error("no result");
+        return decode(r.result);
+      });
+    });
+  }
+
+  function accountState() {
+    return withFailover(function (url) {
+      return post(url, { request_type: "view_account", finality: "final", account_id: CONTRACT })
+        .then(function (r) { return { code_hash: r.code_hash, amount: r.amount }; });
+    });
+  }
+
+  // ---------------------------------------------------------------- insurance wording
+
+  // The contract pays iff the validated reading meets the trigger, where the
+  // direction comes from the metric (Above: value >= threshold; Below: value <=
+  // threshold). The coverage statement is derived from that rule, not hand-written,
+  // so it is correct for every risk category, not just rainfall.
+  function coveredText(p) {
+    var m = METRIC[p.metric_id] || {};
+    var dir = m.direction || "Above";
+    var unit = unitName(p.metric_id);
+    var cat = m.category;
+    var risk = cat ? (cat + " (" + unit + ")") : ("rainfall (" + unit + ")");
+    var verb = dir === "Below" ? "falls to" : "reaches";
+    var suffix = dir === "Below" ? "or less" : "or more";
+    return "Pays if " + cap(p.city) + " " + risk + " " + verb + " " + fmtVal(p.threshold_tenths, p.metric_id) +
+      " " + suffix + " on the observation date.";
+  }
+
+  // A trigger pinned at its metric's own ceiling can only ever pay on the single
+  // ceiling reading: report_observation rejects any value above the metric's
+  // max_value and the trigger is at-or-above. That is a definition mistake, not a
+  // real offering. The ceiling is the metric's max_value; legacy v1 products carry
+  // no metric and use the rainfall bound (MAX_RAINFALL_TENTHS). Flag it from
+  // contract data rather than naming ids.
+  var PLAUSIBLE_CEILING_TENTHS = 5000;
+  function triggerAtCeiling(p) {
+    var m = METRIC[p.metric_id];
+    var ceiling = (m && m.max_value !== undefined) ? Number(m.max_value) : PLAUSIBLE_CEILING_TENTHS;
+    return Number(p.threshold_tenths) >= ceiling;
+  }
+  // The human-readable ceiling for a product's own metric (used in the disclosure
+  // copy), so a temperature product is never described in millimetres.
+  function ceilingLabel(p) {
+    var m = METRIC[p.metric_id];
+    var ceiling = (m && m.max_value !== undefined) ? Number(m.max_value) : PLAUSIBLE_CEILING_TENTHS;
+    return fmtVal(ceiling, p.metric_id) + " (" + metricLabel(p.metric_id) + ")";
+  }
+  // A named product is a real, contract-backed offering. Machine-generated ids
+  // (p-<ts>-<n>) are demo fixtures from the recorded cycle; a trigger pinned at the
+  // plausibility ceiling is a broken definition. Neither is offered as live cover.
+  function isNamed(p) { return !MACHINE_ID.test(p.id); }
+  function isFixture(p) { return MACHINE_ID.test(p.id) || triggerAtCeiling(p); }
+  function isSellable(p) { return isNamed(p) && !isFixture(p) && p.active !== false; }
+
+  function capacityLeft(p) {
+    var max = big(p.max_total_coverage) || 0n, res = big(p.reserved) || 0n;
+    return max > res ? max - res : 0n;
+  }
+
+  // ---------------------------------------------------------------- renderers
+
+  function term(k, v) { return '<div><p class="k">' + esc(k) + '</p><p class="v">' + v + "</p></div>"; }
+
+  function metricLabel(metricId) {
+    var m = METRIC[metricId];
+    return m && m.category ? m.category : "rainfall";
+  }
+
+  function productCard(p) {
+    var util = pct(p.reserved, p.max_total_coverage);
+    var left = capacityLeft(p);
+    var status = p.active === false
+      ? '<span class="tag paused">paused</span>'
+      : '<span class="tag available">available</span>';
+    return '<article class="card prod">' +
+      '<div class="head"><div class="top"><div>' +
+        "<h3>" + esc(cap(p.city)) + " " + esc(metricLabel(p.metric_id)) + "</h3>" +
+        '<p class="city">' + esc(p.id) + " · " + esc(cap(p.city)) + "</p>" +
+      "</div>" + status + "</div>" +
+      '<p class="covered">' + esc(coveredText(p)) + "</p></div>" +
+      '<div class="terms">' +
+        term("Trigger", fmtVal(p.threshold_tenths, p.metric_id)) +
+        term("Premium", (p.premium_bp / 100).toFixed(2) + "%") +
+        term("Max payout", fmt(p.max_payout, 2) + " <small>NEAR</small>") +
+        term("Min payout", fmt(p.min_payout, 2) + " <small>NEAR</small>") +
+        term("Capacity", fmt(p.max_total_coverage, 2) + " <small>NEAR</small>") +
+        term("Capacity left", fmt(left, 2) + " <small>NEAR</small>") +
+      "</div>" +
+      '<div class="cap">' +
+        '<div class="row"><span>Reserved ' + fmt(p.reserved, 2) + " NEAR</span><span>" + util.toFixed(0) + "% of capacity</span></div>" +
+        '<div class="capbar"><div class="cf" style="width:' + Math.min(100, util).toFixed(1) + '%"></div></div>' +
+        '<p class="lim">Parametric: pays on the reading meeting the trigger, not on an assessed loss.</p>' +
+        (triggerAtCeiling(p)
+          ? '<p class="lim warn">Definition problem: the trigger sits at this product\u2019s maximum plausible reading (' + esc(ceilingLabel(p)) + '), so it can only pay on that one reading. Shown for completeness, not offered as cover.</p>'
+          : "") +
+        '<p class="lim">Observation date must be in the future (at least ' + Math.max(OBS_DATE_BUFFER_SEC, Number(p.min_lead_sec) || 0) + "s after purchase).</p>" +
+      "</div></article>";
+  }
+
+  function productRow(p) {
+    var util = pct(p.reserved, p.max_total_coverage);
+    return "<tr>" +
+      "<td>" + esc(p.id) +
+        (p.active === false ? ' <span class="tag paused">paused</span>' : "") +
+        (triggerAtCeiling(p) ? ' <span class="tag nullified" title="Trigger sits at this product\'s maximum plausible reading, so it can only pay on that one reading">ceiling trigger</span>' : "") +
+      "</td>" +
+      '<td class="sub">' + esc(p.city) + "</td>" +
+      '<td class="sub">' + esc(metricLabel(p.metric_id)) + "</td>" +
+      '<td class="num">' + fmtVal(p.threshold_tenths, p.metric_id) + "</td>" +
+      '<td class="num">' + (p.premium_bp / 100).toFixed(2) + "%</td>" +
+      '<td class="num">' + fmt(p.max_payout, 2) + "</td>" +
+      '<td class="num"><span class="meter"><span class="track"><span class="m-fill" style="width:' + Math.min(100, util).toFixed(1) + '%"></span></span><span class="pct">' + fmt(p.reserved, 2) + " / " + fmt(p.max_total_coverage, 0) + "</span></span></td>" +
+      "</tr>";
+  }
+
+  var PROD_HEAD = '<thead><tr><th>Product</th><th>Index</th><th>Metric</th><th class="num">Trigger</th><th class="num">Premium</th><th class="num">Max payout</th><th class="num">Reserved / capacity</th></tr></thead>';
+
+  function renderProducts(list) {
+    if (!list.length) {
+      return '<div class="card"><div class="empty"><span class="e-t">No cover is available</span>Nothing can be bought until a risk product is published. A product fixes the city, index, trigger, premium and a capacity cap.</div></div>';
+    }
+    var canonical = list.filter(isSellable);
+    var fixtures = list.filter(function (p) { return !isSellable(p); });
+    var out = "";
+    if (canonical.length) {
+      out += '<div class="prod-grid">' + canonical.map(productCard).join("") + "</div>";
+    } else {
+      out += '<div class="card"><div class="empty"><span class="e-t">No cover is on offer right now</span>No active, payable product is published in the contract. The contract-backed definitions that exist are listed below as fixtures.</div></div>';
+    }
+    if (fixtures.length) {
+      out += '<div class="card" style="margin-top:20px"><details class="legacy"><summary>Show ' + fixtures.length +
+        " contract-backed test fixtures (demo cycle + definitions that cannot trigger \u2014 not current customer offerings)</summary>" +
+        '<div class="scroll" tabindex="0" role="region" aria-label="Test fixtures"><table><caption>Contract-backed test fixtures</caption>' +
+        PROD_HEAD + "<tbody>" + fixtures.map(productRow).join("") + "</tbody></table></div></details></div>";
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------ insurance factory
+  // The discovery feed (ui/factory.json) is the agent's *prepared* proposal: a
+  // real forecast + the deterministic risk rule + the evidence hash. Activation
+  // is NOT taken from the feed — it is read from the contract. A proposal whose
+  // evidence hash matches an activated product's on-chain `evidence_hash` is
+  // shown as ACTIVE; otherwise it stays PROPOSED. Nothing is claimed as active
+  // unless the contract says so.
+  // Read the discovery feed. A failure is returned as data (not thrown) so a
+  // missing feed never blanks the contract-backed sections of the page.
+  function loadFactoryFeed() {
+    return fetch("factory.json", { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).catch(function (e) {
+      return { error: e && e.message ? e.message : String(e), proposals: [] };
+    });
+  }
+
+  function matchActivated(proposal, products) {
+    return (products || []).filter(function (p) {
+      return p.evidence_hash && p.evidence_hash === proposal.evidence.hash;
+    })[0];
+  }
+
+  function factoryStatus(proposal, products) {
+    var act = matchActivated(proposal, products);
+    if (act) return { label: "ACTIVE", cls: "available", product: act, live: true };
+    return { label: "PROPOSED", cls: "due", product: null, live: false };
+  }
+
+  function renderFactory(feed, products, err) {
+    if (err) {
+      return '<div class="card"><div class="empty"><span class="e-t">Discovery feed unavailable</span>' +
+        "The agent's prepared proposal could not be read (" + esc(err) + "). Activated products are still read from the contract above; only the discovery feed is missing.</div></div>";
+    }
+    var proposals = (feed && feed.proposals) || [];
+    if (!proposals.length) {
+      return '<div class="card"><div class="empty"><span class="e-t">No emerging risk right now</span>' +
+        "The agent monitors real forecasts and only prepares a proposal when a forecast crosses a threshold. No city currently crosses its trigger.</div></div>";
+    }
+    return proposals.map(function (pr) {
+      var st = factoryStatus(pr, products);
+      var ev = pr.evidence;
+      var steps = ["DISCOVERED", "PROPOSED", "UNDERWRITING", "AWAITING CAPITAL", "ACTIVE"];
+      var reached = st.live ? 5 : 2; // the contract is the authority on ACTIVE
+      var track = steps.map(function (s, i) {
+        var on = i < reached ? " on" : "";
+        return '<li class="fstep' + on + '"' + (i < reached ? "" : ' aria-disabled="true"') + ">" + esc(s) + "</li>";
+      }).join("");
+      var terms = '<div class="terms">' +
+        term("Index", esc(metricLabel(pr.metric))) +
+        term("Trigger", fmtVal(pr.thresholdTenths, pr.metric) + " " + (pr.direction === "Above" ? "and above" : "and below")) +
+        term("Premium rate", (pr.premiumBp / 100).toFixed(2) + "%") +
+        term("Coverage from", utc(pr.coverageStartSec)) +
+        "</div>";
+      var evidence = '<div class="feat-ev">' +
+        '<p class="k">Evidence · ' + esc(ev.kind) + " (not an observation of an event that occurred)</p>" +
+        '<p class="v"><a href="' + safeUrl(ev.sourceUrl) + '" target="_blank" rel="noopener">' + esc(ev.source) + "</a> — " + esc(String(ev.raw)) + " " + esc(String(ev.unit).replace(/\/\s*10$/, "")) + " forecast for " + esc(ev.observedAt) + "</p>" +
+        '<p class="k">Evidence hash (recorded on-chain when activated)</p>' +
+        '<p class="v mono">' + esc(ev.hash) + "</p>" +
+        "</div>";
+      var activation = st.live
+        ? '<p class="lim ok">Activated on-chain as product <span class="mono">' + esc(st.product.id) + "</span>, proposed by <span class=\"mono\">" + esc(shortAcct(st.product.proposed_by)) + "</span>. It is purchasable above.</p>"
+        : '<p class="lim">Prepared, not yet activated. Submitting <span class="mono">propose_product</span> with a 0.1 NEAR stake lets the contract judge it. If it qualifies it activates immediately — no owner transaction.</p>';
+      return '<article class="card feat">' +
+        '<div class="head"><div class="top"><div>' +
+          "<h3>" + esc(cap(pr.city)) + " " + esc(metricLabel(pr.metric)) + " — emerging " + esc(pr.risk && pr.risk.direction === "Above" ? "excess" : "deficit") + "</h3>" +
+          '<p class="city">' + esc(pr.id) + " · " + esc(pr.risk ? pr.risk.rationale : "") + "</p>" +
+        "</div><span class=\"tag " + st.cls + "\">" + st.label + "</span></div>" +
+        '<ol class="ftrack" aria-label="Factory lifecycle">' + track + "</ol>" +
+        "</div>" +
+        terms + evidence + activation +
+        "</article>";
+    }).join("");
+  }
+
+
+  // The contract stores one field, `status`, which is exactly one of:
+  // "active" | "settled_paid" | "settled_no_pay". Those are the only states a
+  // policy can be in. To stay honest about a past-due policy the contract has not
+  // settled, derive a *display* state from the settlement rule
+  // (resolve: status==active AND now >= obs_date + settle_delay_sec) rather than
+  // claiming a settlement that has not happened. Every displayed value is
+  // contract state; the derived label only says what the contract permits next.
+  function policyDisplayStatus(pol, cfg) {
+    var raw = String(pol.status || "");
+    if (raw !== "active") return { label: raw.replace(/_/g, " "), cls: raw, derived: false };
+    var delay = Number((cfg && cfg.settle_delay_sec) || 0);
+    var eligible = Number(pol.obs_date) + delay <= Math.floor(Date.now() / 1000);
+    return eligible
+      ? { label: "settlement due \u2014 awaiting resolve()", cls: "due", derived: true }
+      : { label: "active \u2014 awaiting observation", cls: "active", derived: true };
+  }
+
+  function renderPolicies(list, cfg) {
+    if (!list.length) {
+      return '<div class="empty"><span class="e-t">No cover written yet</span>A business buys cover by paying the product premium; the payout is reserved from the pool at that moment.</div>';
+    }
+    var rows = list.slice().sort(function (a, b) { return b.id - a.id; }).map(function (p) {
+      var st = policyDisplayStatus(p, cfg);
+      return "<tr>" +
+        "<td>#" + esc(p.id) + "</td>" +
+        '<td class="sub">' + esc(p.product_id) + "</td>" +
+        '<td class="num">' + fmt(p.payout, 2) + "</td>" +
+        '<td class="num">' + fmt(p.premium, 4) + "</td>" +
+        '<td class="sub">' + esc(shortAcct(p.beneficiary || p.buyer)) + "</td>" +
+        '<td class="num sub">' + utc(p.obs_date) + "</td>" +
+        '<td><span class="tag ' + esc(st.cls) + '"' + (st.derived ? ' title="derived from the contract settlement rule, not a stored status"' : "") + ">" + esc(st.label) + "</span></td>" +
+        "</tr>";
+    }).join("");
+    return '<div class="scroll" tabindex="0" role="region" aria-label="Policies written"><table><caption>Policies written, with settlement status</caption><thead><tr>' +
+      '<th>Policy</th><th>Product</th><th class="num">Payout</th><th class="num">Premium</th>' +
+      '<th>Beneficiary</th><th class="num">Observation date</th><th>Status</th>' +
+      "</tr></thead><tbody>" + rows + "</tbody></table>" +
+      '<p class="lim">Status is the contract\u2019s own field. A policy the contract still holds as <em>active</em> past its observation date is shown as awaiting settlement, never as settled.</p></div>';
+  }
+
+  function renderObservations(list) {
+    if (!list.length) {
+      return '<div class="empty"><span class="e-t">No observations yet</span>Operators each submit a signed reading of a (metric, city, date); the contract verifies each signature and replay nonce' +
+        (CONTRACT_V2 ? ", and finalises the value only when a quorum of distinct operators agree." : ".") + "</div>";
+    }
+    var rows = list.slice().sort(function (a, b) { return b.reported_at - a.reported_at; }).map(function (o) {
+      var state = o.nullified ? "nullified" : o.disputed ? "challenged" : (CONTRACT_V2 ? "quorum" : "signed");
+      var cells = "";
+      if (CONTRACT_V2) cells += '<td class="sub">' + esc(metricLabel(o.metric_id)) + "</td>";
+      cells += '<td class="sub">' + esc(o.city) + "</td>" +
+        '<td class="num">' + fmtVal(o.value_tenths, o.metric_id) + "</td>";
+      if (CONTRACT_V2) cells += '<td class="num sub">' + esc(String(o.quorum || "—")) + " of " + esc(String(OPERATORS.length || o.quorum || "—")) + "</td>";
+      cells += '<td class="num sub">' + utc(o.obs_date) + "</td>" +
+        '<td class="num sub">' + utc(o.reported_at) + "</td>" +
+        '<td><span class="tag ' + state + '">' + state + "</span></td>";
+      return "<tr>" + cells + "</tr>";
+    }).join("");
+    var head = (CONTRACT_V2 ? "<th>Metric</th>" : "") + "<th>Index</th><th class=\"num\">Value</th>" +
+      (CONTRACT_V2 ? '<th class="num">Quorum</th>' : "") +
+      '<th class="num">Observed</th><th class="num">Reported</th><th>State</th>';
+    var label = CONTRACT_V2 ? "Quorum-finalised index observations" : "Signed index observations";
+    return '<div class="scroll" tabindex="0" role="region" aria-label="' + label + '"><table><caption>' + label + "</caption><thead><tr>" +
+      head + "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+  }
+
+  // When the contract is the v2 build (it exposes list_metrics), the oracle and
+  // dispute narrative is upgraded in place. Until then the page keeps the text
+  // that matches the contract actually deployed, so it never over-claims.
+  function applyContractVersion(cfg, metrics) {
+    var isV2 = Array.isArray(metrics) && metrics.length > 0 && cfg && typeof cfg.resolver_quorum === "number";
+    CONTRACT_V2 = isV2;
+    document.documentElement.setAttribute("data-contract", isV2 ? "v2" : "v1");
+    var lbl = el("oracle-label");
+    if (lbl) lbl.textContent = isV2
+      ? "Oracle quorum · resolvers · dispute bond · challenge window"
+      : "Attestor · dispute bond · challenge window";
+    if (!isV2) return;
+    var step4 = el("step-04"), step6 = el("step-06");
+    if (step4) {
+      step4.querySelector(".t").textContent = "The risk is observed by a quorum";
+      step4.querySelector(".d").textContent = "Independent operators each read a public index and sign the reading with their own key. The contract accepts a reading only if the signature verifies, the caller is a registered operator and the nonce is current. No single operator — and not the protocol owner — can set the value alone: an observation finalises only when a quorum of distinct operators agree.";
+      step4.querySelector(".meta").innerHTML = '<span class="chip actor">operators</span><span class="chip">submit_reading</span>';
+    }
+    if (step6) {
+      step6.querySelector(".t").textContent = "An independent quorum resolves the dispute";
+      step6.querySelector(".d").textContent = "A quorum of independent resolvers — separate from the operators who signed, and unable to vote twice — decides. Upholding the reading forfeits the challenger's bond into the pool; nullifying it voids the reading and returns the bond. The contract owner cannot resolve a dispute alone.";
+      step6.querySelector(".meta").innerHTML = '<span class="chip actor">resolvers</span><span class="chip">resolver_vote</span>';
+    }
+    var co = el("ctrl-oracle");
+    if (co) co.textContent = "Independent operators each sign the reading with their own key, and the contract finalises it only at quorum. Anyone may dispute a finalised reading with a bond, and an independent resolver quorum decides — not the operator, not the challenger, not the owner.";
+    var dOracle = el("disc-oracle");
+    if (dOracle) dOracle.innerHTML = "<b>Multi-operator oracle, quorum-finalised.</b> A reading is accepted only when a quorum of independent operators sign the same value within tolerance. No single operator, and not the owner, can set the index alone. The operators currently read one shared free upstream (Open-Meteo), so independent signing does not by itself make the data independent.";
+    var dRes = el("disc-resolvers");
+    if (dRes) dRes.innerHTML = "<b>Independent resolvers decide disputes.</b> Step 06 is decided by a quorum of resolvers who did not sign the reading and cannot vote twice. The owner cannot resolve a dispute alone, and has no power to move pool capital.";
+    var obsNote = el("obs-note");
+    if (obsNote) obsNote.innerHTML = "Readings finalised by a quorum of independent operators. A reading marked <em>challenged</em> was disputed; one marked <em>nullified</em> was rejected by the resolver quorum and can never settle a policy.";
+  }
+
+  // State the security status of the contract this page reads, from its own
+  // deployed code hash — not from a claim in the markup. The legacy build's
+  // `migrate()` is unauthenticated (any account could overwrite state); the
+  // hardened build refuses any caller but the contract itself. The disclosure
+  // and the buy gate are both driven by the SAME trust object, so a contract
+  // that is labelled untrusted is also un-signable — the label is never the only
+  // defence. A legacy or untrusted state opens the disclosure and is never
+  // collapsed while a purchase could be made.
+  function renderSecurityBanner(acct) {
+    var box = el("sec-banner"), tag = el("sec-tag"), text = el("sec-text");
+    var sum = el("sec-summary"), facts = el("sec-facts");
+    if (!box || !tag || !text) return;
+    var hash = acct && acct.code_hash ? String(acct.code_hash) : "";
+    trust = trustFor(CONTRACT, hash);
+    trust.contract = CONTRACT;
+    box.hidden = false;
+    box.className = "sec-status";
+    box.open = false;
+    var acctLink = '<a href="' + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) +
+      '" target="_blank" rel="noopener"><code>' + esc(CONTRACT) + "</code></a>";
+    function setFacts(rows) {
+      if (!facts) return;
+      facts.hidden = false;
+      facts.innerHTML = rows.map(function (r) {
+        return "<div><dt>" + esc(r[0]) + "</dt><dd>" + r[1] + "</dd></div>";
+      }).join("");
+    }
+    if (trust.state === "hardened") {
+      tag.textContent = "Hardened build";
+      if (sum) sum.textContent = "Migration guard verified";
+      text.innerHTML = "The live module blocks <code>migrate()</code> unless the contract calls itself, " +
+        "preventing third parties from replacing owner, oracle or pool state. This confirms the migration guard " +
+        "only; the later SEC-6/7/9 lifecycle hardening is a separate build and is not yet deployed. " +
+        acctLink + " is the address your wallet will sign against.";
+      setFacts([
+        ["Verified deployed code hash", "<code>" + esc(hash) + "</code>"],
+        ["Status", "Confirmed against the deployed module, not a label on this page."],
+      ]);
+    } else if (trust.state === "legacy") {
+      tag.textContent = "Legacy build";
+      box.className = "sec-status legacy";
+      box.open = true;
+      if (sum) sum.textContent = "Original module — new purchases blocked";
+      text.innerHTML = "This contract runs the <b>original</b> module (<code>" + esc(shortAcct(hash)) +
+        "</code>), whose <code>migrate()</code> is unauthenticated. Its history is preserved here for the record, " +
+        "but <b>new purchases are blocked on this address</b>. Buy on the hardened build at " +
+        '<a href="' + EXPLORER + "/account/" + encodeURIComponent(HARDENED_CONTRACT) + '" target="_blank" rel="noopener">' +
+        esc(HARDENED_CONTRACT) + "</a> — the default. To inspect this address, run the console with " +
+        "<code>?contract=" + esc(LEGACY_CONTRACT) + "</code>.";
+      setFacts([
+        ["Deployed code hash", "<code>" + esc(hash) + "</code>"],
+        ["Status", "Buying is refused on this address."],
+      ]);
+    } else if (trust.state === "untrusted") {
+      tag.textContent = "Untrusted build";
+      box.className = "sec-status legacy";
+      box.open = true;
+      if (sum) sum.textContent = "Not an approved Overcover address";
+      text.innerHTML = "This contract (<code>" + esc(shortAcct(CONTRACT)) + "</code>) is <b>not</b> an approved " +
+        "Overcover address, or its deployed module does not match the approved build. " +
+        "Nothing here is signed against it, and no purchase is offered. Treat it as unverified.";
+      setFacts([
+        ["Read code hash", "<code>" + esc(hash || "—") + "</code>"],
+        ["Status", "Not signed against; no purchase offered."],
+      ]);
+    } else {
+      tag.textContent = "Verifying…";
+      if (sum) sum.textContent = "Reading the deployed module";
+      text.innerHTML = "Reading the deployed module for <code>" + esc(shortAcct(CONTRACT)) +
+        "</code> to confirm it is an approved Overcover build. Buying is disabled until the module is verified.";
+      if (facts) facts.hidden = true;
+    }
+    updateBuyEnabled();
+  }
+
+  function setInvariant(prefix, ok) {
+    el(prefix).className = "inv " + (ok ? "ok" : "no");
+    el(prefix + "-g").textContent = ok ? "\u2713" : "\u2715";
+    el(prefix + "-v").textContent = ok ? "true" : "FALSE";
+  }
+
+  function setFreshness(state, detail) {
+    var dot = el("fresh-dot"), text = el("fresh-text");
+    var nd = el("dot"), nl = el("netlabel");
+    if (state === "live") {
+      dot.className = "dot live"; nd.className = "dot live"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>live';
+      text.innerHTML = "Live — read from the contract at <b>" + esc(detail) + "</b>. Re-checked every 15 seconds.";
+    } else if (state === "stale") {
+      dot.className = "dot stale"; nd.className = "dot stale"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>stale';
+      text.innerHTML = "Stale — the latest read failed, so the figures shown are the last good read at <b>" + esc(detail) + "</b>. Do not treat them as current.";
+    } else {
+      dot.className = "dot failed"; nd.className = "dot failed"; nl.innerHTML = '<span class="net-net">NEAR testnet · </span>unreachable';
+      text.textContent = "No data — every RPC endpoint failed. Nothing on this page is being shown as live.";
+    }
+  }
+
+  function showError(msg, haveData, lastOk) {
+    var slot = el("error-slot");
+    if (haveData) {
+      slot.innerHTML = '<div class="stale-note" role="alert" style="margin-top:18px"><span aria-hidden="true">!</span><div><b>Live read failed.</b> Showing the last successful read' + (lastOk ? " from " + esc(lastOk) : "") + '. Reason: <code>' + esc(msg) + "</code></div></div>";
+    } else {
+      slot.innerHTML = '<div class="fail-note" role="alert" style="margin-top:18px"><p class="ft">Could not read the contract</p><p class="fd">The page keeps retrying across three public RPC endpoints. If this persists, the contract id may be wrong or the endpoints may be rate-limiting. <code>' + esc(msg) + "</code></p></div>";
+    }
+  }
+  function clearError() { el("error-slot").innerHTML = ""; }
+
+  // When the very first read fails, the per-section placeholders ("Loading
+  // products…", a lone "—") would sit there forever, looking like a page that
+  // is still working. Say plainly that nothing loaded and what to do next.
+  function renderLoadFailed() {
+    var box = '<div class="card"><div class="empty"><span class="e-t">Could not load from the contract</span>' +
+      "The live read did not complete, so nothing is shown here rather than a stale or invented number. " +
+      "Use Refresh to try again.</div></div>";
+    el("products").innerHTML = box;
+    el("policies").innerHTML = box;
+    el("observations").innerHTML = box;
+    // The factory section is independent of the contract read: a failed contract
+    // read must not erase the agent's real discovery feed. It re-renders with an
+    // empty product list, so a proposal is never shown as ACTIVE by default.
+    if (el("factory-body")) el("factory-body").innerHTML = renderFactory(factoryFeed, [], null);
+    var sel = el("q-product");
+    if (sel) sel.innerHTML = "";
+    ["q-premium", "q-reserve", "q-rate", "q-capacity"].forEach(function (id) { if (el(id)) el(id).textContent = "—"; });
+    if (el("q-terms")) el("q-terms").innerHTML = "";
+    if (el("q-readonly")) el("q-readonly").innerHTML = "<b>Nothing to price.</b> The contract could not be read, so no quote is available.";
+  }
+
+  // ---------------------------------------------------------------- wallet
+
+  // The wallet bundle (ui/vendor/wallet-bundle.js) owns every interaction with a
+  // NEAR wallet extension. This code only reads its status and calls connect /
+  // signAndSend. It never sees a key: signing happens inside the extension.
+  var WALLET = window.OvercoverWallet || null;
+  // Bind the wallet to the contract this page is actually reading, so a
+  // signature can never target a different contract than the one shown.
+  if (WALLET && typeof WALLET.configure === "function") WALLET.configure(CONTRACT);
+  var walletState = { connected: false, accountId: null, networkMismatch: false };
+
+  function accountChip(a) {
+    return '<span class="acct" title="' + esc(a) + '">signed in as <b>' + esc(shortAcct(a)) + "</b></span>";
+  }
+
+  function renderWallet() {
+    var slots = ["wallet-slot", "buy-wallet-slot"];
+    for (var i = 0; i < slots.length; i++) {
+      var s = el(slots[i]);
+      if (!s) continue;
+      if (!WALLET) { s.innerHTML = ""; continue; }
+      if (walletState.connected) {
+        s.innerHTML = accountChip(walletState.accountId) + '<button class="btn-s" type="button" data-wallet="disconnect">Disconnect</button>';
+      } else {
+        s.innerHTML = '<button class="btn" type="button" data-wallet="connect">Connect wallet</button>';
+      }
+    }
+    updateBuyEnabled();
+  }
+
+  // ------------------------------------------------------------- wallet picker
+  // The picker is a modal so it appears where the user is looking, whether they
+  // clicked "Connect wallet" in the header or in the buy panel. It also states
+  // honestly which wallets this browser can actually complete, instead of
+  // offering a flow that dead-ends.
+
+  function walletDialog() { return el("wallet-dialog"); }
+  var walletOpener = null; // element to refocus when the dialog closes
+
+  function walletChoicesHTML(available) {
+    return available.map(function (m) {
+      var canUse = m.present !== false;
+      var note = m.present === false
+        ? '<span class="wp-note">not detected in this browser</span>'
+        : (m.extensionOnly ? '<span class="wp-note ok">browser extension detected</span>' : '<span class="wp-note ok">opens its own app or window</span>');
+      var install = m.present === false && m.downloadUrl
+        ? '<a class="wp-install" href="' + esc(m.downloadUrl) + '" target="_blank" rel="noopener">Install ' + esc(m.name) + " ↗</a>"
+        : "";
+      return '<div class="wp-opt' + (canUse ? "" : " wp-opt-off") + '">' +
+        '<button class="btn wp-pick" type="button" data-wallet-id="' + esc(m.id) + '"' + (canUse ? "" : " disabled") + ">" +
+        esc(m.name) + "</button>" + note + install + "</div>";
+    }).join("");
+  }
+
+  function renderWalletPicker() {
+    var host = el("wallet-choices");
+    if (!host) return;
+    if (!WALLET) {
+      host.innerHTML = '<p class="wp-empty">The wallet library did not load, so no wallet can be connected right now. Reload the page to try again.</p>';
+      return;
+    }
+    var st = WALLET.status();
+    if (!st.ready) {
+      host.innerHTML = '<p class="wp-empty">The wallet library is still starting. Try again in a moment.</p>';
+      return;
+    }
+    var available = st.available || [];
+    var usable = available.filter(function (m) { return m.present !== false; });
+    var intro = usable.length
+      ? "Choose a NEAR wallet. HERE Wallet signs you in with email or a social account inside its own app — no extension needed. Meteor Wallet is a browser extension. Overcover never sees your key."
+      : "None of the supported NEAR wallets were detected in this browser. Install Meteor Wallet below, or use HERE Wallet, which needs no extension — then try again.";
+    host.innerHTML = '<p class="wp-intro">' + intro + "</p>" + walletChoicesHTML(available);
+  }
+
+  function openWalletPicker() {
+    var d = walletDialog();
+    if (!d) return;
+    walletOpener = document.activeElement;
+    if (typeof d.showModal === "function") { if (!d.open) d.showModal(); }
+    else { d.setAttribute("open", ""); }
+    setWalletPickerStatus("");
+    renderWalletPicker();
+    var first = d.querySelector(".wp-pick:not([disabled])");
+    if (first) { try { first.focus(); } catch (e) {} }
+  }
+
+  function closeWalletPicker() {
+    var d = walletDialog();
+    if (!d) return;
+    if (typeof d.close === "function" && d.open) d.close();
+    else d.removeAttribute("open");
+  }
+
+  function setWalletPickerStatus(msg, kind) {
+    var s = el("wallet-picker-status");
+    if (!s) return;
+    s.textContent = msg || "";
+    s.className = "wp-status" + (kind === "err" ? " err" : kind === "ok" ? " ok" : "");
+  }
+
+  function connectWallet(id) {
+    if (!WALLET) { setWalletPickerStatus("The wallet library did not load. Reload the page.", "err"); return; }
+    var st0 = WALLET.status();
+    if (!st0.ready) { setWalletPickerStatus("The wallet library is still starting. Try again in a moment.", "err"); return; }
+    var mod = (st0.available || []).filter(function (m) { return m.id === id; })[0];
+    var name = mod ? mod.name : id;
+    setWalletPickerStatus("Opening " + name + "… approve the connection in the wallet window.", null);
+    WALLET.connect(id).then(function (accountId) {
+      walletState.connected = true;
+      walletState.accountId = accountId;
+      var st = WALLET.status();
+      walletState.networkMismatch = !!(st && st.networkMismatch);
+      renderWallet();
+      if (walletState.networkMismatch) {
+        setWalletPickerStatus("Connected as " + accountId + " — but this wallet is not on NEAR testnet. Overcover settles on testnet only.", "err");
+        setBuyStatus("Connected as " + accountId + ", but this wallet is not on NEAR testnet. Buying is disabled until you switch the wallet to testnet.", true);
+      } else {
+        setWalletPickerStatus("Connected as " + accountId + ".", "ok");
+        setBuyStatus("Connected as " + accountId + ". Set the cover terms below, then press Buy cover.", false, true);
+      }
+      setTimeout(closeWalletPicker, 650);
+    }).catch(function (e) {
+      var msg = e && e.message ? e.message : (e ? String(e) : "The wallet did not complete the connection.");
+      setWalletPickerStatus(msg, "err");
+      setBuyStatus(msg, true);
+    });
+  }
+
+  function disconnectWallet() {
+    if (!WALLET) return;
+    WALLET.disconnect().then(function () {
+      walletState.connected = false; walletState.accountId = null;
+      renderWallet();
+      setBuyStatus("Wallet disconnected.", false);
+    });
+  }
+
+  // One delegated listener handles both wallet slots, the picker buttons, the
+  // dialog's own controls, and the in-page calls to action.
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (!t || !t.getAttribute) return;
+    // hasAttribute, not getAttribute: these are boolean attributes written as
+    // `data-wallet-close` with no value, so getAttribute returns "" (falsy) and an
+    // `if (getAttribute(...))` test would never fire — the original Close defect.
+    if (t.hasAttribute("data-wallet-close")) { ev.preventDefault(); closeWalletPicker(); }
+    else if (t.getAttribute("data-wallet") === "connect") { ev.preventDefault(); openWalletPicker(); }
+    else if (t.getAttribute("data-wallet") === "disconnect") { ev.preventDefault(); disconnectWallet(); }
+    else if (t.getAttribute("data-wallet-id")) { ev.preventDefault(); connectWallet(t.getAttribute("data-wallet-id")); }
+    else if (t.hasAttribute("data-buy-jump")) { ev.preventDefault(); closeWalletPicker(); var b = el("buy-panel"); if (b) { b.scrollIntoView({ behavior: "smooth", block: "start" }); if (b.focus) b.focus(); } }
+  });
+
+  // Close the picker when the user clicks the backdrop (outside the dialog box).
+  var _wd = walletDialog();
+  if (_wd) {
+    _wd.addEventListener("click", function (ev) { if (ev.target === _wd) closeWalletPicker(); });
+    // Restore focus to whatever opened the dialog when it closes, for any close
+    // path (Close button, Escape, backdrop, the in-page "see the cover" link).
+    _wd.addEventListener("close", function () {
+      if (walletOpener && typeof walletOpener.focus === "function") { try { walletOpener.focus(); } catch (e) {} }
+      walletOpener = null;
+    });
+    // Escape fires `cancel`; close explicitly so focus restoration runs through the
+    // same path as the Close button.
+    _wd.addEventListener("cancel", function (ev) { ev.preventDefault(); closeWalletPicker(); });
+  }
+
+  if (WALLET) {
+    WALLET.subscribe(function (st) {
+      walletState.connected = !!st.connected;
+      walletState.accountId = st.accountId || null;
+      walletState.networkMismatch = !!st.networkMismatch;
+      renderWallet();
+    });
+    WALLET.status && WALLET.setup && WALLET.setup().then(function () {
+      var st = WALLET.status();
+      walletState.connected = !!st.connected;
+      walletState.accountId = st.accountId || null;
+      walletState.networkMismatch = !!(st && st.networkMismatch);
+      renderWallet();
+    }).catch(function () {});
+  }
+
+  // ---------------------------------------------------------------- purchase
+
+  var buyState = { busy: false, result: null, pendingSign: false };
+
+  function setBuyStatus(msg, isErr, isOk) {
+    var s = el("b-status");
+    s.textContent = msg || "";
+    s.className = "buy-status" + (isErr ? " err" : isOk ? " ok" : "");
+  }
+
+  function updateBuyEnabled() {
+    var b = el("b-buy");
+    if (!b) return;
+    // Buying is offered only when the contract being read is a VERIFIED hardened
+    // build. A legacy, untrusted, or not-yet-verified contract disables the
+    // control entirely — the security banner explains why.
+    var allowed = trust.state === "hardened" && !walletState.networkMismatch;
+    b.disabled = buyState.busy || buyState.pendingSign || !walletState.connected || !quoteState.selected || !allowed;
+    b.textContent = buyState.busy ? "Waiting for your wallet…" : "Buy cover";
+    // Show the exact address the wallet will sign against, from the same value
+    // the transaction uses, so the destination is never implicit.
+    var dest = el("b-dest");
+    if (dest) {
+      dest.innerHTML = "You are buying on <a href=\"" + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) +
+        "\" target=\"_blank\" rel=\"noopener\"><code>" + esc(CONTRACT) + "</code></a> · NEAR testnet" +
+        (trust.state === "hardened" ? " · verified hardened module" : " · <b>not verified for purchase</b>");
+      dest.className = "buy-dest" + (allowed ? "" : " blocked");
+    }
+    // Say why the button cannot be used yet, so a first-time visitor is never
+    // left pressing a dead control with no explanation.
+    var pend = el("b-pending");
+    if (pend) pend.hidden = !buyState.pendingSign;
+    var h = el("b-hint");
+    if (!h) return;
+    if (buyState.pendingSign) h.textContent = "Your wallet has not answered yet. Check its window and the explorer before retrying — a second purchase is blocked until it does.";
+    else if (buyState.busy) h.textContent = "Approve the transaction in your wallet.";
+    else if (walletState.networkMismatch) h.textContent = "This wallet is not on NEAR testnet. Switch it to testnet to buy — Overcover settles on testnet only.";
+    else if (!allowed) h.textContent = trust.state === "legacy"
+      ? "New purchases are disabled on this legacy address. Read or buy on the hardened build — it is the default."
+      : "Buying is disabled until the contract's deployed module is verified as an approved build.";
+    else if (!quoteState.selected) h.textContent = "Pick the cover and payout you want above to enable buying.";
+    else if (!walletState.connected) h.textContent = "Connect a wallet to buy this cover.";
+    else h.textContent = "";
+  }
+
+  // The observation date must be genuinely in the future. The product's own
+  // min_lead_sec is the contract's floor, but it is 0 for every product currently
+  // published, and the date is compared in whole seconds — so "one second ahead"
+  // is not really in the future once the transaction is signed and included. A
+  // small wall-clock buffer keeps the chosen date ahead of the settlement block.
+  var OBS_DATE_BUFFER_SEC = 120;
+  function obsDateFloorSec(p) {
+    return Math.floor(Date.now() / 1000) + Math.max(Number(p && p.min_lead_sec) || 0, OBS_DATE_BUFFER_SEC);
+  }
+  function obsDateError(p, obsSec) {
+    if (obsSec === null) return "Choose an observation date.";
+    if (obsSec < obsDateFloorSec(p)) {
+      return "The observation date must be in the future — at least " +
+        Math.ceil(OBS_DATE_BUFFER_SEC / 60) + " minutes from now (the contract requires at least " +
+        ((p && p.min_lead_sec) || 0) + "s, and the reading is taken in whole seconds).";
+    }
+    return null;
+  }
+
+  // The observation date defaults to the product's minimum lead plus one day, in
+  // UTC, and is re-clamped whenever the selected product changes.
+  function defaultObsDate(p) {
+    var t = (obsDateFloorSec(p) + 24 * 3600) * 1000;
+    var d = new Date(t);
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
+  }
+
+  var ACCOUNT_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
+
+  function obsDateSec() {
+    var v = el("b-obsdate").value;
+    if (!v) return null;
+    var ms = new Date(v + ":00Z").getTime();
+    return isFinite(ms) ? Math.floor(ms / 1000) : null;
+  }
+
+  function showBuyResult(ok, html) {
+    var box = el("b-result");
+    box.hidden = false;
+    box.className = "buy-result" + (ok ? "" : " err");
+    box.innerHTML = html;
+  }
+
+  // Decide, from the wallet's OWN result, whether a purchase is confirmed. A
+  // rejected, failed or hashless outcome must never be classified as success:
+  // that is the difference between "cover in force" and a lie. Pure, so it can
+  // be lifted and asserted (see tests/console.test.js).
+  //   -> { ok: boolean, hash: string|null, reason: string|null }
+  function evaluateWalletOutcome(res) {
+    var failed = res && res.status && res.status.Failure;
+    var hash = (res && res.transaction_outcome && res.transaction_outcome.id)
+            || (res && res.transaction && res.transaction.hash) || null;
+    if (failed) return { ok: false, hash: hash, reason: "the contract refused the transaction" };
+    if (!hash) return { ok: false, hash: null, reason: "the wallet returned no transaction hash" };
+    return { ok: true, hash: hash, reason: null };
+  }
+
+  // The exact arguments sent to the contract's buy_cover. Built in one place so
+  // the console and its tests agree on the shape, and so the payout is always
+  // the same string the contract quoted against. Pure.
+  function buildBuyArgs(product, payoutStr, obsDateSec, beneficiary) {
+    return { product_id: product.id, payout: payoutStr, obs_date: obsDateSec, beneficiary: beneficiary || null };
+  }
+
+  // A wallet that never answers must not hang the buy control forever. Unlike
+  // the connect path (bounded in wallet.js), signAndSend had no bound: a dead
+  // extension would leave the button disabled and the user with no way forward.
+  // The bound is generous (an approval is a human step) and overridable for tests.
+  var SIGN_TIMEOUT_MS = Number(window.OVERCOVER_SIGN_TIMEOUT_MS) || 120000;
+  // Race the wallet against a deadline. The wallet promise is NOT cancelled
+  // (the user may still approve after the deadline), so on timeout the outcome
+  // is genuinely UNKNOWN — never a success, never a definite failure. The
+  // settled promise is returned too, so a LATE wallet answer can be recovered
+  // honestly instead of being silently discarded.
+  function withSignDeadline(promise) {
+    var tracked = promise.then(
+      function (v) { return { ok: true, value: v }; },
+      function (e) { return { ok: false, error: e }; }
+    );
+    var deadline = new Promise(function (_, reject) {
+      setTimeout(function () { reject({ code: "sign_timeout" }); }, SIGN_TIMEOUT_MS);
+    });
+    var raced = Promise.race([tracked.then(function (r) {
+      if (r.ok) return r.value;
+      throw r.error;
+    }), deadline]);
+    return { raced: raced, settled: tracked };
+  }
+
+  // A wallet that answers AFTER the deadline: the timeout message said the
+  // outcome was unknown, so a late answer must be reconciled honestly — never
+  // left as a permanently ambiguous state, and never shown as a success unless
+  // the wallet's own result carries a transaction hash.
+  function onWalletLateAnswer(r) {
+    if (!buyState.pendingSign) return; // the normal path already handled it
+    buyState.pendingSign = false;
+    if (r.ok) {
+      var out = evaluateWalletOutcome(r.value);
+      if (out.ok) {
+        setBuyStatus("Transaction confirmed (late wallet response).", false, true);
+        showBuyResult(true,
+          "<h4>Cover in force</h4>" +
+          "<p>Your wallet answered after the deadline and the contract confirmed your <code>buy_cover</code> call. The policy appears under “Policies written”.</p>" +
+          '<p class="mono">' + esc(out.hash) + "</p>" +
+          '<p><a href="' + EXPLORER + "/txns/" + encodeURIComponent(out.hash) + '" target="_blank" rel="noopener">View the transaction on NEAR Blocks ↗</a></p>');
+      } else {
+        setBuyStatus("No cover was bought: " + out.reason + ".", true);
+        showBuyResult(false,
+          "<h4>No cover was bought</h4>" +
+          "<p>" + esc(out.reason) + ". Nothing was charged.</p>");
+      }
+    } else {
+      var m = r.error && r.error.message ? r.error.message : String(r.error);
+      setBuyStatus("Purchase not completed: " + m, true);
+      showBuyResult(false,
+        "<h4>No cover was bought</h4>" +
+        "<p>" + esc(m) + "</p>" +
+        "<p>Nothing was charged.</p>");
+    }
+    updateBuyEnabled();
+    tick();
+  }
+
+  function doBuy() {
+    if (buyState.busy) return;
+    // A previous wallet request timed out and has not answered yet. The outcome
+    // is unknown, so a retry could send a SECOND signed buy_cover for the same
+    // intent. Refuse until the wallet actually responds.
+    if (buyState.pendingSign) {
+      setBuyStatus("Your wallet has not answered the previous request yet. Check your wallet and the explorer before retrying — a second purchase is blocked while the outcome is unknown.", true);
+      return;
+    }
+    var p = quoteState.selected;
+    if (!p) { setBuyStatus("Choose a product to price first.", true); return; }
+    if (!WALLET || !walletState.connected) { setBuyStatus("Connect a wallet first.", true); return; }
+    // Fail closed on a network mismatch: a wallet that is not on NEAR testnet
+    // can never produce a testnet signature, so refuse before building the call.
+    if (walletState.networkMismatch) {
+      setBuyStatus("This wallet is not on NEAR testnet. Switch it to testnet and try again — Overcover settles on testnet only.", true);
+      return;
+    }
+    // Fail closed before anything else: only a verified hardened build may be
+    // signed against. This is the same gate the button uses, re-checked here so
+    // a programmatic call cannot bypass it.
+    if (trust.state !== "hardened") {
+      setBuyStatus("Buying is disabled: this contract is not a verified hardened Overcover build.", true);
+      return;
+    }
+    var destAtClick = CONTRACT;
+
+    var obs = obsDateSec();
+    var obsErr = obsDateError(p, obs);
+    if (obsErr) { setBuyStatus(obsErr, true); return; }
+    var ben = (el("b-beneficiary").value || "").trim();
+    if (ben && (!ACCOUNT_RE.test(ben) || ben.length > 64)) {
+      setBuyStatus("The beneficiary is not a valid NEAR account id.", true);
+      return;
+    }
+
+    buyState.busy = true;
+    el("b-result").hidden = true;
+    updateBuyEnabled();
+    setBuyStatus("Confirming the premium with the contract…", false);
+
+    var payoutStr = quoteState.payoutYocto.toString();
+    // Read the authoritative premium straight from the contract, then attach
+    // exactly that as the deposit. The contract rejects any other amount.
+    view("quote", { product_id: p.id, payout: payoutStr }).then(function (q) {
+      var premium = String(Array.isArray(q) ? q[0] : q);
+      if (big(premium) === null) throw new Error("the contract returned no premium");
+      // Re-validate the destination IMMEDIATELY before signing: re-read the
+      // deployed module and require it to still be the verified hardened build
+      // on the same address the quote was priced against. If the address or its
+      // module changed between page load and this signature, refuse.
+      return accountState().then(function (acct) {
+        var now = trustFor(CONTRACT, acct && acct.code_hash);
+        if (CONTRACT !== destAtClick || now.state !== "hardened") {
+          throw new Error("the contract's deployed module changed or is not the verified hardened build — refusing to sign");
+        }
+        trust = now; trust.contract = CONTRACT;
+        setBuyStatus("Waiting for your wallet to approve " + fmt(premium, 6) + " NEAR…", false);
+        var args = buildBuyArgs(p, payoutStr, obs, ben);
+        var d = withSignDeadline(WALLET.signAndSend({
+          receiverId: CONTRACT,
+          actions: [WALLET.functionCall({ methodName: "buy_cover", args: args, gas: "300000000000000", deposit: premium })],
+        }));
+        // If the wallet answers only after the deadline, reconcile it honestly.
+        d.settled.then(onWalletLateAnswer);
+        return d.raced;
+      });
+    }).then(function (res) {
+      var out = evaluateWalletOutcome(res);
+      if (!out.ok) throw new Error(out.reason);
+      // Success is claimed only from the wallet's own confirmed outcome.
+      setBuyStatus("Transaction confirmed.", false, true);
+      showBuyResult(true,
+        "<h4>Cover in force</h4>" +
+        "<p>The contract confirmed your <code>buy_cover</code> call. The policy now appears under “Policies written”, read back from the contract.</p>" +
+        '<p class="mono">' + esc(out.hash) + "</p>" +
+        '<p><a href="' + EXPLORER + "/txns/" + encodeURIComponent(out.hash) + '" target="_blank" rel="noopener">View the transaction on NEAR Blocks ↗</a></p>');
+      buyState.busy = false;
+      updateBuyEnabled();
+      tick();
+    }).catch(function (e) {
+      // A timed-out wallet is an UNKNOWN outcome, not a failure: the user may
+      // still approve after the deadline, so no transaction may be claimed and
+      // none may be ruled out. Say so, and point at the explorer to check. The
+      // wallet promise is still outstanding, so buying stays BLOCKED until the
+      // wallet actually answers — otherwise a retry could send a second signed
+      // buy_cover while the first is unresolved.
+      if (e && e.code === "sign_timeout") {
+        buyState.pendingSign = true;
+        setBuyStatus("No answer from your wallet.", true);
+        var pend = el("b-pending");
+        if (pend) pend.innerHTML = "<b>Purchase outcome unknown — do not retry yet.</b> Your wallet did not answer within " +
+          Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent, and a second signed " +
+          "purchase is blocked until your wallet answers. Check the contract's transactions before retrying.";
+        showBuyResult(false,
+          "<h4>Transaction outcome unknown</h4>" +
+          "<p>Your wallet did not respond within " + Math.round(SIGN_TIMEOUT_MS / 1000) + " seconds. A transaction may or may not have been sent — this page cannot tell, and it will not guess.</p>" +
+          "<p>Check <a href=\"" + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + "\" target=\"_blank\" rel=\"noopener\">the contract's transactions on NEAR Blocks ↗</a> before retrying. Buying is blocked until your wallet answers, so a second purchase cannot be sent while this one is unresolved. If you approve the wallet prompt after this message, the cover is still valid and will appear under “Policies written” on the next refresh.</p>");
+        buyState.busy = false;
+        updateBuyEnabled();
+        tick();
+        return;
+      }
+      var m = e && e.message ? e.message : String(e);
+      setBuyStatus("Purchase not completed: " + m, true);
+      showBuyResult(false,
+        "<h4>No cover was bought</h4>" +
+        "<p>" + esc(m) + "</p>" +
+        "<p>Nothing was charged. If your wallet was declined, no transaction was sent at all.</p>");
+      buyState.busy = false;
+      updateBuyEnabled();
+    });
+  }
+
+  el("b-buy").addEventListener("click", doBuy);
+  el("q-product").addEventListener("change", function () {
+    if (quoteState.selected) el("b-obsdate").value = defaultObsDate(quoteState.selected);
+  });
+
+  // ---------------------------------------------------------------- agent console
+
+  // Public mode evaluates a purchase with the agent's own spending-policy engine
+  // (agent/limits.mjs, bundled to ui/vendor/policy.js) — read-only, in the
+  // browser, with no key and nothing signed. Local mode talks to an agent service
+  // the user runs themselves; that service holds the key and signs, under the
+  // limits the user set. The public site never points at localhost by default.
+  var agentUI = { url: "", mode: "readonly", connected: false, status: null };
+
+  function agentUrl() {
+    return (el("a-url").value || "").trim().replace(/\/$/, "");
+  }
+
+  // Turn a fetch-level failure into something a person can act on, never the raw
+  // "Failed to fetch".
+  function friendlyNetError(e) {
+    var m = e && e.message ? String(e.message) : "";
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(m)) return "the service did not respond (is it running?)";
+    return m || "unknown error";
+  }
+
+  function agentReq(path, body) {
+    var url = agentUrl() + path;
+    return fetch(url, {
+      method: body ? "POST" : "GET",
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(function (res) {
+      return res.text().then(function (t) {
+        var j = {};
+        try { j = t ? JSON.parse(t) : {}; } catch (e) { j = { message: t }; }
+        if (!res.ok) {
+          var err = new Error(j.message || ("HTTP " + res.status));
+          err.reasons = j.reasons || [];
+          err.status = res.status;
+          throw err;
+        }
+        return j;
+      });
+    });
+  }
+
+  function setAgentStatus(msg, isErr, isOk) {
+    var s = el("a-status");
+    s.textContent = msg || "";
+    s.className = "buy-status" + (isErr ? " err" : isOk ? " ok" : "");
+  }
+
+  function renderAgentState(st) {
+    var box = el("a-state");
+    box.hidden = false;
+    var lim = st.limits || {};
+    var body =
+      row("Agent account", esc(st.accountId)) +
+      row("Contract", esc(st.contractId)) +
+      row("Balance", typeof st.balanceYocto === "string" ? esc(fmt(st.balanceYocto, 4) + " NEAR") : "uninitialised account") +
+      row("Enabled", st.enabled ? "yes" : "no") +
+      row("Dry run", st.dryRun ? "yes (never sends)" : "no (sends real transactions)") +
+      row("Max premium / policy", esc(fmt(lim.maxPremiumPerPolicy, 4) + " NEAR")) +
+      row("Max payout / policy", esc(fmt(lim.maxPayoutPerPolicy, 4) + " NEAR")) +
+      row("Daily premium budget", esc(fmt(lim.dailyPremiumBudget, 4) + " NEAR")) +
+      row("Daily policy limit", esc(String(lim.dailyPolicyLimit))) +
+      row("Cooldown", esc(String(lim.cooldownSec) + "s"));
+    // Preserve any verdict or result block the caller appended.
+    var keep = box.querySelector(".verdict");
+    box.innerHTML = body;
+    if (keep) box.appendChild(keep);
+  }
+  function row(k, v) {
+    return '<div class="row"><span class="k">' + esc(k) + '</span><span class="v">' + v + "</span></div>";
+  }
+
+  function renderAgentLog(entries) {
+    var box = el("a-log");
+    if (!entries || !entries.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = "<h4>Agent activity (from its audit log)</h4><ol>" + entries.slice().reverse().map(function (e) {
+      var cls = e.kind === "buy" ? "ok" : e.kind === "denied" || e.kind === "refused" || e.kind === "error" ? "deny" : "";
+      var t = (e.at || "").slice(11, 19);
+      var detail = e.kind === "buy" ? "bought " + e.productId + " for " + fmt(e.premiumYocto, 4) + " NEAR"
+        : e.kind === "denied" ? "refused: " + (e.reasons || []).join("; ")
+        : e.kind === "refused" ? "contract refused: " + e.error
+        : e.kind === "dry_run" ? "dry run: would buy " + e.productId
+        : e.kind === "control" ? "set enabled=" + e.enabled
+        : e.kind;
+      return '<li class="' + cls + '"><span class="t">' + esc(t) + "</span><span>" + esc(detail) + "</span></li>";
+    }).join("") + "</ol>";
+  }
+
+  function refreshAgent() {
+    return agentReq("/api/v1/agent").then(function (st) {
+      agentUI.status = st;
+      renderAgentState(st);
+      return agentReq("/api/v1/agent/audit").then(function (a) { renderAgentLog(a.entries); }).catch(function () {});
+    });
+  }
+
+  function agentPayout(productId) {
+    var p = quoteState.products.filter(function (x) { return x.id === productId; })[0];
+    var v = p ? big(p.max_payout) : null;
+    return v === null ? null : v.toString();
+  }
+
+  function agentObsDate(productId) {
+    var p = quoteState.products.filter(function (x) { return x.id === productId; })[0];
+    return p ? Math.floor(new Date(defaultObsDate(p) + ":00Z").getTime() / 1000) : null;
+  }
+
+  function renderAgentProducts() {
+    var sel = el("a-product");
+    if (!sel) return;
+    // Only sellable products (named, payable, active) — never the throwaway
+    // machine-generated fixtures or a definition that cannot trigger.
+    var list = quoteState.products.filter(isSellable);
+    var prev = sel.value;
+    sel.innerHTML = list.map(function (p) {
+      return '<option value="' + esc(p.id) + '">' + esc(cap(p.city)) + " — " + esc(p.id) + "</option>";
+    }).join("");
+    if (prev && list.some(function (p) { return p.id === prev; })) sel.value = prev;
+  }
+
+  function agentConnect() {
+    var url = agentUrl();
+    if (!url) { setAgentStatus("Enter your local agent service URL first.", true); return; }
+    setAgentStatus("Connecting to " + url + "…", false);
+    agentReq("/api/v1/health").then(function (h) {
+      agentUI.connected = true;
+      agentUI.url = url;
+      el("a-buy").disabled = false;
+      el("a-kill").disabled = false;
+      setAgentStatus("Connected to agent " + h.accountId + " (" + (h.dryRun ? "dry run" : "live") + ").", false, true);
+      return refreshAgent();
+    }).catch(function (e) {
+      agentUI.connected = false;
+      el("a-buy").disabled = true;
+      el("a-kill").disabled = true;
+      setAgentStatus("Could not reach your agent service at " + url + ": " + friendlyNetError(e) + ". Make sure it is running, then connect again.", true);
+    });
+  }
+
+  // The public, read-only evaluation: the SAME policy engine the agent service
+  // runs, on the live contract quote, with the engine's default limits. No key,
+  // no network write, nothing signed.
+  function agentEvaluatePublic(pid, payout, obs) {
+    var P = window.OvercoverPolicy;
+    if (!P || typeof P.evaluate !== "function") return Promise.reject(new Error("policy engine did not load"));
+    var product = quoteState.products.filter(function (x) { return x.id === pid; })[0];
+    if (!product) return Promise.reject(new Error("no such product: " + pid));
+    return view("quote", { product_id: pid, payout: String(payout) }).then(function (q) {
+      var premiumYocto = String(Array.isArray(q) ? q[0] : q);
+      var nowSec = Math.floor(Date.now() / 1000);
+      var verdict = P.evaluate(
+        { productId: pid, city: product.city, payoutYocto: String(payout), premiumYocto: premiumYocto, obsDateSec: obs, nowSec: nowSec },
+        product,
+        { limits: P.DEFAULT_LIMITS, history: [], nowMs: nowSec * 1000 }
+      );
+      return { allow: verdict.allow, reasons: verdict.reasons, premiumYocto: premiumYocto };
+    });
+  }
+
+  function renderAgentVerdict(d, payout, isPublic) {
+    var box = el("a-state");
+    box.hidden = false;
+    var badge = d.allow ? '<span class="badge allow">ALLOW</span>' : '<span class="badge deny">DENY</span>';
+    var detail = d.allow
+      ? "The agent may buy this cover: premium " + fmt(d.premiumYocto, 6) + " NEAR, payout " + fmt(payout, 2) + " NEAR."
+      : "The agent refuses this cover:<ul>" + d.reasons.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
+    var v = document.createElement("div");
+    v.className = "verdict";
+    v.innerHTML = badge + "<div>" + detail + "</div>";
+    box.innerHTML = "";
+    box.appendChild(v);
+    if (isPublic) renderPublicLimits();
+    else renderAgentState(agentUI.status || {});
+  }
+
+  // Show the limits the public verdict was judged against, so the result is
+  // auditable and never looks like a fabricated number.
+  function renderPublicLimits() {
+    var box = el("a-state");
+    box.hidden = false;
+    var L = (window.OvercoverPolicy && window.OvercoverPolicy.DEFAULT_LIMITS) || {};
+    var body =
+      row("Engine", "agent/limits.mjs — same as the service") +
+      row("Mode", "public, read-only") +
+      row("Signs / sends", "nothing") +
+      row("Max premium / policy", esc(fmt(L.maxPremiumPerPolicy, 4) + " NEAR")) +
+      row("Max payout / policy", esc(fmt(L.maxPayoutPerPolicy, 4) + " NEAR")) +
+      row("Daily premium budget", esc(fmt(L.dailyPremiumBudget, 4) + " NEAR")) +
+      row("Daily policy limit", esc(String(L.dailyPolicyLimit))) +
+      row("Cooldown", esc(String(L.cooldownSec) + "s"));
+    var keep = box.querySelector(".verdict");
+    box.innerHTML = body;
+    if (keep) box.appendChild(keep);
+  }
+
+  function agentDecide() {
+    var pid = el("a-product").value;
+    var payout = agentPayout(pid);
+    var obs = agentObsDate(pid);
+    if (!payout) { setAgentStatus("Choose an agent product.", true); return; }
+
+    if (agentUI.mode !== "local") {
+      setAgentStatus("Evaluating with the agent's spending-policy engine…", false);
+      agentEvaluatePublic(pid, payout, obs).then(function (d) {
+        renderAgentVerdict(d, payout, true);
+        setAgentStatus(d.allow ? "Policy verdict: allow." : "Policy verdict: deny.", !d.allow, d.allow);
+      }).catch(function (e) {
+        setAgentStatus("Evaluation failed: " + friendlyNetError(e), true);
+      });
+      return;
+    }
+
+    if (!agentUI.connected) { setAgentStatus("Connect to your local agent service first.", true); return; }
+    setAgentStatus("Asking the agent to decide…", false);
+    agentReq("/api/v1/agent/decide", { productId: pid, payoutYocto: payout, obsDateSec: obs }).then(function (d) {
+      renderAgentVerdict(d, payout, false);
+      setAgentStatus(d.allow ? "Policy verdict: allow." : "Policy verdict: deny.", !d.allow, d.allow);
+    }).catch(function (e) {
+      setAgentStatus("Decision failed: " + friendlyNetError(e), true);
+    });
+  }
+
+  function agentBuy() {
+    if (agentUI.mode !== "local") { setAgentStatus("Public mode is read-only. Switch to Local service to buy.", true); return; }
+    if (!agentUI.connected) { setAgentStatus("Connect to your local agent service first.", true); return; }
+    var pid = el("a-product").value;
+    var payout = agentPayout(pid);
+    var obs = agentObsDate(pid);
+    if (!payout) { setAgentStatus("Choose an agent product.", true); return; }
+    var idem = "ui-" + pid + "-" + obs + "-" + Math.floor(Date.now() / 1000);
+    setAgentStatus("Asking the agent to buy…", false);
+    agentReq("/api/v1/agent/buy", { productId: pid, payoutYocto: payout, obsDateSec: obs, idempotencyKey: idem }).then(function (r) {
+      if (r.dryRun) { setAgentStatus("Dry run: the agent would have bought, but sent nothing.", false, true); }
+      else if (r.hash) {
+        setAgentStatus("Agent bought cover.", false, true);
+        var box = el("a-state");
+        box.hidden = false;
+        var v = document.createElement("div");
+        v.className = "verdict";
+        v.innerHTML = '<span class="badge allow">BOUGHT</span><div>Premium ' + fmt(r.premiumYocto, 6) + ' NEAR.<br><span class="mono">' + esc(r.hash) + '</span><br><a href="' + EXPLORER + "/txns/" + encodeURIComponent(r.hash) + '" target="_blank" rel="noopener">View on NEAR Blocks ↗</a></div>';
+        box.appendChild(v);
+      } else { setAgentStatus("Agent returned an unexpected result.", true); }
+      return refreshAgent();
+    }).catch(function (e) {
+      var reasons = (e.reasons && e.reasons.length) ? " " + e.reasons.join("; ") : "";
+      setAgentStatus("Agent did not buy: " + friendlyNetError(e) + reasons, true);
+    });
+  }
+
+  function agentKill() {
+    if (agentUI.mode !== "local" || !agentUI.connected) { setAgentStatus("Connect to your local agent service first.", true); return; }
+    agentReq("/api/v1/agent/control", { enabled: false }).then(function (r) {
+      setAgentStatus("Emergency stop engaged. The agent is disabled (enabled=" + r.enabled + ").", false, true);
+      return refreshAgent();
+    }).catch(function (e) {
+      setAgentStatus("Emergency stop failed: " + friendlyNetError(e), true);
+    });
+  }
+
+  function setAgentMode(mode) {
+    agentUI.mode = mode;
+    var isLocal = mode === "local";
+    var btns = document.querySelectorAll(".mode-switch .btn-s");
+    for (var i = 0; i < btns.length; i++) btns[i].setAttribute("aria-pressed", btns[i].getAttribute("data-mode") === mode ? "true" : "false");
+    el("a-url-wrap").hidden = !isLocal;
+    el("a-connect").hidden = !isLocal;
+    el("a-buy").hidden = !isLocal;
+    el("a-kill").hidden = !isLocal;
+    el("a-buy").disabled = true;
+    el("a-kill").disabled = true;
+    var decide = el("a-decide");
+    decide.textContent = isLocal ? "Ask the agent to decide" : "Evaluate with agent policy";
+    decide.disabled = false;
+    if (!isLocal) { agentUI.connected = false; agentUI.url = ""; }
+    var st = el("a-state"); st.hidden = true; st.innerHTML = "";
+    el("a-log").hidden = true;
+    el("a-note").innerHTML = isLocal
+      ? '<b>Local service.</b> Connect an agent service you run yourself (see <code>agent/README.md</code>). It holds the key and can call only <code>buy_cover</code>, under the limits you set. It cannot call any owner-only method, and a limit refusal moves no funds.'
+      : '<b>Public mode is read-only.</b> It evaluates a purchase with the agent\'s own spending-policy engine, using the engine\'s default limits and the live contract quote. It holds no key, calls no owner-only method, and signs nothing. A purchase can only be sent by a local agent service you run, or by your own wallet above.';
+    setAgentStatus(isLocal ? "Local mode: connect your agent service." : "Public mode: read-only evaluation with the agent policy engine.", false);
+  }
+
+  el("a-connect").addEventListener("click", agentConnect);
+  el("a-decide").addEventListener("click", agentDecide);
+  el("a-buy").addEventListener("click", agentBuy);
+  el("a-kill").addEventListener("click", agentKill);
+  (function () {
+    var btns = document.querySelectorAll(".mode-switch .btn-s");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener("click", function () { setAgentMode(this.getAttribute("data-mode")); });
+    }
+  })();
+  setAgentMode("readonly");
+
+  // ---------------------------------------------------------------- quote
+
+  var quoteState = { products: [], selected: null, payoutYocto: 0n };
+  function ceilDiv(a, b) { return (a + b - 1n) / b; }
+
+  function renderQuote() {
+    var sel = el("q-product");
+    var canonical = quoteState.products.filter(isSellable);
+    if (!canonical.length) {
+      sel.innerHTML = "";
+      el("q-premium").textContent = "—"; el("q-reserve").textContent = "—";
+      el("q-rate").textContent = "—"; el("q-capacity").textContent = "—";
+      el("q-terms").innerHTML = "";
+      el("q-readonly").innerHTML = "<b>No cover available to price.</b> The contract has no active, payable product right now.";
+      return;
+    }
+    if (sel.options.length !== canonical.length) {
+      sel.innerHTML = canonical.map(function (p) {
+        var cmp = (METRIC[p.metric_id] || {}).direction === "Below" ? "or less" : "or more";
+        return '<option value="' + esc(p.id) + '">' + esc(cap(p.city)) + " " + esc(metricLabel(p.metric_id)) +
+          " — pays at " + fmtVal(p.threshold_tenths, p.metric_id) + " " + cmp + "</option>";
+      }).join("");
+    }
+    var id = sel.value || canonical[0].id;
+    var p = canonical.filter(function (x) { return x.id === id; })[0] || canonical[0];
+    quoteState.selected = p;
+    if (el("b-obsdate") && !el("b-obsdate").value) el("b-obsdate").value = defaultObsDate(p);
+    updateBuyEnabled();
+
+    var min = big(p.min_payout) || 0n, max = big(p.max_payout) || 0n;
+    if (quoteState.payoutYocto < min || quoteState.payoutYocto > max) quoteState.payoutYocto = max;
+    var frac = max > min ? Number((quoteState.payoutYocto - min) * 1000n / (max - min)) / 1000 : 1;
+    el("q-payout").value = String(Math.round(frac * 100));
+    el("q-payout-label").textContent = fmt(quoteState.payoutYocto, 2) + " NEAR  (this product allows " + fmt(min, 2) + "–" + fmt(max, 2) + ")";
+
+    var localPremium = ceilDiv(quoteState.payoutYocto * BigInt(p.premium_bp), 10000n);
+    el("q-premium").textContent = fmt(localPremium, 4) + " NEAR";
+    el("q-reserve").textContent = fmt(quoteState.payoutYocto, 2) + " NEAR";
+    el("q-rate").textContent = (p.premium_bp / 100).toFixed(2) + "%";
+
+    var left = capacityLeft(p);
+    var after = left > quoteState.payoutYocto ? left - quoteState.payoutYocto : 0n;
+    el("q-capacity").textContent = fmt(after, 2) + " NEAR";
+
+    el("q-terms").innerHTML =
+      '<div><span>Covered event</span><span>' + esc(coveredText(p)) + "</span></div>" +
+      "<div><span>Observation date</span><span>chosen at purchase, ≥ " + esc(String(p.min_lead_sec)) + "s ahead</span></div>" +
+      "<div><span>Product capacity</span><span>" + fmt(p.max_total_coverage, 2) + " NEAR · " + fmt(left, 2) + " left</span></div>" +
+      "<div><span>Limitations</span><span>parametric, not indemnity; single city and date</span></div>";
+
+    // Confirm with the contract's own quote view; if it answers, its number wins.
+    // A U128 serialises as a JSON string ("49999…"); some wrappers give a one-element
+    // array. Take whichever shape actually arrived — indexing a string yields a digit.
+    var payoutStr = quoteState.payoutYocto.toString();
+    view("quote", { product_id: p.id, payout: payoutStr }).then(function (q) {
+      var authoritative = Array.isArray(q) ? q[0] : q;
+      if (authoritative !== undefined && authoritative !== null && big(authoritative) !== null) {
+        el("q-premium").textContent = fmt(authoritative, 4) + " NEAR";
+      }
+    }).catch(function () { /* keep the locally computed premium; it uses the same ceil rule */ });
+  }
+
+  // ---------------------------------------------------------------- proof
+
+  var DEMO = [
+    ["Publish a product", "BksQTpHzuZ5hDvGaUBBuNv1qgEzwSn7a3wTiMnm8rRR"],
+    ["Provider deposit", "4VNLFJuzmjJyNCnmuvba6EaZCt3qLfR7r2he7oBN2Qxn"],
+    ["Buy cover", "HpNNqRyLCQHHrqF5AQBT4ZRSF6Fu9AUbRPNX7HkU7gwL"],
+    ["Report an observation", "CLFdnAs14lKNEGsKmLJ8rMtt8J3XmxaH9KjCzRV9Dp7D"],
+    ["Settle, trigger met (paid)", "8nvB1dQfBNpJGqfiPcMBC6GScZnzZb3684aKvUzoSnJ3"],
+    ["Settle, no trigger (no pay)", "8sHQujtdYHByd3pydEstxtjd444SRVXJzxhA5CqnXgSD"],
+    ["Dispute upheld (bond forfeited)", "ztxGRCatv7xvUSZx7gJKo6eGHaSTNx52JxMQ5ejXNW4"],
+    ["Dispute rejected (reading nullified)", "3i1ZwxY1MfkzDnCfhDK2YGaDeCH2wX8j5cpobfamEaG6"],
+  ];
+
+  function renderProof(cfg, acct, pool) {
+    var cid = el("cid");
+    cid.textContent = CONTRACT;
+    cid.href = EXPLORER + "/account/" + encodeURIComponent(CONTRACT);
+    var fcid = el("f-cid");
+    fcid.href = EXPLORER + "/account/" + encodeURIComponent(CONTRACT);
+    el("codehash").textContent = acct && acct.code_hash ? acct.code_hash : "—";
+    el("attestor").textContent = cfg
+      ? (CONTRACT_V2
+          ? OPERATORS.length + " operators · quorum " + cfg.quorum + " · resolvers " + cfg.resolver_quorum +
+            " · bond " + fmt(cfg.challenge_bond, 2) + " NEAR · window " + cfg.challenge_window_sec + "s"
+          : (cfg.attestor || "—") + "  ·  bond " + fmt(cfg.challenge_bond, 2) + " NEAR  ·  window " + cfg.challenge_window_sec + "s")
+      : "—";
+    el("src-list").textContent = RPC.join(", ");
+    el("eq").textContent = "capital " + fmt(pool.capital, 4) + "  =  deposits " + fmt(pool.total_deposited, 4) +
+      "  −  withdrawals " + fmt(pool.total_withdrawn, 4) + "  +  premiums " + fmt(pool.premiums_collected, 4) +
+      "  +  bonds " + fmt(pool.bonds_forfeited, 4) + "  −  paid " + fmt(pool.total_paid, 4);
+    el("cmd").textContent = "curl -s https://test.rpc.fastnear.com -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"query\",\"params\":{\"request_type\":\"call_function\",\"finality\":\"final\",\"account_id\":\"" + CONTRACT + "\",\"method_name\":\"get_pool\",\"args_base64\":\"e30=\"}}'";
+    el("explorer-links").innerHTML =
+      '<a href="' + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + '" target="_blank" rel="noopener">Contract account on NEAR Blocks</a>' +
+      '<a href="https://github.com/itzebe/overcover" target="_blank" rel="noopener">Source repository on GitHub</a>';
+    el("demo-links").innerHTML = DEMO.map(function (d) {
+      return '<a href="' + EXPLORER + "/txns/" + d[1] + '" target="_blank" rel="noopener">' + esc(d[0]) + " ↗</a>";
+    }).join("");
+  }
+
+  // ---------------------------------------------------------------- poll loop
+
+  var state = { haveData: false, lastOk: null, busy: false };
+  // The most recent discovery feed, kept so a later contract-read failure can
+  // re-render the factory section without inventing anything.
+  var factoryFeed = null;
+
+  function tick() {
+    if (state.busy) return Promise.resolve();
+    state.busy = true;
+    return Promise.all([
+      view("get_pool"), view("list_products"), view("list_policies"),
+      view("list_observations"), view("get_config"), view("reconcile"),
+      view("check_invariant"), accountState(),
+      // v2 reads are optional so the page still renders against an older contract
+      // that lacks them, rather than failing the whole read.
+      view("list_metrics").catch(function () { return []; }),
+      view("list_operators").catch(function () { return []; }),
+      loadFactoryFeed(),
+    ]).then(function (r) {
+      var pool = r[0], products = r[1], policies = r[2], obs = r[3], cfg = r[4];
+      var reconciled = r[5] === true, invariant = r[6] === true, acct = r[7];
+      var metrics = r[8], operators = r[9], feed = r[10];
+      factoryFeed = feed;
+      METRIC = {};
+      (metrics || []).forEach(function (m) { METRIC[m.id] = m; });
+      OPERATORS = operators || [];
+      applyContractVersion(cfg, metrics);
+
+      clearError();
+      state.haveData = true; state.lastOk = hhmm(Date.now());
+      setFreshness("live", state.lastOk);
+
+      el("capital").innerHTML = fmt(pool.capital) + '<span class="u">NEAR</span>';
+      el("reserved").innerHTML = fmt(pool.reserved) + '<span class="u">NEAR</span>';
+      el("available-cap").textContent = "free to underwrite " + fmt(pool.available) + " NEAR";
+
+      var util = pct(pool.reserved, pool.capital);
+      var fill = el("fill");
+      fill.style.width = Math.min(100, util).toFixed(1) + "%";
+      fill.className = "fill" + (near(pool.reserved) > near(pool.capital) ? " over" : "");
+      el("barlbl").textContent = "reserved " + util.toFixed(1) + "% of capital";
+
+      // Both flags are read from the contract; neither is assumed.
+      setInvariant("inv-solvent", pool.solvent === undefined ? invariant : pool.solvent === true);
+      setInvariant("inv-recon", reconciled);
+
+      var active = policies.filter(function (p) { return p.status === "active"; }).length;
+      el("fig-avail").innerHTML = fmt(pool.available) + '<span class="u">NEAR</span>';
+      el("fig-active").textContent = active + " of " + policies.length;
+      el("fig-premiums").innerHTML = fmt(pool.premiums_collected, 3) + '<span class="u">NEAR</span>';
+      el("fig-paid").innerHTML = fmt(pool.total_paid, 3) + '<span class="u">NEAR</span>';
+      el("fig-deposited").innerHTML = fmt(pool.total_deposited, 3) + '<span class="u">NEAR</span>';
+      el("fig-withdrawn").innerHTML = fmt(pool.total_withdrawn, 3) + '<span class="u">NEAR</span>';
+
+      el("cov-capital").textContent = fmt(pool.capital, 2) + " NEAR";
+      el("cov-reserved").textContent = fmt(pool.reserved, 2) + " NEAR";
+      el("cov-active").textContent = active + " of " + policies.length;
+      el("cov-paid").textContent = fmt(pool.total_paid, 2) + " NEAR";
+
+      el("hero-live").textContent = "Pool read from the contract at " + state.lastOk +
+        " — " + fmt(pool.reserved, 2) + " of " + fmt(pool.capital, 2) + " NEAR reserved for live policies.";
+      el("hero-dot").className = "dot live";
+
+      el("products").innerHTML = renderProducts(products);
+      el("factory-body").innerHTML = renderFactory(feed, products, feed && feed.error);
+      el("policies").innerHTML = renderPolicies(policies, cfg);
+      el("observations").innerHTML = renderObservations(obs);
+      quoteState.products = products;
+      renderQuote();
+      renderAgentProducts();
+
+      renderProof(cfg, acct, pool);
+      renderSecurityBanner(acct);
+      state.busy = false;
+    }).catch(function (e) {
+      state.busy = false;
+      var msg = e && e.message ? e.message : String(e);
+      showError(msg, state.haveData, state.lastOk);
+      setFreshness(state.haveData ? "stale" : "failed", state.lastOk);
+      el("hero-dot").className = "dot " + (state.haveData ? "stale" : "failed");
+      if (!state.haveData) {
+        el("hero-live").textContent = "Could not read the pool from the contract.";
+        renderLoadFailed();
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------- controls
+
+  el("refresh").addEventListener("click", function () {
+    var b = el("refresh");
+    b.disabled = true; b.textContent = "Refreshing…";
+    tick().then(function () { b.disabled = false; b.textContent = "Refresh"; });
+  });
+
+  el("q-product").addEventListener("change", function () { quoteState.payoutYocto = 0n; renderQuote(); });
+  el("q-payout").addEventListener("input", function () {
+    var p = quoteState.selected; if (!p) return;
+    var min = big(p.min_payout) || 0n, max = big(p.max_payout) || 0n;
+    var v = BigInt(el("q-payout").value);
+    quoteState.payoutYocto = min + ((max - min) * v) / 100n;
+    renderQuote();
+  });
+
+  function copyText(text, statusEl) {
+    var done = function () {
+      statusEl.textContent = "Copied";
+      setTimeout(function () { statusEl.textContent = ""; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, statusEl); });
+    } else { fallback(text, done, statusEl); }
+  }
+  function fallback(text, done, statusEl) {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "absolute"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { statusEl.textContent = "Copy failed"; }
+    document.body.removeChild(ta);
+  }
+  el("copy").addEventListener("click", function () { copyText(el("cmd").textContent, el("copied")); });
+  el("copy-cid").addEventListener("click", function () { copyText(CONTRACT, el("copied-cid")); });
+
+  renderWallet();
+  tick();
+  setInterval(tick, 15000);
+})();
+</script>
+</body>
+</html>
+

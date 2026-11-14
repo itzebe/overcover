@@ -1,0 +1,28 @@
+# Overcover — public product site. Everything here is public and safe to index.
+User-agent: *
+Allow: /
+
+# Search and AI answer engines are explicitly welcome: the product is a
+# prototype that benefits from being found and accurately described.
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Claude-Web
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Googlebot
+Allow: /
+User-agent: Bingbot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://overcover.vercel.app/sitemap.xml

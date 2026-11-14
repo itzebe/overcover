@@ -1,0 +1,153 @@
+{
+  "schema": "https://overcover.vercel.app/products.schema.json",
+  "generated_at": "2026-11-13T12:40:39.899Z",
+  "source": {
+    "network": "testnet",
+    "contract": "contract.ovc-v3-ctl-2f6c4c.testnet",
+    "rpc": "public NEAR testnet JSON-RPC call_function views",
+    "explorer": "https://testnet.nearblocks.io/address/contract.ovc-v3-ctl-2f6c4c.testnet",
+    "method": "list_products / get_config / get_pool / list_observations"
+  },
+  "protocol": {
+    "paused": false,
+    "solvent": true,
+    "capital_yocto": "1425000000000000000000000",
+    "reserved_yocto": "200000000000000000000000",
+    "available_yocto": "1225000000000000000000000",
+    "policy_count": 3,
+    "challenge_window_sec": 3600,
+    "challenge_bond_yocto": "100000000000000000000000"
+  },
+  "disclaimer": "Testnet prototype with test funds. Unaudited. Parametric (payout follows the index reading, not a loss assessment). Not an offer of real insurance.",
+  "products": [
+    {
+      "id": "heat-lagos",
+      "named": true,
+      "sellable": true,
+      "kind": "offering",
+      "status": "available",
+      "metric": {
+        "name": "temperature",
+        "unit": "degC",
+        "city": "lagos",
+        "metric_id": "heat"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 400,
+        "threshold_value": "40.0",
+        "unit": "degC",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos temperature is at or above 40.0 degC on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "300000000000000000000000",
+          "premium_yocto": "15000000000000000000000",
+          "premium_near": "0.0150"
+        }
+      },
+      "payout": {
+        "min_yocto": "100000000000000000000000",
+        "max_yocto": "300000000000000000000000",
+        "min_near": "0.1000",
+        "max_near": "0.3000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "400000000000000000000000",
+        "reserved_yocto": "100000000000000000000000",
+        "capacity_left_yocto": "300000000000000000000000",
+        "capacity_left_near": "0.3000"
+      },
+      "min_lead_sec": 0,
+      "active": true,
+      "purchase": {
+        "contract": "contract.ovc-v3-ctl-2f6c4c.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 3600,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    },
+    {
+      "id": "heat-lagos-factory",
+      "named": true,
+      "sellable": true,
+      "kind": "offering",
+      "status": "available",
+      "metric": {
+        "name": "temperature",
+        "unit": "degC",
+        "city": "lagos",
+        "metric_id": "heat"
+      },
+      "trigger": {
+        "direction": "at-or-above",
+        "threshold_tenths": 400,
+        "threshold_value": "40.0",
+        "unit": "degC",
+        "at_plausibility_ceiling": false,
+        "statement": "Pays if lagos temperature is at or above 40.0 degC on the observation date."
+      },
+      "premium": {
+        "basis_points": 500,
+        "rate_percent": "5.00",
+        "formula": "ceil(payout_yocto * premium_bp / 10000)",
+        "example_at_max_payout": {
+          "payout_yocto": "100000000000000000000000",
+          "premium_yocto": "5000000000000000000000",
+          "premium_near": "0.0050"
+        }
+      },
+      "payout": {
+        "min_yocto": "100000000000000000000000",
+        "max_yocto": "100000000000000000000000",
+        "min_near": "0.1000",
+        "max_near": "0.1000"
+      },
+      "capacity": {
+        "max_total_coverage_yocto": "500000000000000000000000",
+        "reserved_yocto": "100000000000000000000000",
+        "capacity_left_yocto": "400000000000000000000000",
+        "capacity_left_near": "0.4000"
+      },
+      "min_lead_sec": 3600,
+      "active": true,
+      "purchase": {
+        "contract": "contract.ovc-v3-ctl-2f6c4c.testnet",
+        "network": "testnet",
+        "method": "buy_cover",
+        "args": [
+          "product_id",
+          "payout",
+          "obs_date",
+          "beneficiary"
+        ],
+        "deposit_rule": "deposit must equal quote(product_id, payout) exactly",
+        "quote_method": "quote"
+      },
+      "config": {
+        "challenge_window_sec": 3600,
+        "challenge_bond_yocto": "100000000000000000000000"
+      }
+    }
+  ],
+  "offerings": [
+    "heat-lagos",
+    "heat-lagos-factory"
+  ],
+  "observation_count": 1
+}

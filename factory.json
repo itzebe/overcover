@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-11-12T06:41:18.000Z",
+  "provider": "open-meteo",
+  "kind": "forecast",
+  "note": "Prepared proposals from the discovery agent. A forecast motivates a prospective product; it is not an observation of an event that occurred. Products the protocol has ACTIVATED are read from the contract itself, not from this file.",
+  "proposals": [
+    {
+      "id": "factory-rain-miami-2026-11-17",
+      "status": "PROPOSED",
+      "metric": "rain",
+      "city": "miami",
+      "direction": "Above",
+      "thresholdTenths": 300,
+      "premiumBp": 500,
+      "coverageStartSec": 1794472878,
+      "evidence": {
+        "kind": "forecast",
+        "source": "open-meteo:forecast:precipitation_sum",
+        "sourceUrl": "https://api.open-meteo.com/v1/forecast?latitude=25.7617&longitude=-80.1918&daily=precipitation_sum&timezone=UTC&start_date=2026-11-17&end_date=2026-11-17",
+        "observedAt": "2026-11-17",
+        "valueTenths": 615,
+        "unit": "mm/10",
+        "raw": 61.5,
+        "hash": "sha256:43ae2080fde534f5e3a122b7ddbd8ddf2ad982c040710335db1e0faa6ac545f9"
+      },
+      "risk": {
+        "emerging": true,
+        "direction": "Above",
+        "thresholdTenths": 300,
+        "valueTenths": 615,
+        "marginTenths": 315,
+        "rationale": "excess rainfall: forecast 61.5 mm crosses trigger 30.0 mm (Above)"
+      }
+    }
+  ]
+}

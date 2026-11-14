@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://overcover.vercel.app/products.schema.json",
+  "title": "Overcover product feed",
+  "description": "Machine-readable description of the insurance products published in the Overcover NEAR testnet contract. Generated from contract state by scripts/products-feed.mjs. All money fields are exact decimal integer strings in yoctoNEAR (1 NEAR = 10^24 yoctoNEAR); never parse them as floating point.",
+  "type": "object",
+  "required": ["schema", "generated_at", "source", "protocol", "disclaimer", "products", "offerings"],
+  "properties": {
+    "schema": { "type": "string", "format": "uri" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "required": ["network", "contract", "method"],
+      "properties": {
+        "network": { "const": "testnet" },
+        "contract": { "type": "string" },
+        "rpc": { "type": "string" },
+        "explorer": { "type": "string", "format": "uri" },
+        "method": { "type": "string" }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "required": ["paused", "solvent", "capital_yocto", "reserved_yocto", "available_yocto", "policy_count"],
+      "properties": {
+        "paused": { "type": "boolean" },
+        "solvent": { "type": "boolean" },
+        "capital_yocto": { "$ref": "#/$defs/yocto" },
+        "reserved_yocto": { "$ref": "#/$defs/yocto" },
+        "available_yocto": { "$ref": "#/$defs/yocto" },
+        "policy_count": { "type": "integer", "minimum": 0 },
+        "challenge_window_sec": { "type": "integer", "minimum": 0 },
+        "challenge_bond_yocto": { "$ref": "#/$defs/yocto" }
+      }
+    },
+    "disclaimer": { "type": "string" },
+    "offerings": {
+      "description": "Ids of products that are actually offered for sale right now (named, active, not pinned at the plausibility ceiling).",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "observation_count": { "type": "integer", "minimum": 0 },
+    "products": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/product" }
+    }
+  },
+  "$defs": {
+    "yocto": {
+      "description": "Exact non-negative integer as a decimal string, in yoctoNEAR.",
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "product": {
+      "type": "object",
+      "required": ["id", "named", "sellable", "kind", "status", "metric", "trigger", "premium", "payout", "capacity", "active", "purchase"],
+      "properties": {
+        "id": { "type": "string" },
+        "named": { "description": "true if this is a hand-named offering rather than a demo fixture (p-<ts>-<n>).", "type": "boolean" },
+        "sellable": { "description": "true only if named AND active AND not pinned at the plausibility ceiling.", "type": "boolean" },
+        "kind": { "enum": ["offering", "demo-fixture", "broken-definition"] },
+        "status": { "enum": ["available", "not-offered"] },
+        "metric": {
+          "type": "object",
+          "required": ["name", "unit", "city"],
+          "properties": {
+            "name": { "type": "string" },
+            "unit": { "type": "string" },
+            "city": { "type": "string" },
+            "metric_id": { "type": ["string", "null"] }
+          }
+        },
+        "trigger": {
+          "type": "object",
+          "required": ["direction", "threshold_tenths", "threshold_value", "statement"],
+          "properties": {
+            "direction": { "enum": ["at-or-above", "at-or-below"] },
+            "threshold_tenths": { "type": "integer", "minimum": 0 },
+            "threshold_value": { "type": "string" },
+            "unit": { "type": "string" },
+            "at_plausibility_ceiling": { "type": "boolean" },
+            "statement": { "type": "string" }
+          }
+        },
+        "premium": {
+          "type": "object",
+          "required": ["basis_points", "rate_percent", "formula"],
+          "properties": {
+            "basis_points": { "type": "integer", "minimum": 0 },
+            "rate_percent": { "type": "string" },
+            "formula": { "const": "ceil(payout_yocto * premium_bp / 10000)" },
+            "example_at_max_payout": {
+              "type": "object",
+              "properties": {
+                "payout_yocto": { "$ref": "#/$defs/yocto" },
+                "premium_yocto": { "$ref": "#/$defs/yocto" },
+                "premium_near": { "type": "string" }
+              }
+            }
+          }
+        },
+        "payout": {
+          "type": "object",
+          "required": ["min_yocto", "max_yocto"],
+          "properties": {
+            "min_yocto": { "$ref": "#/$defs/yocto" },
+            "max_yocto": { "$ref": "#/$defs/yocto" },
+            "min_near": { "type": "string" },
+            "max_near": { "type": "string" }
+          }
+        },
+        "capacity": {
+          "type": "object",
+          "required": ["max_total_coverage_yocto", "reserved_yocto", "capacity_left_yocto"],
+          "properties": {
+            "max_total_coverage_yocto": { "$ref": "#/$defs/yocto" },
+            "reserved_yocto": { "$ref": "#/$defs/yocto" },
+            "capacity_left_yocto": { "$ref": "#/$defs/yocto" },
+            "capacity_left_near": { "type": "string" }
+          }
+        },
+        "min_lead_sec": { "type": "integer", "minimum": 0 },
+        "active": { "type": "boolean" },
+        "purchase": {
+          "type": "object",
+          "required": ["contract", "network", "method", "args"],
+          "properties": {
+            "contract": { "type": "string" },
+            "network": { "const": "testnet" },
+            "method": { "const": "buy_cover" },
+            "args": { "type": "array", "items": { "type": "string" } },
+            "deposit_rule": { "type": "string" },
+            "quote_method": { "const": "quote" }
+          }
+        },
+        "config": { "type": ["object", "null"] }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Issues requiring human or external authority
 
-**As of:** 2026-11-13 · **Branch:** `main` (PR #45 merged as `c209cbf4…`) · **Contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
+**As of:** 2026-11-14 · **Branch:** `main` (`f0e0b07…`, the deployed build; PRs #45/#47/#48 merged) · **Contract:** `contract.ovc-v3-ctl-2f6c4c.testnet` (testnet)
 
 This is the separate register of work that **cannot** be completed from an agent environment
 because it needs a private key, a human-controlled wallet, or an external service account. Nothing
@@ -112,22 +112,15 @@ Console or Bing Webmaster Tools, to which this environment has no account.
 **squash-merged to `main`** as `c209cbf49f24217e122a0dbcdc2c326debc015a6`. Vercel auto-deployed that
 exact commit to production (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, READY).
 
-**Current state (blocked again).** The stored token now returns **HTTP 401** on every call
-(`GET /user`, `git push`). Read-only operations still work anonymously (`git ls-remote`, the public
-REST API, NEAR RPC, the Vercel API), but **nothing that writes** does. As a result the release-truth
-closeout branch `docs/release-truth-closeout` (PR #46, head `81e54ba…`) is already pushed and its CI
-is green, but **further commits to it cannot be pushed from this environment until a valid token is
-restored.**
+**Current state (2026-11-14, resolved).** The token works again: `GET /user` returns `itzebe` with
+`admin`/`push` on `itzebe/overcover`. This session pushed and squash-merged **PR #47** (legacy
+`code_hash` correction) and **PR #44** (SEC-1 remediation tests + operator runbook), and is landing
+**PR #46** (release-truth closeout) after rebasing it onto the current `main`. No credential is
+required from a human to publish documentation-only work.
 
-**What is needed.** A GitHub token with `contents:write` + `pull_requests:write` for
-`itzebe/overcover`, or a human to push the branch and merge PR #46 (and decide PR #44).
+**What remains human-only.** The operations that need a NEAR signing key this environment does not
+hold (v3 redeploy, legacy v1 pause, the live v3 purchase) — see sections A–E. Publishing code and
+docs no longer needs a human.
 
-**Smallest human action:**
-
-```bash
-# with a valid credential in place, from a checkout of the branch:
-git push origin docs/release-truth-closeout          # PR #46
-# then merge PR #46 (docs-only) and assess/merge PR #44 per its review
-```
-
-The documentation commits are ready on the local branch; the only missing piece is the credential.
+**Historical note (2026-11-13).** Earlier in the release-closure session the stored token briefly
+returned HTTP 401 on writes; that is no longer the case.

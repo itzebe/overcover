@@ -1,6 +1,6 @@
 # Final release readiness register
 
-**As of:** 2026-11-13 (release-closure session; PR #45 merged) · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (`c209cbf4…`)
+**As of:** 2026-11-14 (release-closure session; PRs #45/#47/#48 merged) · **Repository:** https://github.com/itzebe/overcover · **Branch:** `main` (`f0e0b07…`, the deployed production build)
 **Default contract (hardened v3):** `contract.ovc-v3-ctl-2f6c4c.testnet` · **Legacy address (v1, readable, not a purchase destination):** `contract.attestor-overcover.testnet` · **Production:** https://overcover.vercel.app/
 
 The console now reads **and signs against the hardened v3 contract by default**. v3 is metric-agnostic
@@ -201,7 +201,7 @@ now requires a date at least 120 s ahead (`obsDateFloorSec`), tested in `tests/c
 | Requirement | Status | What exists | How tested / evidence |
 | --- | --- | --- | --- |
 | Vercel deployment | FIXED AND VERIFIED | Project `overcover`; production alias `overcover.vercel.app`. | `GET /v6/deployments?…&target=production` shows a READY production deployment. |
-| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | 2026-11-13: `main` = `c209cbf49f24217e122a0dbcdc2c326debc015a6` (PR #45, squash-merge); the production deployment `dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV` reports `meta.githubCommitSha = c209cbf4…` (READY) and the public alias `overcover.vercel.app` returns HTTP 200 with the merged page (its inline-script hash `sha256-oPtOeIa…` equals the pinned `vercel.json` CSP hash). Prior: PR #43 `7e7a5102…`, PR #37 `7f95f992…`. |
+| Correct deployed commit | FIXED AND VERIFIED | The production deployment's `meta.githubCommitSha` tracks `main` (Vercel auto-deploys on every `main` push). | 2026-11-14: `main` = `f0e0b073a377750b17254833cfdcd59b055b4841` (PR #48, squash-merge; the security-disclosure placement fix); the production deployment `dpl_9BS9gaQykq9Rypb9ztstYNP4j8e7` reports `meta.githubCommitSha = f0e0b073a377…` (READY) and the public alias `overcover.vercel.app` returns HTTP 200 with that exact page — its inline-script hash `sha256-zVUGF7AJ…` equals the pinned `vercel.json` CSP hash, and the served bytes match `main`'s `ui/index.html` (sha256 `9d778bc8…`). Prior: PR #45 `c209cbf4…` (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, inline-script hash `sha256-oPtOeIa…`), PR #43 `7e7a5102…`, PR #37 `7f95f992…`. |
 | API availability | NOT APPLICABLE | The console is a static page reading public NEAR RPC; there is no product API. | — |
 | Browser functionality | FIXED AND VERIFIED | Page loads and renders live contract state. | `verify:live` (5 widths, 0 console errors); browser probe: 0 console errors. |
 | Wallet compatibility | FIXED AND VERIFIED (integration) | HERE + Meteor; honest availability. | `verify:connectivity`; `ui:qa`. Live extension approval BLOCKED BY HUMAN ACTION. |
@@ -305,7 +305,7 @@ suite re-ran green. So the harness is a real guard, not decoration.
 ### Release gate re-run (this session)
 
 All green, locally: model 74/74 (0 exploitable) · contract **88** (was 83; +5 fuzz seeds) · console
-**129** · agent **54** · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
+**132** · agent **54** · agent-eval 33 · factory 11 · deploy 21 · `verify:proof` 13/13 · `verify:upgrade` 8/8
 · `verify:upgrade-preservation` PRESERVED · `verify:connectivity` 13/13 · `verify:sandbox` 28/28 ·
 `verify:factory` 22/22 · `verify:controlled-v3:sandbox` **39/39** (incl. SEC-1 refused on the compiled
 wasm, owner unchanged after the refused `migrate`). `axe` 0 violations at 7 widths. `test:onchain`
@@ -326,10 +326,11 @@ accounting behaviour, and deployed nothing.
    hash-pinned CSP (`script-src 'self' 'sha256-…'`, no `unsafe-inline` for script) plus
    `object-src`/`base-uri`/`frame-ancestors`/`form-action` locked. Verified in a real browser under the
    served header (`npm run ui:qa`). The old note that a strict policy "would need `unsafe-inline`" was
-   wrong: hashing removes the need. **Status (2026-11-13):** the header is now live in production —
-   PR #45 merged to `main` as `c209cbf4…` and Vercel deployed it; `curl -sI https://overcover.vercel.app/`
-   returns `content-security-policy` whose `script-src` hash matches the page's inline script
-   (`sha256-oPtOeIa…`).
+   wrong: hashing removes the need. **Status (2026-11-14):** the header is live in production —
+   PR #45 landed it (`c209cbf4…`), and PR #48 (`f0e0b07…`) updated the pinned inline-script hash after
+   moving the security disclosure; `curl -sI https://overcover.vercel.app/` returns
+   `content-security-policy` whose `script-src` hash matches the page's current inline script
+   (`sha256-zVUGF7AJ…`).
 2. **SEC-10 — a code-only hardening deploy would have disabled buying (LOW).** The console's
    `TRUSTED` build map is now a list of approved builds, so the pending SEC-6/7/9 module does not
    silently lock the buy button. Regression test added.
@@ -1040,7 +1041,8 @@ executed. Full evidence: `docs/SECURITY_HARDENING_MISSION.md` §10, plus `proof/
 | OutLayer adapter deploy | **BLOCKED** | needs `outlayer` CLI + funded FullAccess operator key |
 | On-chain suite (`test:onchain`) | **SKIPPED** | 95 pass / 1 fail; live file needs `keys/identities.json` |
 | Release regression suites | **PASS** | sec1 17/17, upgrade 8/8, upgrade-preservation ok, sandbox 28/28, controlled-v3 39/39, factory 22/22, connectivity 13/13, proof 13/13, live ok, axe 0, ui:qa ok |
-| PR #43 | **DRAFT** | head `f5f60ec9beecdf076a337d9052f9cd601f766412` |
+| PR #43 | **MERGED** | squash-merged to `main` as `7e7a5102ea74ef13d1b9f0ca6639f1b8c400f97b` (2026-11-13T13:53:33Z) |
+| PR #47 / #44 / #46 | **MERGED / MERGED / THIS PR** | #47 legacy `code_hash` fix and #44 SEC-1 remediation merged 2026-11-14; #46 (this docs closeout) rebased onto `main` |
 
 ### Authority re-verification and byte-level deployment proof (2026-11-13, second pass)
 

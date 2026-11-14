@@ -1150,3 +1150,26 @@ owner-controlled; no simulated deployment was substituted.
 `docs/HUMAN_ACCEPTANCE_TEST.md`. The hardened v3 redeploy (`node driver/redeploy-v3.mjs`), legacy v1
 containment (`node driver/upgrade.js`) and the OutLayer adapter deploy (`outlayer deploy`) are also
 owner-only but are not prerequisites for that acceptance.
+
+### Controlled-release readiness pass (2026-11-14, `feat/owner-authority-reconciliation-testnet`)
+
+Full report: `reports/FINAL-CONTROLLED-RELEASE-READINESS.md`. Verdict: **CONDITIONAL GO** for owner-led
+human testing on the existing v3 contract; **NO-GO** for declaring the hardened module deployed (owner
+key required). Re-confirmed from the deployed bytes this session: production v3 = `a97034e6…`
+(lacks SEC-7/SEC-9), hardened reference = `811e0427…`, legacy v1 = `1f30ccf1…` (lacks SEC-1). All
+**26** transactions in `proof/controlled-v3-deploy.json` re-resolved on-chain **26/26 SUCCESS**. Suite:
+model 74/74, sim 79/79, console 132/132, agent 54/54, agent-eval 33/33, factory 11/11, deploy 21/21,
+outlayer 34/34; `verify:proof` 13/13, `verify:connectivity` 13/13, `verify:factory` 22/22,
+`verify:upgrade` 8/8, `verify:upgrade-preservation` PRESERVED, `verify:sec1-takeover` 17/17,
+`verify:migration` 6/6, `axe` 0 @320–1440, `ui:qa` PASS. Production `ui/index.html` and all six
+discoverability endpoints (`robots.txt`, `sitemap.xml`, `llms.txt`, `llms-full.txt`, `products.json`,
+`products.schema.json`) are byte-identical to the repo. `npm audit` 19 low / 0 high / 0 critical
+(transitive `elliptic`; no non-breaking fix). **Fixed:** the committed reconciliation report held full
+NEAR **public** keys as `ed25519:<44 chars>`, which the CI secret-scan regex matches — they are public
+(equal to the on-chain `view_access_key_list`), no secret was exposed, but they were truncated to
+`ed25519:XXXXXXXX…` so the CI `verify` job cannot fail on a false positive (guard not weakened). **New:**
+`npm run verify:preservation` — a state-preservation verifier that diffs every live state view against
+`proof/preservation-snapshot.json` across the code-only redeploy and re-asserts `reserved ≤ capital`.
+**Blocked (owner key):** the v3 redeploy and the legacy v1 `set_paused`; **blocked (human):** the v3
+wallet purchase. Rust and `neard` are absent locally, so `test:contract` and the `*:sandbox` suites run
+in CI (`REQUIRE_SANDBOX=1`) on the PR.

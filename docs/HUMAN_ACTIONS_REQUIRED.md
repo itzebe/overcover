@@ -39,6 +39,12 @@ Rollback is the same command pointed at the previous module (`a97034e6…`); it 
 
 ```bash
 npm run verify:proof   # the deployed module must now match 811e0427… and SOURCE AHEAD must be gone
+npm run verify:preservation -- \
+  --expect-sha256 811e0427ec467582913a47400ecf1b7c272ddea20ff5074f04a4513d896c0a7f
+# ^ re-reads every state view and diffs it against proof/preservation-snapshot.json.
+#   Expect PRESERVATION PASS: owner, products, all policies, pool accounting and the
+#   reserved <= capital invariant unchanged; only the code hash differs. Run
+#   `npm run verify:preservation:snapshot` once before the redeploy to (re)record the baseline.
 ```
 
 ## B. Live human wallet approval on v3 (the outstanding acceptance test)

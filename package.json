@@ -35,6 +35,8 @@
     "verify:migration": "node proof/migration-auth.mjs",
     "verify:sec1-takeover": "node proof/sec1-takeover.mjs",
     "verify:release-ops": "node proof/release-ops.mjs",
+    "verify:preservation": "node scripts/verify-preservation.mjs",
+    "verify:preservation:snapshot": "node scripts/verify-preservation.mjs --snapshot",
     "verify:upgrade": "node proof/upgrade-guard.mjs",
     "verify:upgrade-preservation": "node proof/upgrade-state-preservation.mjs",
     "verify:proof": "node proof/verify.mjs",

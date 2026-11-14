@@ -1,42 +1,42 @@
 {
   "mode": "TESTNET",
   "network": "testnet",
-  "rootId": "ovc-v3-ctl-2f6c4c.testnet",
-  "wasmSha256": "a97034e65fb0c53fe0a6e27e8541e2d8f3ea0ff54ddd037fab1c4e23fb0e37c1",
-  "wasmBytes": 500023,
+  "rootId": "ovc-v3-ctl-mwgci3u8.testnet",
+  "wasmSha256": "811e0427ec467582913a47400ecf1b7c272ddea20ff5074f04a4513d896c0a7f",
+  "wasmBytes": 500342,
   "txs": {
-    "create:owner": "9A4bZvfxitRfPtrtN2djwNuXvyvrhiHVHfVoGXpAGBW3",
-    "create:buyer": "G47LpBaaMsCg5HsC15T1rPjukv8GvmkbVQLhJ99YXeMn",
-    "create:attacker": "9WisEc85vodUXdP2jFX15LtX7EenmgUXLmooZVC19Adn",
-    "create:proposer": "35rkNRQ26Ky71h8XBEt4Ag7KatLKy2vwCiyWKV9TAu5F",
-    "create:op1": "6SxbSZmnGg7mgxEjYN7bwAbHGPeCYsGRK3g8VvUnCBMF",
-    "create:op2": "2ggW8JkReZkU3wRyN84EnPEtPTrqL8Mwztgna7mN1WoR",
-    "create:op3": "3taZScCrcEv1AzWi1M444EiLmS3DHw1SaueRUmDXhka9",
-    "create:op4": "6kdJUYusucPDWbSYpNVYXMENZv9TB58qQ72FXXu7A85b",
-    "create:op5": "CJXeotZvwaLkdUPgM3Tguce2Ji2VJ4bWVQwPGuQmYzFZ",
-    "create:res1": "GSZqwj6e8fS1jYGuHPbLG9W2ni6dR2MaPCkCZD8zYwrq",
-    "create:res2": "B9g3DuQ7DxSzACMkWtS6rsxTZSfUDGD8FPrfGVWEYJ3d",
-    "create:res3": "AhG8Tt8XpkxcyriUua3rntHhX9jFrhGb7HmpMw6LptNp",
-    "create:res4": "5Yz8ZVpyxcJfc33ZPhwsbtch8fN5mPh7BpRWFECQY8A5",
-    "create:res5": "CxCgi2MxLZtFfFjvLApmZv1izM3nbbTszgcXnYM1xZ7H",
-    "create:contract": "Dby7v25QG4PpECZhqHRz7HrNkz5kcDP4eFxtrAew2vxy",
-    "deploy": "8to8kukd8VBVNWDUjZhEUDNyrAeVet4GEbzirCPNYr25",
-    "new": "8cnMVNEkLYSSiizUauGVkPbgv3rYVa5tKnmc9MWxAjRw",
-    "set_quorum": "CzTmL8qDtsQcCrzN6DPU7zMCNZvSfwvNpxp6dAh5Xfye",
-    "set_resolver_quorum": "8fPHBMfQcMW61DK9SuTpQtH4fVNMr2huVqPyPTe7Adpi",
-    "set_dispute_window": "9sUagU8BsezocFrL7ukjjju8xDwNhnNME6Lb67HXeYMq",
-    "deposit": "2qkUyMwy6t2Ki5N6L5PREvk6BdY6S4kLRdPPBeUJXH3q",
-    "challenge": "7ZqGNduQBXDjERoXpqwDG5SFaZ54UxLfYd19mwo19kDw",
-    "resolver_vote": "ECcwkfHji6rqHjYWiDHVLdxPyYw4p2uwbUnQ5WEDEG8D",
-    "resolve": "DEhZuntFqBj5QZHS9SsMLg5ZsqaD3v6XVp2RM3Wm4jyL",
-    "propose_product": "2PwSJug83az8ShtN2c5TeCaHtiDPM4PPoqE5nfZhGCAh",
-    "set_prod_window": "44yqcchmoazdqN1cGvEojYHAB7k22ZL8y9B3fk1xNd41"
+    "create:owner": "7T7SV3Z5F3hoLALPRnfmPj4znqUhx18z8KKQojoAPfvx",
+    "create:buyer": "Hg8aNdLqfofTgtXwuobhBxB9mFm8a8NYA8o8qJrGrS5J",
+    "create:attacker": "AQBTEJqF9JedwpqobRVBrDAh8ysxt4hJ3bkXBkxeENXM",
+    "create:proposer": "5g6ZxRRBgywtYJNNHb7DSvAg5RyURZbvmWZru8gYamzn",
+    "create:op1": "CojaC22eJwbXwzY4xY9mzKvGYEyXXzhme77wzhdaM4YN",
+    "create:op2": "3eegsBeyWfMrtur3NRMRM1qbSjG8dFX3784YWyJrPQ6N",
+    "create:op3": "4BLzXugaqKia5Rbc3dELh69vVMZQdVVsQNM87qYRMJgS",
+    "create:op4": "HrMsw8Z1jQKgmrorEZkqeEejaSLRUJzuDduj3ME7MviG",
+    "create:op5": "BG2dor6a1S16jRGVdGYvoH8A8sfqnt8o9F5rPPkzCdhy",
+    "create:res1": "KusrJsFFQeUZduFkiNJkckmNgrF1ZL2gjTmu26gZoH3",
+    "create:res2": "5tR3qafCWPAxbi72Z2hfA4B8Zcpp48nXDSL7o65pUYHD",
+    "create:res3": "dnqKDYMn46jc7pnwKueHfWAS51XpR2eFp1PdHqWJgMW",
+    "create:res4": "2bTQeccb56g8m8ZhMciLzXt269zJAT99e1DC2BA71wuR",
+    "create:res5": "6t37ToPwwgBbvvDTu3d996Ze5rJ2QFozJSiAJLshjZxK",
+    "create:contract": "3EaKP6yjTJa6MjE3QfyzmDFLA5u67jsS3vw13HVn7vEU",
+    "deploy": "CtFfnoyrfnVhE2MqdtZebjtGPzpRyQjkcKUwHvVwqNvX",
+    "new": "66WSbzUvfLBmMaYRq1SKZGXWm5YBuMhXU13FN2xrzD29",
+    "set_quorum": "4Kw8ZstEv4128oXJYtPMqhcURE4zxbPVybgFopf6m86V",
+    "set_resolver_quorum": "27cqHFsMHNjVVQXG3FJEoWY7zEf7ngM1QM8sGsTWg7Z8",
+    "set_dispute_window": "GK9aYyW4yEdEgMBpvygwmYMtGRnHnRP8XCLTb7TWho7S",
+    "deposit": "45tsTdDTLfpDD589SKnsMCAxLpAmL2L2qS9ubVW16wTA",
+    "challenge": "35fmERJd5zqcuYLH26ennxvfCRFyviBHCFzq7oR3NVZ5",
+    "resolver_vote": "LBT5bxayPoG2MtS99VsrnmXr5BAx4XcEVTmgZAUxK5q",
+    "resolve": "2hojE2gtFiut9fi7rnz2W3sHB98UxgvESV2i6zQy1rcs",
+    "propose_product": "CGhpj56a8nrKAgfZXyN8JKBHVEiNNv3cq5fvPZJ68zQJ",
+    "set_prod_window": "7FaUXudNCTarv22EN8HsrZzQ8q3Vr3WV1ckrnHVXvW7L"
   },
   "checks": [
     {
       "name": "resolved the funding root (testnet)",
       "ok": true,
-      "detail": "ovc-v3-ctl-2f6c4c.testnet"
+      "detail": "ovc-v3-ctl-mwgci3u8.testnet"
     },
     {
       "name": "the root account holds enough to fund the whole graph",
@@ -46,22 +46,22 @@
     {
       "name": "created the identity graph + contract account",
       "ok": true,
-      "detail": "contract.ovc-v3-ctl-2f6c4c.testnet"
+      "detail": "contract.ovc-v3-ctl-mwgci3u8.testnet"
     },
     {
       "name": "the proposer is a distinct account from the owner",
       "ok": true,
-      "detail": "owner=owner.ovc-v3-ctl-2f6c4c.testnet proposer=proposer.ovc-v3-ctl-2f6c4c.testnet"
+      "detail": "owner=owner.ovc-v3-ctl-mwgci3u8.testnet proposer=proposer.ovc-v3-ctl-mwgci3u8.testnet"
     },
     {
       "name": "deployed the compiled v3 wasm",
       "ok": true,
-      "detail": "500023 bytes, sha256 a97034e65fb0c53f…"
+      "detail": "500342 bytes, sha256 811e0427ec467582…"
     },
     {
       "name": "initialised with the controlled owner",
       "ok": true,
-      "detail": "owner=owner.ovc-v3-ctl-2f6c4c.testnet"
+      "detail": "owner=owner.ovc-v3-ctl-mwgci3u8.testnet"
     },
     {
       "name": "challenge window is the accelerated demo value",
@@ -111,7 +111,7 @@
     {
       "name": "the policy belongs to the buyer and froze the challenge window",
       "ok": true,
-      "detail": "buyer=buyer.ovc-v3-ctl-2f6c4c.testnet window=60"
+      "detail": "buyer=buyer.ovc-v3-ctl-mwgci3u8.testnet window=60"
     },
     {
       "name": "the payout is reserved against capital",
@@ -181,7 +181,7 @@
     {
       "name": "the activated product records the proposer (not the owner)",
       "ok": true,
-      "detail": "proposed_by=proposer.ovc-v3-ctl-2f6c4c.testnet"
+      "detail": "proposed_by=proposer.ovc-v3-ctl-mwgci3u8.testnet"
     },
     {
       "name": "the activated product carries the immutable evidence hash",
@@ -234,33 +234,33 @@
       "detail": "window=3600s"
     }
   ],
-  "contractId": "contract.ovc-v3-ctl-2f6c4c.testnet",
-  "ownerId": "owner.ovc-v3-ctl-2f6c4c.testnet",
-  "proposerId": "proposer.ovc-v3-ctl-2f6c4c.testnet",
+  "contractId": "contract.ovc-v3-ctl-mwgci3u8.testnet",
+  "ownerId": "owner.ovc-v3-ctl-mwgci3u8.testnet",
+  "proposerId": "proposer.ovc-v3-ctl-mwgci3u8.testnet",
   "operatorIds": [
-    "op1.ovc-v3-ctl-2f6c4c.testnet",
-    "op2.ovc-v3-ctl-2f6c4c.testnet",
-    "op3.ovc-v3-ctl-2f6c4c.testnet",
-    "op4.ovc-v3-ctl-2f6c4c.testnet",
-    "op5.ovc-v3-ctl-2f6c4c.testnet"
+    "op1.ovc-v3-ctl-mwgci3u8.testnet",
+    "op2.ovc-v3-ctl-mwgci3u8.testnet",
+    "op3.ovc-v3-ctl-mwgci3u8.testnet",
+    "op4.ovc-v3-ctl-mwgci3u8.testnet",
+    "op5.ovc-v3-ctl-mwgci3u8.testnet"
   ],
   "resolverIds": [
-    "res1.ovc-v3-ctl-2f6c4c.testnet",
-    "res2.ovc-v3-ctl-2f6c4c.testnet",
-    "res3.ovc-v3-ctl-2f6c4c.testnet",
-    "res4.ovc-v3-ctl-2f6c4c.testnet",
-    "res5.ovc-v3-ctl-2f6c4c.testnet"
+    "res1.ovc-v3-ctl-mwgci3u8.testnet",
+    "res2.ovc-v3-ctl-mwgci3u8.testnet",
+    "res3.ovc-v3-ctl-mwgci3u8.testnet",
+    "res4.ovc-v3-ctl-mwgci3u8.testnet",
+    "res5.ovc-v3-ctl-mwgci3u8.testnet"
   ],
   "gasFloatYocto": "10000000000000000000000",
   "gasPrice": "100000000",
-  "obsDate": 1794489318,
+  "obsDate": 1794657220,
   "policyId": 1,
   "factoryPolicyId": 2,
   "passed": 40,
   "total": 40,
   "config": {
-    "owner": "owner.ovc-v3-ctl-2f6c4c.testnet",
-    "attestor": "8iWgqJK57sZ3vBCb45MkGJHUPk9QnoQPnqMgrZ6s6nE1",
+    "owner": "owner.ovc-v3-ctl-mwgci3u8.testnet",
+    "attestor": "6xRjiKhHFvmdgFdsA8GqfpDmJ9uey6D1b6bRq4Viw49w",
     "challenge_bond": "100000000000000000000000",
     "challenge_window_sec": 60,
     "settle_delay_sec": 0,

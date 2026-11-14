@@ -1083,3 +1083,29 @@ code-only, state-preserving redeploy remains prepared and fails closed without t
 **Pre-deployment v3 state captured** (unchanged; `paused=false`, pool solvent): capital 1.4250,
 reserved 0.2000, available 1.2250 NEAR; 2 products, 3 policies, 5 operators (quorum 3), 5 resolvers,
 1 observation, 1 metric — the state a redeploy must preserve.
+
+### Release closeout — PR reconciliation (2026-11-14)
+
+A later session reconciled the open pull-request queue against the deployed truth. Every PR was
+independently reviewed and re-verified before merge; two conflicted with the deployed PR #48 and were
+rebased.
+
+| PR | Branch | Disposition | Merge commit |
+| --- | --- | --- | --- |
+| #47 | `fix/doc-integrity-legacy-code-hash` | merged — legacy `code_hash` typo corrected; the fix was verified against NEAR RPC (`36koHoSdqrYi…`) before merge | `5f86db1` |
+| #44 | `fix/legacy-v1-sec1-remediation` | merged — SEC-1 `migrate()` boundary regression tests + operator runbook (no product change) | `fe4bb7c` |
+| #46 | `docs/release-truth-closeout` | merged after rebase — its `ui/index.html` commit was **dropped** (superseded by, and identical to, the deployed #48 page); the docs were re-anchored to `f0e0b07` | `69ab07c` |
+| #41 | `feat/outlayer-attested-observation-poc` | merged after rebase (`package.json` script conflict resolved, both kept) — OutLayer TDX attestation POC (34/34 local) + funding research; the adapter deploy remains **BLOCKED** on the `outlayer` CLI and a funded operator key | `31dcc25` |
+| #39 | `video/final-human-purchase` | **preserved, left open/draft** (mission instruction) — independently re-verified: the recorded purchase is a real legacy-v1 transaction (`87n1pdeAD4jv…`, policy 15 on `contract.attestor-overcover.testnet`) and is labelled "legacy v1 build" wherever it appears. It is **not** evidence of a v3 human purchase. | — |
+
+**Production parity after the merges.** `main` = `31dcc25`; the production deployment
+`dpl_HCGzBWSfFQBrU1afd2SVY5rBaLWz` (READY) reports `meta.githubCommitSha = 31dcc2563a83…`, and the
+served `ui/index.html` (sha256 `9d778bc863729d58…`) is byte-identical to `main`'s. The CSP
+`script-src` hash `sha256-zVUGF7AJz3czRkmhdlWGLfdwpj/86a96VfpUytQEgjs=` matches the page inline script.
+
+**Dependency audit (this session).** `npm audit` → 0 high / 0 moderate / 0 critical; **19 low**, all one
+transitive advisory: `elliptic` "risky cryptographic primitive" (GHSA-848j-6mx2-7j84), reached through
+`@near-js/crypto` → `secp256k1` and through `crypto-browserify` in the wallet bundle. There is **no
+non-breaking fix** (`fixAvailable` is a semver-major downgrade of `crypto-browserify` to 3.5.1, which
+would be a supply-chain regression). The code is used for ECDSA verification and browser polyfills; the
+console holds no key and signing happens in the wallet extension. Documented, not suppressed.

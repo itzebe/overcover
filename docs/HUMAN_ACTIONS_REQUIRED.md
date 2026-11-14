@@ -114,9 +114,10 @@ exact commit to production (`dpl_3JRkaP6iBiSbm5mkTqQJYiXa7rrV`, READY).
 
 **Current state (2026-11-14, resolved).** The token works again: `GET /user` returns `itzebe` with
 `admin`/`push` on `itzebe/overcover`. This session pushed and squash-merged **PR #47** (legacy
-`code_hash` correction) and **PR #44** (SEC-1 remediation tests + operator runbook), and is landing
-**PR #46** (release-truth closeout) after rebasing it onto the current `main`. No credential is
-required from a human to publish documentation-only work.
+`code_hash` correction), **PR #44** (SEC-1 remediation tests + operator runbook), **PR #46**
+(release-truth closeout, rebased onto the current `main`) and **PR #41** (OutLayer attestation POC,
+rebased; `package.json` conflict resolved). A closeout PR **#49** records the reconciliation. No
+credential is required from a human to publish documentation-only work.
 
 **What remains human-only.** The operations that need a NEAR signing key this environment does not
 hold (v3 redeploy, legacy v1 pause, the live v3 purchase) — see sections A–E. Publishing code and

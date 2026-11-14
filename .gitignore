@@ -18,3 +18,14 @@ video/out/*.webm
 video/out/narration.m4a
 video/out/concat.txt
 video/out/seg-*.mp4
+
+# company film: regenerable intermediates; master kept out of git (51 MB)
+video/company/out/overcover-company-film.mp4
+video/company/seg/
+video/company/audio/
+video/company/frames/
+video/company/cards/
+video/company/cards-html/
+video/company/voices/
+video/company/out/mix.m4a
+video/company/out/video-silent.mp4

@@ -1,0 +1,48 @@
+{
+  "master": {
+    "dur": "188.500",
+    "sizeMB": "61.7",
+    "bitrate": "2620 kbps",
+    "vcodec": "h264",
+    "w": 1920,
+    "h": 1080,
+    "fps": "30/1",
+    "acodec": "aac",
+    "ch": 2,
+    "layout": "stereo",
+    "sr": "48000"
+  },
+  "web": {
+    "dur": "188.500",
+    "sizeMB": "26.5",
+    "bitrate": "1125 kbps",
+    "vcodec": "h264",
+    "w": 1920,
+    "h": 1080,
+    "fps": "30/1",
+    "acodec": "aac",
+    "ch": 2,
+    "layout": "stereo",
+    "sr": "48000"
+  },
+  "master_sha256": "5f6e57588a77c4f8b1aef5564b4784d90e4b889590fdbefc9abcc68cd8ca2d0d",
+  "web_sha256": "41607d5c2dae9c747018a891e43389a287cc7850aaee84b8325ee053484c692e",
+  "poster_sha256": "87ef3b55e2fb2e8372c42072c04eceae7a515fafc7543d7acf8f014cc62f21b0",
+  "decode_clean": true,
+  "decode_output": "",
+  "black_frames": 0,
+  "loudness": {
+    "integrated": "-15.5",
+    "true_peak": "-1.1",
+    "lra": "3.6"
+  },
+  "scene_audio": {
+    "t10": "-21.0",
+    "t30": "-17.5",
+    "t60": "-17.1",
+    "t90": "-20.8",
+    "t120": "-16.9",
+    "t150": "-19.4",
+    "t175": "-18.7"
+  }
+}

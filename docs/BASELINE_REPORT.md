@@ -34,7 +34,7 @@ which are on `main` yet.
 | --- | --- |
 | Account | `contract.attestor-overcover.testnet` |
 | Version on chain | **v1** — single trusted attestor; owner resolves disputes |
-| code_hash | `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2rK` |
+| code_hash | `36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R` |
 | Deployed wasm sha256 | `1f30ccf1d4c735ad58dd858a41293187fd6598a4d20fe2ee1ab99d4d766dd26e` |
 | Pool | capital 14.05 NEAR, reserved 10.50 NEAR, available 3.55 NEAR, 15 policies |
 | Invariants | `reconcile()` = true, `check_invariant()` = true, `solvent` = true |

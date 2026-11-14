@@ -806,6 +806,29 @@ test("the JSON-LD block is valid JSON and makes only truthful claims", () => {
   assert.doesNotMatch(flat, /\$\d/, "no invented pricing beyond free");
 });
 
+// ---- documentation integrity: contract identifiers are hand-copied, so they drift. ----
+
+test("the legacy code_hash is recorded exactly, with no hand-copied drift", () => {
+  // The live legacy module's code_hash, read from NEAR RPC. Every doc that cites
+  // it must use this exact 44-character base58 value. A hand-typed variant (for
+  // example a 45-character one with a stray trailing character) is a defect: it
+  // makes the one identifier a reader would verify against the chain wrong.
+  const LEGACY_CODE_HASH = "36koHoSdqrYiBNkaNaLEanPAspLMioyZYT9qUcELoY2R";
+  assert.equal(LEGACY_CODE_HASH.length, 44, "a NEAR code_hash is 44 base58 characters");
+  const docDir = path.join(root, "docs");
+  const docs = fs.readdirSync(docDir).filter((f) => f.endsWith(".md"));
+  let cites = 0;
+  for (const f of docs) {
+    const text = fs.readFileSync(path.join(docDir, f), "utf8");
+    // Any base58 token that starts like this hash but is not exactly it is drift.
+    for (const m of text.matchAll(/\b36koHo[1-9A-HJ-NP-Za-km-z]{30,48}\b/g)) {
+      assert.equal(m[0], LEGACY_CODE_HASH, `${f} records a drifted legacy code_hash: ${m[0]}`);
+    }
+    if (text.includes(LEGACY_CODE_HASH)) cites += 1;
+  }
+  assert.ok(cites >= 3, "the legacy code_hash must still be cited by the docs that describe it");
+});
+
 // ---- the public UI must never expose an owner-only contract method. ----
 
 test("the public UI can only ever sign buy_cover, never an owner-only method", () => {

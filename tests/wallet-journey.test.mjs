@@ -389,6 +389,38 @@ test("a malformed ?contract= is ignored and the hardened default stands", async 
   assert.equal(page.el("sec-tag").textContent, "Hardened build");
 });
 
+test("a contract whose module has not been read yet is 'unknown' and un-signable", async () => {
+  // The read has not returned a code hash: trust is unknown, so buying must be
+  // refused until the module is verified — never assumed.
+  const wallet = mockWallet({ result: okResult("H") });
+  const page = bootPage({ wallet, codeHash: null });
+  await settle(page);
+  assert.equal(page.el("sec-tag").textContent, "Verifying…");
+  assert.match(page.el("sec-text").innerHTML, /approved Overcover build/);
+  assert.equal(page.el("b-buy").disabled, true, "an unverified module must never be signable");
+});
+
+test("the hardened disclosure opens only for a legacy or untrusted build, never hides a warning", async () => {
+  // A verified hardened build: the disclosure is collapsed by default (it is
+  // evidence, not the pitch) and the class is the quiet default.
+  const w1 = mockWallet({ result: okResult("H") });
+  const hardened = bootPage({ wallet: w1 });
+  await settle(hardened);
+  assert.equal(hardened.el("sec-banner").className, "sec-status");
+  assert.notEqual(hardened.el("sec-banner").open, true, "the hardened disclosure is collapsed by default");
+  assert.match(hardened.el("sec-text").innerHTML, /separate build and is not yet deployed/,
+    "the hardened disclosure must state the SEC-6/7/9 build is not deployed");
+
+  // A legacy build: the disclosure is forced open and carries the bad-state class,
+  // so the warning is never hidden behind a collapsed control.
+  const w2 = mockWallet({ result: okResult("H") });
+  const legacy = bootPage({ wallet: w2, search: "?contract=" + LEGACY, codeHash: LEGACY_HASH });
+  await settle(legacy);
+  assert.equal(legacy.el("sec-banner").className, "sec-status legacy");
+  assert.equal(legacy.el("sec-banner").open, true, "a legacy warning must be open, not collapsed");
+  assert.match(legacy.el("sec-summary").textContent, /blocked/i);
+});
+
 // ---- adversarial: the destination is re-verified immediately before signing. ----
 
 test("doBuy re-verifies the module and refuses if it changed before signing", async () => {

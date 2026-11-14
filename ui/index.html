@@ -202,17 +202,28 @@
   .fail-note .fd { margin: 0; font-size: 13.5px; color: var(--ink2); }
   .fail-note code { font-family: var(--mono); font-size: 12.5px; color: var(--bad); word-break: break-all; }
 
-  /* Security status of the contract this page is reading. Slim, factual, and
-     always visible: the deployment build is not something to bury. */
-  .sec-banner { border-bottom: 1px solid var(--line2); background: var(--good-w); }
-  .sec-banner.legacy { background: var(--bad-w); border-bottom-color: var(--bad); }
-  .sec-banner .in { display: flex; align-items: baseline; gap: 12px; padding: 10px 0; font-size: 13.5px; color: var(--ink2); }
-  .sec-banner .tag { flex: none; font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--good); border: 1px solid var(--good); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
-  .sec-banner.legacy .tag { color: var(--bad); border-color: var(--bad); }
-  .sec-banner p { margin: 0; }
-  .sec-banner a { text-decoration: underline; text-underline-offset: 2px; }
-  .sec-banner code { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
-  @media (max-width: 640px) { .sec-banner .in { flex-direction: column; gap: 6px; } }
+  /* Contract security status, shown inside the proof section as a quiet
+     disclosure — it is evidence, not the headline. The tag carries the state;
+     the body carries the technical detail and the verified hash. */
+  .sec-status { border: 1px solid var(--line); border-radius: var(--r2); background: var(--card); margin-bottom: 26px; overflow: hidden; }
+  .sec-status[open] { background: var(--card); }
+  .sec-status > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 13px 18px; font-size: 13.5px; color: var(--ink2); }
+  .sec-status > summary::-webkit-details-marker { display: none; }
+  .sec-status > summary::after { content: "\25B8"; margin-left: auto; color: var(--muted); font-size: 12px; }
+  .sec-status[open] > summary::after { content: "\25BE"; }
+  .sec-status > summary:hover { background: var(--card-2); }
+  .sec-status > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .sec-status .tag { flex: none; font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--good); border: 1px solid var(--good); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .sec-status.legacy .tag { color: var(--bad); border-color: var(--bad); }
+  .sec-status.legacy { border-color: var(--bad); background: var(--bad-w); }
+  .sec-status .sec-body { padding: 0 18px 16px; }
+  .sec-status .sec-body p { margin: 0; font-size: 13.5px; color: var(--ink2); }
+  .sec-status .sec-body a { text-decoration: underline; text-underline-offset: 2px; }
+  .sec-status .sec-body code { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  .sec-status .sec-facts { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 12px 0 0; }
+  .sec-status .sec-facts dt { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .sec-status .sec-facts dd { margin: 3px 0 0; font-size: 13px; color: var(--ink2); }
+  @media (max-width: 640px) { .sec-status > summary { flex-wrap: wrap; gap: 8px; } }
 
   /* ---------------- journey timeline ---------------- */
   .journey { list-style: none; margin: 0; padding: 0; position: relative; }
@@ -701,16 +712,6 @@
 
 <main id="main">
   <div class="wrap"><div id="error-slot"></div></div>
-
-  <!-- Security status of the contract this page reads. Filled from the deployed
-       module: the hardened build refuses a third-party migrate(); the legacy
-       build does not. Hidden until a read tells us which one we are on. -->
-  <section id="sec-banner" class="sec-banner" hidden aria-live="polite">
-    <div class="wrap"><div class="in">
-      <span class="tag" id="sec-tag">—</span>
-      <p id="sec-text">—</p>
-    </div></div>
-  </section>
 
   <!-- ================= HERO ================= -->
   <section class="hero" aria-labelledby="hero-h">
@@ -1219,6 +1220,20 @@
       <h2 id="proof-h">Check it for yourself</h2>
       <p class="sect-note">Everything above is a direct read. Reproduce it, or check it on a block explorer, without trusting this page.</p>
     </div>
+    <!-- Security status of the contract this page reads, filled from the deployed
+         module's code hash: the hardened build refuses a third-party migrate();
+         the legacy build does not. Hidden until a read tells us which we are on.
+         Kept here with the proof, not above the hero: it is evidence, not the pitch. -->
+    <details id="sec-banner" class="sec-status" hidden>
+      <summary>
+        <span class="tag" id="sec-tag">—</span>
+        <span id="sec-summary">Contract security status</span>
+      </summary>
+      <div class="sec-body">
+        <p id="sec-text">—</p>
+        <dl class="sec-facts" id="sec-facts" hidden></dl>
+      </div>
+    </details>
     <div class="proof">
       <div>
         <p class="lbl">Contract account · NEAR testnet</p>
@@ -1944,46 +1959,74 @@
   // State the security status of the contract this page reads, from its own
   // deployed code hash — not from a claim in the markup. The legacy build's
   // `migrate()` is unauthenticated (any account could overwrite state); the
-  // hardened build refuses any caller but the contract itself. The banner and
-  // the buy gate are both driven by the SAME trust object, so a contract that is
-  // labelled untrusted is also un-signable — the label is never the only defence.
-  var HARDENED_CODE_HASH = TRUSTED[HARDENED_CONTRACT];
-  var LEGACY_CODE_HASH = TRUSTED[LEGACY_CONTRACT];
+  // hardened build refuses any caller but the contract itself. The disclosure
+  // and the buy gate are both driven by the SAME trust object, so a contract
+  // that is labelled untrusted is also un-signable — the label is never the only
+  // defence. A legacy or untrusted state opens the disclosure and is never
+  // collapsed while a purchase could be made.
   function renderSecurityBanner(acct) {
     var box = el("sec-banner"), tag = el("sec-tag"), text = el("sec-text");
+    var sum = el("sec-summary"), facts = el("sec-facts");
     if (!box || !tag || !text) return;
     var hash = acct && acct.code_hash ? String(acct.code_hash) : "";
     trust = trustFor(CONTRACT, hash);
     trust.contract = CONTRACT;
     box.hidden = false;
-    box.className = "sec-banner";
+    box.className = "sec-status";
+    box.open = false;
+    var acctLink = '<a href="' + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) +
+      '" target="_blank" rel="noopener"><code>' + esc(CONTRACT) + "</code></a>";
+    function setFacts(rows) {
+      if (!facts) return;
+      facts.hidden = false;
+      facts.innerHTML = rows.map(function (r) {
+        return "<div><dt>" + esc(r[0]) + "</dt><dd>" + r[1] + "</dd></div>";
+      }).join("");
+    }
     if (trust.state === "hardened") {
       tag.textContent = "Hardened build";
-      text.innerHTML = "This contract runs the hardened module (<code>" + esc(shortAcct(hash)) +
-        "</code>): <code>migrate()</code> is refused unless the call comes from the contract account itself, " +
-        "so no third party can overwrite owner, oracle or pool state. " +
-        '<a href="' + EXPLORER + "/account/" + encodeURIComponent(CONTRACT) + '" target="_blank" rel="noopener">' +
-        esc(CONTRACT) + "</a> is the address your wallet will sign against.";
+      if (sum) sum.textContent = "Migration guard verified";
+      text.innerHTML = "The live module blocks <code>migrate()</code> unless the contract calls itself, " +
+        "preventing third parties from replacing owner, oracle or pool state. This confirms the migration guard " +
+        "only; the later SEC-6/7/9 lifecycle hardening is a separate build and is not yet deployed. " +
+        acctLink + " is the address your wallet will sign against.";
+      setFacts([
+        ["Verified deployed code hash", "<code>" + esc(hash) + "</code>"],
+        ["Status", "Confirmed against the deployed module, not a label on this page."],
+      ]);
     } else if (trust.state === "legacy") {
       tag.textContent = "Legacy build";
-      box.className = "sec-banner legacy";
+      box.className = "sec-status legacy";
+      box.open = true;
+      if (sum) sum.textContent = "Original module — new purchases blocked";
       text.innerHTML = "This contract runs the <b>original</b> module (<code>" + esc(shortAcct(hash)) +
         "</code>), whose <code>migrate()</code> is unauthenticated. Its history is preserved here for the record, " +
         "but <b>new purchases are blocked on this address</b>. Buy on the hardened build at " +
         '<a href="' + EXPLORER + "/account/" + encodeURIComponent(HARDENED_CONTRACT) + '" target="_blank" rel="noopener">' +
         esc(HARDENED_CONTRACT) + "</a> — the default. To inspect this address, run the console with " +
         "<code>?contract=" + esc(LEGACY_CONTRACT) + "</code>.";
+      setFacts([
+        ["Deployed code hash", "<code>" + esc(hash) + "</code>"],
+        ["Status", "Buying is refused on this address."],
+      ]);
     } else if (trust.state === "untrusted") {
       tag.textContent = "Untrusted build";
-      box.className = "sec-banner legacy";
+      box.className = "sec-status legacy";
+      box.open = true;
+      if (sum) sum.textContent = "Not an approved Overcover address";
       text.innerHTML = "This contract (<code>" + esc(shortAcct(CONTRACT)) + "</code>) is <b>not</b> an approved " +
         "Overcover address, or its deployed module does not match the approved build. " +
         "Nothing here is signed against it, and no purchase is offered. Treat it as unverified.";
+      setFacts([
+        ["Read code hash", "<code>" + esc(hash || "—") + "</code>"],
+        ["Status", "Not signed against; no purchase offered."],
+      ]);
     } else {
       tag.textContent = "Verifying…";
-      box.className = "sec-banner";
+      if (sum) sum.textContent = "Reading the deployed module";
       text.innerHTML = "Reading the deployed module for <code>" + esc(shortAcct(CONTRACT)) +
         "</code> to confirm it is an approved Overcover build. Buying is disabled until the module is verified.";
+      if (facts) facts.hidden = true;
     }
     updateBuyEnabled();
   }

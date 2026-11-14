@@ -38,15 +38,15 @@ All values read live from `https://test.rpc.fastnear.com` (`view_account`, `view
 
 | Identity | Account ID | Public key (on chain) | Permission | Created by | Credential in this env? | Verified signer here? |
 | --- | --- | --- | --- | --- | --- | --- |
-| Agent service account | `oc-agent-mwb87z4k.testnet` | `ed25519:7oPfWX2sKoPUX9XGsLwiFsWMmUNLnCR3CjKPAWBYDsBv` | FullAccess | OpenHands (earlier session) | **No** | No |
-| Agent demo sub-account | `human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet` | `ed25519:Hpej6xzdCvcF7CMsuYLMA4hnKRSGCKcNFdA46tfdiYLx` | FullAccess | OpenHands (earlier session) | **No** | No (it signed the historical PR #39 purchase; that key is gone) |
-| **v3 contract (production)** | `contract.ovc-v3-ctl-2f6c4c.testnet` | `ed25519:B5iWCqs99Ww7ZJcjZpuPdXtUPSQKrvUCauzRqA136GVT` | FullAccess | OpenHands (earlier session) | **No** | No |
-| v3 funding root (original) | `ovc-v3-ctl-2f6c4c.testnet` | `ed25519:EUBFaRRaGLw5HtyguAVYReMNNsww6KgJZ98deceyssYd` | FullAccess | OpenHands (earlier session) | **No** | No |
-| Legacy v1 contract | `contract.attestor-overcover.testnet` | `ed25519:CwZBmKyVjtsUYXfZSWWpedw63MDg2UfngQY7A98eiRre` | FullAccess | OpenHands (earlier session) | **No** | No |
-| Legacy v1 owner | `owner.attestor-overcover.testnet` | `ed25519:3RJTRuypY91YqWySqZdHJeFBYB5ctMrcAihiKfNdyfGD` | FullAccess | OpenHands (earlier session) | **No** | No |
-| Legacy v1 attestor | `attestor-overcover.testnet` | `ed25519:4dhxyFrsS8y8HhS2CCFYHRbpjTGRudSqPWoHYCRECTxC` | FullAccess | OpenHands (earlier session) | **No** | No |
-| v3 funding root (this session) | `ovc-v3-ctl-mwgci3u8.testnet` | `ed25519:Czw8gCc6jhMkjvkKmTB1YVJsSRJuyjJZDUKKofA6fLxq` | FullAccess | **OpenHands (this session, free faucet)** | **Yes** — `keys/controlled-v3.json` (gitignored, 0600) | **Yes** |
-| Hardened test contract (this session) | `contract.ovc-v3-ctl-mwgci3u8.testnet` | `ed25519:2B9AjToaitKEy8KMfogxUqCmCCbo4P1tqm96Daswtuy6` | FullAccess | **OpenHands (this session)** | **Yes** — same file | **Yes** |
+| Agent service account | `oc-agent-mwb87z4k.testnet` | `ed25519:7oPfWX2s…` | FullAccess | OpenHands (earlier session) | **No** | No |
+| Agent demo sub-account | `human-demo-mwb9swu7.oc-agent-mwb87z4k.testnet` | `ed25519:Hpej6xzd…` | FullAccess | OpenHands (earlier session) | **No** | No (it signed the historical PR #39 purchase; that key is gone) |
+| **v3 contract (production)** | `contract.ovc-v3-ctl-2f6c4c.testnet` | `ed25519:B5iWCqs9…` | FullAccess | OpenHands (earlier session) | **No** | No |
+| v3 funding root (original) | `ovc-v3-ctl-2f6c4c.testnet` | `ed25519:EUBFaRRa…` | FullAccess | OpenHands (earlier session) | **No** | No |
+| Legacy v1 contract | `contract.attestor-overcover.testnet` | `ed25519:CwZBmKyV…` | FullAccess | OpenHands (earlier session) | **No** | No |
+| Legacy v1 owner | `owner.attestor-overcover.testnet` | `ed25519:3RJTRuyp…` | FullAccess | OpenHands (earlier session) | **No** | No |
+| Legacy v1 attestor | `attestor-overcover.testnet` | `ed25519:4dhxyFrs…` | FullAccess | OpenHands (earlier session) | **No** | No |
+| v3 funding root (this session) | `ovc-v3-ctl-mwgci3u8.testnet` | `ed25519:Czw8gCc6…` | FullAccess | **OpenHands (this session, free faucet)** | **Yes** — `keys/controlled-v3.json` (gitignored, 0600) | **Yes** |
+| Hardened test contract (this session) | `contract.ovc-v3-ctl-mwgci3u8.testnet` | `ed25519:2B9AjToa…` | FullAccess | **OpenHands (this session)** | **Yes** — same file | **Yes** |
 
 ### The five distinctions the mission asked for
 
@@ -154,7 +154,7 @@ code_hash: 9h296MCND93dzHQn4vVUeEVai3VuohDbo9VJFntpT45C
 bytes:     500342   sha256: 811e0427ec467582913a47400ecf1b7c272ddea20ff5074f04a4513d896c0a7f
 matches the hardened artifact 811e0427…: TRUE
 guards in the deployed bytes: SEC-1 HAS · SEC-6 HAS · SEC-7 HAS
-access keys: ed25519:2B9AjToaitKEy8KMfogxUqCmCCbo4P1tqm96Daswtuy6  FullAccess
+access keys: ed25519:2B9AjToa…  FullAccess
 pool: capital 1 420 000 …000  reserved 100 000 …000  solvent true  policies 2
 invariant reserved ≤ available: TRUE
 quorum 3-of-5   resolver_quorum 3-of-5
